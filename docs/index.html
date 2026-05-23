@@ -1083,7 +1083,7 @@
 
     <div class="stats" style="margin-bottom:32px">
       <div class="stat">
-        <div class="stat-num" style="color:var(--green)">4 / 6</div>
+        <div class="stat-num" style="color:var(--green)">6 / 6</div>
         <div class="stat-label">phases complete</div>
       </div>
       <div class="stat">
@@ -1091,7 +1091,7 @@
         <div class="stat-label">unit tests passing</div>
       </div>
       <div class="stat">
-        <div class="stat-num" style="color:var(--purple)">120</div>
+        <div class="stat-num" style="color:var(--purple)">130</div>
         <div class="stat-label">sessions in test data</div>
       </div>
     </div>
@@ -1104,7 +1104,7 @@
         </div>
         <div class="phase-body">
           <h3>Texting &amp; AI</h3>
-          <p>iMessage send/receive from your phone. AI classifies replies. HTTP bridge API for the web app.</p>
+          <p>iMessage send/receive from your phone. AI classifies replies. HTTP bridge API.</p>
         </div>
       </div>
 
@@ -1115,7 +1115,7 @@
         </div>
         <div class="phase-body">
           <h3>Website &amp; Client Roster</h3>
-          <p>Search, sort, drag-to-reorder, inline editing, detail pages, standing slots, add/edit/delete clients. Mobile responsive.</p>
+          <p>Search, sort, drag-to-reorder, inline editing, detail pages, standing slots, add/edit/delete.</p>
         </div>
       </div>
 
@@ -1126,7 +1126,7 @@
         </div>
         <div class="phase-body">
           <h3>Schedule &amp; Calendar</h3>
-          <p>FullCalendar with week navigation, Generate Week algorithm, drag-and-drop, .ics export. Default availability + weekly overrides. 8 weeks of session history. List view on mobile.</p>
+          <p>FullCalendar, Generate Week, drag-and-drop, .ics export, availability settings, week navigation.</p>
         </div>
       </div>
 
@@ -1137,35 +1137,48 @@
         </div>
         <div class="phase-body">
           <h3>Outreach &amp; Messaging</h3>
-          <p>Batch sending (3 at a time), follow-up after 1hr, move on after 3hrs. AI classification with Matt's override controls. Standing slots auto-fill. Saturday 9am workflow.</p>
+          <p>Batch sending, follow-up timers, AI classification, override controls, standing slots, Saturday 9am workflow.</p>
         </div>
       </div>
 
-      <div class="phase active">
+      <div class="phase done">
         <div class="phase-marker">
-          <div class="phase-num">5</div>
-          <div class="phase-est">~1 wk</div>
+          <div class="phase-num">&#10003;</div>
+          <div class="phase-est">Done</div>
         </div>
         <div class="phase-body">
           <h3>Packages &amp; Payments</h3>
-          <p>Balance tracking, missed deduction flags, Acuity reconciliation.</p>
+          <p>Balance tracking, progress bars, low-package alerts, unreconciled session flags.</p>
         </div>
       </div>
 
-      <div class="phase">
+      <div class="phase done">
         <div class="phase-marker">
-          <div class="phase-num">6</div>
-          <div class="phase-est">~1 wk</div>
+          <div class="phase-num">&#10003;</div>
+          <div class="phase-est">Done</div>
         </div>
         <div class="phase-body">
           <h3>Dashboard &amp; Reports</h3>
-          <p>Weekly summaries, revenue tracking, .csv export.</p>
+          <p>Weekly summary, this week's sessions, completion rate, .csv export for sessions and clients.</p>
         </div>
       </div>
     </div>
 
     <div style="margin-top:24px;padding:16px 20px;background:var(--surface);border-radius:var(--radius);font-size:13px;color:var(--text-muted)">
-      <strong style="color:var(--text)">Also done:</strong> Full iPhone/iPad responsive design &bull; Hamburger nav on mobile &bull; 52 automated tests run on every commit &bull; Pre-commit hook blocks bad code &bull; M2 favicon &bull; GitHub Pages docs site &bull; <a href="questions.html" style="color:var(--accent)">Questions for Matt</a>
+      <strong style="color:var(--text)">Also done:</strong> iPhone/iPad responsive &bull; Hamburger nav on mobile &bull; 52 automated tests &bull; Pre-commit hook &bull; M2 favicon &bull; GitHub Pages docs &bull; <a href="questions.html" style="color:var(--accent)">Questions for Matt</a>
+    </div>
+
+    <div style="margin-top:16px;padding:16px 20px;background:var(--surface);border-radius:var(--radius);font-size:13px;color:var(--text-muted)">
+      <strong style="color:var(--text)">What we need from Matt to go live:</strong>
+      <ul style="margin:8px 0 0;padding-left:18px;list-style:disc;line-height:2">
+        <li>Real client list (names, phone numbers, preferred days/times, standing slots)</li>
+        <li>Sign in to iCloud on the Mac Mini with his Apple ID</li>
+        <li>Grant Full Disk Access + Automation permissions on the Mac Mini</li>
+        <li>Acuity API credentials (for future payment reconciliation &mdash; <a href="https://github.com/malpern/m2/issues/3" style="color:var(--accent)">Issue #3</a>)</li>
+        <li>Review a few example scheduling texts so the AI matches his voice</li>
+        <li>Confirm his available days/times and session length</li>
+        <li>Anthropic API key for Claude (reply classification)</li>
+      </ul>
     </div>
   </div>
 </section>
