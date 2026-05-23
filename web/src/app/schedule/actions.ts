@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { clients, sessions } from "@/db/schema";
+import { clients, sessions, outreach } from "@/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { generateWeek, getMonday } from "@/lib/scheduler";
 import { revalidatePath } from "next/cache";
@@ -67,9 +67,50 @@ export async function confirmSession(sessionId: number) {
   revalidatePath("/schedule");
 }
 
+export async function cancelSession(sessionId: number) {
+  db.update(sessions)
+    .set({ status: "cancelled" })
+    .where(eq(sessions.id, sessionId))
+    .run();
+  revalidatePath("/schedule");
+}
+
 export async function deleteSession(sessionId: number) {
   db.delete(sessions).where(eq(sessions.id, sessionId)).run();
   revalidatePath("/schedule");
+}
+
+export async function queueNotification(sessionId: number, message: string) {
+  const session = db
+    .select({
+      clientId: sessions.clientId,
+      clientName: clients.name,
+      clientPhone: clients.phone,
+      scheduledDate: sessions.scheduledDate,
+      scheduledTime: sessions.scheduledTime,
+    })
+    .from(sessions)
+    .innerJoin(clients, eq(clients.id, sessions.clientId))
+    .where(eq(sessions.id, sessionId))
+    .get();
+
+  if (!session) return;
+
+  db.insert(outreach).values({
+    clientId: session.clientId,
+    sessionId,
+    weekOf: session.scheduledDate,
+    direction: "sent",
+    messageText: message,
+    status: "pending",
+    sentAt: new Date().toISOString(),
+  }).run();
+
+  // TODO: Call iMessage bridge API to send
+  // await fetch("http://localhost:8787/send", { method: "POST", body: JSON.stringify({ phone: session.clientPhone, message }) });
+
+  revalidatePath("/schedule");
+  revalidatePath("/outreach");
 }
 
 export async function exportICS(weekStartISO: string): Promise<string> {

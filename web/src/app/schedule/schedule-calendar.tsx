@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import {
   generateSchedule,
   updateSessionTime,
+  cancelSession,
+  queueNotification,
   exportICS,
 } from "./actions";
 
@@ -21,6 +23,28 @@ interface SessionEvent {
   scheduledDate: string;
   scheduledTime: string;
   status: string;
+}
+
+interface PendingChange {
+  type: "move" | "cancel";
+  sessionId: number;
+  clientName: string;
+  oldDay: string;
+  oldSlot: string;
+  newDay?: string;
+  newSlot?: string;
+  newDate?: string;
+  newTime?: string;
+  draftMessage: string;
+}
+
+function formatDay(dateStr: string): string {
+  return new Date(dateStr + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" });
+}
+
+function formatSlot(time: string): string {
+  const hour = parseInt(time.split(":")[0]);
+  return hour >= 12 ? `${hour > 12 ? hour - 12 : 12}pm` : `${hour}am`;
 }
 
 function statusColor(status: string) {
@@ -51,6 +75,58 @@ function useIsMobile() {
   return isMobile;
 }
 
+function NotifyDialog({
+  change,
+  onSend,
+  onSkip,
+  onCancel,
+}: {
+  change: PendingChange;
+  onSend: (message: string) => void;
+  onSkip: () => void;
+  onCancel: () => void;
+}) {
+  const [message, setMessage] = useState(change.draftMessage);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="bg-background border border-border rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <h3 className="text-lg font-bold mb-2">
+          {change.type === "move" ? "Session moved" : "Session cancelled"}
+        </h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          {change.clientName}'s session was {change.type === "move"
+            ? `moved from ${change.oldDay} ${change.oldSlot} to ${change.newDay} ${change.newSlot}`
+            : `cancelled (${change.oldDay} ${change.oldSlot})`
+          }. This session was <strong>confirmed</strong> — do you want to notify them?
+        </p>
+
+        <div className="mb-4">
+          <label className="text-sm font-medium mb-1 block">Message</label>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={3}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+
+        <div className="flex gap-2 justify-end">
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            Undo
+          </Button>
+          <Button variant="outline" size="sm" onClick={onSkip}>
+            Move without texting
+          </Button>
+          <Button size="sm" onClick={() => onSend(message)}>
+            Send text
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ScheduleCalendar({
   sessions,
   weekStart,
@@ -61,6 +137,8 @@ export function ScheduleCalendar({
   const calendarRef = useRef<FullCalendar>(null);
   const [isPending, startTransition] = useTransition();
   const [isExporting, setIsExporting] = useState(false);
+  const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
+  const [revertInfo, setRevertInfo] = useState<(() => void) | null>(null);
   const isMobile = useIsMobile();
 
   const prevDate = new Date(weekStart + "T12:00:00");
@@ -86,14 +164,103 @@ export function ScheduleCalendar({
     });
   };
 
-  const handleDrop = (info: { event: { id: string; start: Date | null } }) => {
+  const handleDrop = (info: { event: { id: string; start: Date | null; extendedProps: Record<string, unknown> }; revert: () => void }) => {
     const sessionId = parseInt(info.event.id);
+    const session = sessions.find((s) => s.id === sessionId);
+    if (!session) return;
+
     const newDate = info.event.start!.toISOString().split("T")[0];
     const hours = String(info.event.start!.getHours()).padStart(2, "0");
     const mins = String(info.event.start!.getMinutes()).padStart(2, "0");
+    const newTime = `${hours}:${mins}`;
+
+    if (session.status === "confirmed") {
+      const oldDay = formatDay(session.scheduledDate);
+      const oldSlot = formatSlot(session.scheduledTime);
+      const newDay = formatDay(newDate);
+      const newSlot = formatSlot(newTime);
+      const firstName = session.clientName.split(" ")[0];
+
+      setPendingChange({
+        type: "move",
+        sessionId,
+        clientName: session.clientName,
+        oldDay,
+        oldSlot,
+        newDay,
+        newSlot,
+        newDate,
+        newTime,
+        draftMessage: `Hey ${firstName}, heads up — your ${oldDay} ${oldSlot} session has been moved to ${newDay} at ${newSlot}. Let me know if that works!`,
+      });
+      setRevertInfo(() => info.revert);
+    } else {
+      startTransition(() => {
+        updateSessionTime(sessionId, newDate, newTime);
+      });
+    }
+  };
+
+  const handleEventClick = (info: { event: { id: string; extendedProps: Record<string, unknown> } }) => {
+    const sessionId = parseInt(info.event.id);
+    const session = sessions.find((s) => s.id === sessionId);
+    if (!session) return;
+
+    if (session.status === "confirmed" || session.status === "proposed") {
+      const day = formatDay(session.scheduledDate);
+      const slot = formatSlot(session.scheduledTime);
+      const firstName = session.clientName.split(" ")[0];
+
+      if (session.status === "confirmed") {
+        setPendingChange({
+          type: "cancel",
+          sessionId,
+          clientName: session.clientName,
+          oldDay: day,
+          oldSlot: slot,
+          draftMessage: `Hey ${firstName}, I need to cancel your ${day} ${slot} session. I'll reach out to reschedule.`,
+        });
+      } else {
+        if (confirm(`Cancel ${session.clientName}'s proposed ${day} ${slot} session?`)) {
+          startTransition(() => {
+            cancelSession(sessionId);
+          });
+        }
+      }
+    }
+  };
+
+  const handleNotifySend = (message: string) => {
+    if (!pendingChange) return;
     startTransition(() => {
-      updateSessionTime(sessionId, newDate, `${hours}:${mins}`);
+      if (pendingChange.type === "move" && pendingChange.newDate && pendingChange.newTime) {
+        updateSessionTime(pendingChange.sessionId, pendingChange.newDate, pendingChange.newTime);
+      } else {
+        cancelSession(pendingChange.sessionId);
+      }
+      queueNotification(pendingChange.sessionId, message);
     });
+    setPendingChange(null);
+    setRevertInfo(null);
+  };
+
+  const handleNotifySkip = () => {
+    if (!pendingChange) return;
+    startTransition(() => {
+      if (pendingChange.type === "move" && pendingChange.newDate && pendingChange.newTime) {
+        updateSessionTime(pendingChange.sessionId, pendingChange.newDate, pendingChange.newTime);
+      } else {
+        cancelSession(pendingChange.sessionId);
+      }
+    });
+    setPendingChange(null);
+    setRevertInfo(null);
+  };
+
+  const handleNotifyCancel = () => {
+    if (revertInfo) revertInfo();
+    setPendingChange(null);
+    setRevertInfo(null);
   };
 
   const handleExport = async () => {
@@ -109,7 +276,6 @@ export function ScheduleCalendar({
     setIsExporting(false);
   };
 
-  // Switch view when mobile state changes
   useEffect(() => {
     const api = calendarRef.current?.getApi();
     if (api) {
@@ -119,6 +285,15 @@ export function ScheduleCalendar({
 
   return (
     <div>
+      {pendingChange && (
+        <NotifyDialog
+          change={pendingChange}
+          onSend={handleNotifySend}
+          onSkip={handleNotifySkip}
+          onCancel={handleNotifyCancel}
+        />
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Schedule</h1>
@@ -196,6 +371,7 @@ export function ScheduleCalendar({
           allDaySlot={false}
           editable={!isMobile}
           eventDrop={handleDrop}
+          eventClick={handleEventClick}
           events={events}
           height="auto"
           hiddenDays={[6]}
@@ -226,6 +402,8 @@ export function ScheduleCalendar({
           No Show
         </div>
       </div>
+
+      <p className="text-xs text-muted-foreground mt-2">Click a session to cancel it. Drag to move. Confirmed sessions will prompt you to notify the client.</p>
     </div>
   );
 }
