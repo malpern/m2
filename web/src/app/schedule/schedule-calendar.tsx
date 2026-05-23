@@ -32,6 +32,8 @@ function statusColor(status: string) {
       return { backgroundColor: "#22d3ee", borderColor: "#22d3ee" };
     case "cancelled":
       return { backgroundColor: "#f87171", borderColor: "#f87171" };
+    case "no_show":
+      return { backgroundColor: "#f59e0b", borderColor: "#f59e0b" };
     default:
       return { backgroundColor: "#6c8cff", borderColor: "#6c8cff" };
   }
@@ -133,7 +135,18 @@ export function ScheduleCalendar({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-background p-6 [&_.fc]:text-sm [&_.fc-timegrid-slot]:h-20 [&_.fc-col-header-cell]:py-3 [&_.fc-col-header-cell]:text-xs [&_.fc-col-header-cell]:uppercase [&_.fc-col-header-cell]:tracking-wider [&_.fc-col-header-cell]:text-muted-foreground [&_.fc-col-header-cell]:font-semibold [&_.fc-timegrid-slot-label]:text-sm [&_.fc-timegrid-slot-label]:text-muted-foreground [&_.fc-timegrid-slot-label]:pr-3 [&_.fc-event]:rounded-lg [&_.fc-event]:px-3 [&_.fc-event]:py-2 [&_.fc-event]:text-sm [&_.fc-event]:font-semibold [&_.fc-event]:cursor-grab [&_.fc-event]:border-0 [&_.fc-event]:shadow-sm [&_.fc-scrollgrid]:border-border [&_.fc-scrollgrid td]:border-border [&_.fc-scrollgrid th]:border-border [&_.fc-timegrid-divider]:hidden [&_.fc-day-today]:bg-accent/5">
+      <div className="rounded-lg border bg-background p-6" style={{ ['--fc-event-text-color' as string]: '#fff' }}>
+        <style>{`
+          .fc .fc-timegrid-slot { height: 80px !important; }
+          .fc .fc-col-header-cell { padding: 12px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; }
+          .fc .fc-timegrid-slot-label { font-size: 14px; color: var(--text-muted); padding-right: 12px; }
+          .fc .fc-event { border-radius: 8px !important; padding: 6px 10px !important; font-size: 14px !important; font-weight: 600 !important; cursor: grab !important; border: none !important; box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important; }
+          .fc .fc-event .fc-event-title { font-size: 14px !important; font-weight: 600 !important; }
+          .fc .fc-event .fc-event-time { font-size: 12px !important; opacity: 0.8; }
+          .fc .fc-scrollgrid, .fc .fc-scrollgrid td, .fc .fc-scrollgrid th { border-color: var(--border) !important; }
+          .fc .fc-timegrid-divider { display: none; }
+          .fc .fc-day-today { background: rgba(108,140,255,0.03) !important; }
+        `}</style>
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, interactionPlugin]}
@@ -154,7 +167,7 @@ export function ScheduleCalendar({
         />
       </div>
 
-      <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
+      <div className="flex items-center gap-5 mt-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm bg-[#6c8cff]" />
           Proposed
@@ -170,6 +183,10 @@ export function ScheduleCalendar({
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm bg-[#f87171]" />
           Cancelled
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm bg-[#f59e0b]" />
+          No Show
         </div>
       </div>
     </div>
