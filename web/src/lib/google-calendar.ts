@@ -24,34 +24,43 @@ export async function handleCallback(code: string) {
   const oauth2 = getOAuth2Client();
   const { tokens } = await oauth2.getToken(code);
 
-  if (!tokens.refresh_token || !tokens.access_token) {
-    throw new Error("Missing tokens from Google");
+  if (!tokens.access_token) {
+    throw new Error("Missing access token from Google");
   }
 
-  // Get user email
-  oauth2.setCredentials(tokens);
-  const oauth2Api = google.oauth2({ version: "v2", auth: oauth2 });
-  const userInfo = await oauth2Api.userinfo.get();
+  const refreshToken = tokens.refresh_token ?? "";
+  const expiresAt = new Date(tokens.expiry_date ?? Date.now() + 3600000).toISOString();
+
+  // Try to get email, but don't fail if we can't
+  let email: string | null = null;
+  try {
+    oauth2.setCredentials(tokens);
+    const oauth2Api = google.oauth2({ version: "v2", auth: oauth2 });
+    const userInfo = await oauth2Api.userinfo.get();
+    email = userInfo.data.email ?? null;
+  } catch {
+    // Email lookup failed, continue without it
+  }
 
   // Store in DB (upsert)
   const existing = await db.select().from(googleTokens).get();
   if (existing) {
     await db.update(googleTokens).set({
       accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-      expiresAt: new Date(tokens.expiry_date ?? Date.now() + 3600000).toISOString(),
-      email: userInfo.data.email ?? null,
+      refreshToken: refreshToken || existing.refreshToken,
+      expiresAt,
+      email,
     }).where(eq(googleTokens.id, existing.id)).run();
   } else {
     await db.insert(googleTokens).values({
       accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-      expiresAt: new Date(tokens.expiry_date ?? Date.now() + 3600000).toISOString(),
-      email: userInfo.data.email ?? null,
+      refreshToken: refreshToken,
+      expiresAt,
+      email,
     }).run();
   }
 
-  return userInfo.data.email;
+  return email;
 }
 
 async function getAuthenticatedClient() {

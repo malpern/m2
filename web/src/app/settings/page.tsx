@@ -9,7 +9,13 @@ import { isConnected } from "@/lib/google-calendar";
 
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ calendar?: string; error?: string }>;
+}) {
+  const params = await searchParams;
+  const calendarStatus = params.calendar === "connected" ? "connected" : params.error ? "error" : undefined;
   const googleStatus = await isConnected();
 
   let feedbackItems: Awaited<ReturnType<typeof getFeedbackItems>> = [];
@@ -43,7 +49,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="mb-8">
-        <GoogleCalendarCard connected={googleStatus.connected} email={googleStatus.email} />
+        <GoogleCalendarCard connected={googleStatus.connected} email={googleStatus.email} status={calendarStatus} />
       </div>
 
       <h2 className="text-lg font-bold mb-4">Outreach Timing</h2>
