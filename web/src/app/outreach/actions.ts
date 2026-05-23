@@ -2,6 +2,7 @@
 
 import { db } from "@/db";
 import { outreach, sessions, clients } from "@/db/schema";
+import { sendSMS } from "@/lib/twilio";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -61,8 +62,11 @@ export async function sendOutreachBatch(sessionIds: number[], weekOf: string) {
       sentAt: new Date().toISOString(),
     }).run();
 
-    // TODO: Call iMessage bridge API to actually send
-    // await fetch("http://localhost:8787/send", { method: "POST", body: JSON.stringify({ phone: session.clientPhone, message }) });
+    try {
+      await sendSMS(session.clientPhone, message);
+    } catch (e) {
+      console.error(`Failed to send SMS to ${session.clientPhone}:`, e);
+    }
   }
 
   revalidatePath("/outreach");

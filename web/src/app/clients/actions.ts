@@ -2,6 +2,7 @@
 
 import { db } from "@/db";
 import { clients, outreach, type NewClient } from "@/db/schema";
+import { sendSMS } from "@/lib/twilio";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -105,9 +106,14 @@ export async function sendDirectMessage(clientId: number, message: string) {
     sentAt: new Date().toISOString(),
   }).run();
 
-  // TODO: Call iMessage bridge API to send
-  // const client = db.select().from(clients).where(eq(clients.id, clientId)).get();
-  // await fetch("http://localhost:8787/send", { method: "POST", body: JSON.stringify({ phone: client.phone, message }) });
+  const client = await db.select().from(clients).where(eq(clients.id, clientId)).get();
+  if (client) {
+    try {
+      await sendSMS(client.phone, message);
+    } catch (e) {
+      console.error(`Failed to send SMS to ${client.phone}:`, e);
+    }
+  }
 
   revalidatePath(`/clients/${clientId}`);
 }

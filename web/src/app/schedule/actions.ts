@@ -2,6 +2,7 @@
 
 import { db } from "@/db";
 import { clients, sessions, outreach, prioritySettings } from "@/db/schema";
+import { sendSMS } from "@/lib/twilio";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { generateWeek, getMonday } from "@/lib/scheduler";
 import { DEFAULT_WEIGHTS } from "@/lib/priority";
@@ -130,8 +131,11 @@ export async function queueNotification(sessionId: number, message: string) {
     sentAt: new Date().toISOString(),
   }).run();
 
-  // TODO: Call iMessage bridge API to send
-  // await fetch("http://localhost:8787/send", { method: "POST", body: JSON.stringify({ phone: session.clientPhone, message }) });
+  try {
+    await sendSMS(session.clientPhone, message);
+  } catch (e) {
+    console.error(`Failed to send SMS to ${session.clientPhone}:`, e);
+  }
 
   revalidatePath("/schedule");
   revalidatePath("/outreach");
