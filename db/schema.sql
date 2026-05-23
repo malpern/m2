@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS clients (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    phone TEXT NOT NULL UNIQUE,
+    phone TEXT NOT NULL,
     category TEXT NOT NULL DEFAULT 'active'
         CHECK (category IN ('active', 'inactive', 'in_season', 'on_break', 'vacation')),
     grade_level TEXT

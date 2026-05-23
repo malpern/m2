@@ -1,23 +1,31 @@
 import subprocess
 import logging
+import tempfile
+import os
 
 logger = logging.getLogger(__name__)
 
 
 def send_imessage(phone_number: str, message: str) -> bool:
     """Send an iMessage via AppleScript. Returns True on success."""
-    escaped_message = message.replace('"', '\\"').replace("'", "'\\''")
     escaped_phone = phone_number.replace('"', '')
 
-    applescript = f'''
-    tell application "Messages"
-        set targetService to 1st account whose service type = iMessage
-        set targetBuddy to participant "{escaped_phone}" of targetService
-        send "{escaped_message}" to targetBuddy
-    end tell
-    '''
-
+    # Write message to a temp file to avoid AppleScript escaping issues
+    fd, tmp_path = tempfile.mkstemp(suffix=".txt")
     try:
+        with os.fdopen(fd, 'w') as f:
+            f.write(message)
+
+        applescript = f'''
+        set msgFile to POSIX file "{tmp_path}"
+        set msgText to read msgFile as «class utf8»
+        tell application "Messages"
+            set targetService to 1st account whose service type = iMessage
+            set targetBuddy to participant "{escaped_phone}" of targetService
+            send msgText to targetBuddy
+        end tell
+        '''
+
         result = subprocess.run(
             ["osascript", "-e", applescript],
             capture_output=True,
@@ -36,3 +44,5 @@ def send_imessage(phone_number: str, message: str) -> bool:
     except Exception as e:
         logger.error(f"Failed to send to {phone_number}: {e}")
         return False
+    finally:
+        os.unlink(tmp_path)

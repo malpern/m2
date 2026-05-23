@@ -20,11 +20,26 @@ Respond with a JSON object containing:
 - "confidence": float 0-1 for how confident you are
 - "reasoning": one sentence explaining your read
 
+IMPORTANT: During testing, replies may be prefixed with a client name like "Jake: yeah I can do 3pm".
+Strip the name prefix before interpreting — the actual response starts after the colon.
+If the name in the prefix doesn't match the expected client name, flag that in your reasoning.
+
 Examples of confirmed: "yes", "sounds good", "see you then", "perfect", "I'll be there"
 Examples of declined: "can't make it", "I'm out this week", "no"
 Examples of reschedule: "can we do 5 instead?", "what about Thursday?", "is 6pm open?"
 Examples of ambiguous: "maybe", "let me check", "I'll let you know", "not sure yet"
 """
+
+
+def parse_named_reply(raw_reply: str) -> tuple[str | None, str]:
+    """Parse a 'Name: message' reply. Returns (name_or_none, message)."""
+    if ":" in raw_reply:
+        parts = raw_reply.split(":", 1)
+        name_part = parts[0].strip()
+        # Only treat as a name prefix if it's short and looks like a name
+        if len(name_part.split()) <= 3 and len(name_part) < 30:
+            return name_part, parts[1].strip()
+    return None, raw_reply
 
 
 def interpret_reply(

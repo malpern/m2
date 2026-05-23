@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matt Scheduler — Your Training Business, Automated</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface-2: #232733;
+    --border: #2e3345;
+    --text: #e4e6ed;
+    --text-muted: #8b8fa3;
+    --accent: #6c8cff;
+    --accent-dim: #4a65cc;
+    --green: #34d399;
+    --green-dim: rgba(52, 211, 153, 0.15);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251, 191, 36, 0.15);
+    --red: #f87171;
+    --red-dim: rgba(248, 113, 113, 0.15);
+    --purple: #a78bfa;
+    --purple-dim: rgba(167, 139, 250, 0.15);
+    --cyan: #22d3ee;
+    --cyan-dim: rgba(34, 211, 238, 0.15);
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 80px 0 60px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-badge {
+    display: inline-block;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 6px 16px;
+    border-radius: 100px;
+    margin-bottom: 20px;
+  }
+  .hero h1 {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero p {
+    font-size: 18px;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  /* ── Sections ── */
+  section { padding: 64px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+
+  h2 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .section-sub {
+    color: var(--text-muted);
+    font-size: 15px;
+    margin-bottom: 36px;
+    line-height: 1.7;
+  }
+
+  /* ── Cards ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 32px;
+  }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+  }
+  .card h3 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .card ul { list-style: none; }
+  .card ul li {
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--text-muted);
+    position: relative;
+    padding-left: 20px;
+    line-height: 1.6;
+  }
+  .card ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 14px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+  .card-problem ul li::before { background: var(--red); }
+  .card-solution ul li::before { background: var(--green); }
+
+  .icon-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  /* ── Stats ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 32px;
+  }
+  @media (max-width: 640px) { .stats { grid-template-columns: 1fr; } }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+  }
+  .stat-num {
+    font-size: 36px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .stat-label {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  /* ── Screens ── */
+  .screens {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-top: 32px;
+  }
+  .screen {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+  }
+  @media (max-width: 640px) {
+    .screen { flex-direction: column; }
+  }
+  .screen-icon {
+    font-size: 36px;
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    background: var(--surface-2);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .screen-body { flex: 1; }
+  .screen-body h3 { font-size: 18px; margin-bottom: 6px; }
+  .screen-body p { font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+  .screen-body .screen-detail {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 12px 16px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    line-height: 1.6;
+  }
+
+  /* ── Workflow ── */
+  .workflow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 32px;
+  }
+  .wf-step {
+    display: flex;
+    gap: 20px;
+    padding-bottom: 32px;
+  }
+  .wf-step:last-child { padding-bottom: 0; }
+  .wf-step:last-child .wf-line { display: none; }
+
+  .wf-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 40px;
+  }
+  .wf-dot {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .wf-line {
+    width: 2px;
+    flex: 1;
+    margin-top: 8px;
+  }
+  .wf-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    flex: 1;
+  }
+  .wf-content h3 { margin-bottom: 6px; font-size: 16px; }
+  .wf-content p { font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+  .wf-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+    margin-top: 10px;
+  }
+
+  .wf-auto .wf-dot { background: var(--green-dim); color: var(--green); }
+  .wf-auto .wf-line { background: var(--green-dim); }
+  .wf-auto .wf-tag { background: var(--green-dim); color: var(--green); }
+
+  .wf-human .wf-dot { background: var(--amber-dim); color: var(--amber); }
+  .wf-human .wf-line { background: var(--amber-dim); }
+  .wf-human .wf-tag { background: var(--amber-dim); color: var(--amber); }
+
+  .wf-ai .wf-dot { background: var(--purple-dim); color: var(--purple); }
+  .wf-ai .wf-line { background: var(--purple-dim); }
+  .wf-ai .wf-tag { background: var(--purple-dim); color: var(--purple); }
+
+  /* ── Priority Table ── */
+  .priority-table-wrap {
+    overflow-x: auto;
+    margin-top: 32px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  thead { background: var(--surface-2); }
+  th {
+    text-align: left;
+    padding: 14px 16px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  td {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tr:hover td { background: rgba(108, 140, 255, 0.03); }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-green { background: var(--green-dim); color: var(--green); }
+  .badge-amber { background: var(--amber-dim); color: var(--amber); }
+  .badge-red { background: var(--red-dim); color: var(--red); }
+  .badge-purple { background: var(--purple-dim); color: var(--purple); }
+  .badge-muted { background: var(--surface-2); color: var(--text-muted); }
+
+  .score-bar {
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+  }
+  .score-pip {
+    width: 8px;
+    height: 14px;
+    border-radius: 2px;
+    background: var(--surface-2);
+  }
+  .score-pip.filled { background: var(--accent); }
+
+  .rank-num {
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-2);
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  /* ── Message Examples ── */
+  .msg-thread {
+    max-width: 420px;
+    margin: 24px auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .msg {
+    padding: 12px 16px;
+    border-radius: 18px;
+    font-size: 14px;
+    max-width: 85%;
+    line-height: 1.45;
+  }
+  .msg-out {
+    background: #2563eb;
+    color: white;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .msg-in {
+    background: var(--surface-2);
+    color: var(--text);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+  .msg-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .msg-label-right { text-align: right; }
+  .msg-interpretation {
+    font-size: 12px;
+    color: var(--green);
+    margin-top: 4px;
+    font-style: italic;
+  }
+  .msg-interp-amber { color: var(--amber); }
+  .msg-interp-blue { color: var(--accent); }
+  .msg-interp-red { color: var(--red); }
+
+  /* ── How It Connects ── */
+  .connect-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 32px;
+  }
+  .connect-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .connect-item:last-child { border-bottom: none; }
+  .connect-icon {
+    font-size: 24px;
+    width: 48px;
+    height: 48px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .connect-arrow {
+    color: var(--accent);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .connect-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .connect-text strong { color: var(--text); }
+
+  /* ── Phases ── */
+  .phases {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 32px;
+  }
+  .phase {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  .phase-marker {
+    flex-shrink: 0;
+    width: 48px;
+    text-align: center;
+  }
+  .phase-marker .phase-num {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--surface-2);
+    line-height: 1;
+  }
+  .phase-marker .phase-est {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .phase.done .phase-num { color: var(--green); }
+  .phase.active .phase-num { color: var(--accent); }
+  .phase-body h3 { font-size: 16px; margin-bottom: 4px; }
+  .phase-body p { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+  /* ── Footer ── */
+  footer {
+    padding: 40px 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════ HERO ════════════════════════ -->
+<div class="hero">
+  <div class="container">
+    <div class="hero-badge">Built for Matt</div>
+    <h1>Matt Scheduler</h1>
+    <p>The scheduling system that lives in your head &mdash; but now it runs itself. Your rules, your priorities, your voice. You stay in control. The busywork disappears.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════ THE PROBLEM ════════════════════════ -->
+<section>
+  <div class="container">
+    <h2>What This Fixes</h2>
+    <p class="section-sub">You've built a great system in your head. The problem isn't the logic &mdash; it's that you're the only one running it, and things slip through the cracks.</p>
+
+    <div class="two-col">
+      <div class="card card-problem">
+        <h3><span class="icon-circle" style="background:var(--red-dim);color:var(--red)">!</span> What's Costing You Time &amp; Money</h3>
+        <ul>
+          <li>You text every client manually, in the right order, every week</li>
+          <li>You play schedule Tetris in your head across 20+ athletes</li>
+          <li>2&ndash;3 sessions per month don't get deducted from packages</li>
+          <li>Sunday logging is tedious &mdash; you're copying from Calendar to Sheets by hand</li>
+          <li>Some clients slip through &mdash; you forget to follow up or lose track of who replied</li>
+        </ul>
+      </div>
+      <div class="card card-solution">
+        <h3><span class="icon-circle" style="background:var(--green-dim);color:var(--green)">&#10003;</span> What You'll Get</h3>
+        <ul>
+          <li>A website where you see your whole week laid out &mdash; drag and drop to adjust</li>
+          <li>One click to text all your clients in the right priority order</li>
+          <li>AI reads their replies and sorts them: confirmed, declined, needs follow-up</li>
+          <li>Export your schedule straight into Google Calendar</li>
+          <li>Export session logs straight into Google Sheets</li>
+          <li>Alerts when sessions don't match up with payments</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num" style="color:var(--red)">2&ndash;3</div>
+        <div class="stat-label">sessions/month lost to missed package deductions</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" style="color:var(--amber)">3&ndash;4 hrs</div>
+        <div class="stat-label">spent texting, scheduling, and logging every week</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" style="color:var(--green)">1 click</div>
+        <div class="stat-label">to send all outreach and export to Calendar/Sheets</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ WHAT YOU'LL SEE ════════════════════════ -->
+<section>
+  <div class="container">
+    <h2>What You'll See</h2>
+    <p class="section-sub">Six screens. Everything you need to run your training business, in one place. Open it in any browser on your phone, laptop, or tablet.</p>
+
+    <div class="screens">
+      <div class="screen">
+        <div class="screen-icon">📋</div>
+        <div class="screen-body">
+          <h3>Dashboard</h3>
+          <p>Your home base. See this week at a glance: how many sessions are booked, who hasn't replied yet, which clients are running low on their packages, and anything that needs your attention.</p>
+        </div>
+      </div>
+
+      <div class="screen">
+        <div class="screen-icon">📅</div>
+        <div class="screen-body">
+          <h3>Schedule</h3>
+          <p>Your weekly calendar &mdash; the Tetris board. Hit "Generate Week" and the system fills in time slots using your rules. Drag and drop to make adjustments. When it looks right, approve it and the outreach texts go out.</p>
+          <div class="screen-detail">
+            <strong>Export to Google Calendar:</strong> One button downloads an .ics file. Open it and your confirmed sessions appear in Google Calendar. No syncing, no setup, no passwords.
+          </div>
+        </div>
+      </div>
+
+      <div class="screen">
+        <div class="screen-icon">👥</div>
+        <div class="screen-body">
+          <h3>Clients</h3>
+          <p>Your full roster. See everyone ranked by priority. Add new clients, change someone's status (active, on break, in-season), adjust their behavior score, set preferred days and times. The priority ranking updates automatically.</p>
+        </div>
+      </div>
+
+      <div class="screen">
+        <div class="screen-icon">💬</div>
+        <div class="screen-body">
+          <h3>Outreach</h3>
+          <p>Your message command center. See every text sent and every reply received. The AI tells you who confirmed, who wants to reschedule, and who's being wishy-washy. You can override any decision or send a follow-up with one tap.</p>
+        </div>
+      </div>
+
+      <div class="screen">
+        <div class="screen-icon">📦</div>
+        <div class="screen-body">
+          <h3>Packages</h3>
+          <p>Track every client's package balance. See sessions purchased vs. sessions delivered. Get alerts when someone is running low, or when you've front-loaded sessions that haven't been paid for yet.</p>
+          <div class="screen-detail">
+            <strong>The money leak fix:</strong> The system flags every completed session that wasn't deducted from a package. No more forgetting to reconcile &mdash; those 2&ndash;3 misses per month go to zero.
+          </div>
+        </div>
+      </div>
+
+      <div class="screen">
+        <div class="screen-icon">📊</div>
+        <div class="screen-body">
+          <h3>Reports</h3>
+          <p>Weekly and monthly summaries. Sessions completed, revenue tracked, client retention trends. Everything you currently log by hand on Sundays, done automatically.</p>
+          <div class="screen-detail">
+            <strong>Export to Google Sheets:</strong> One button downloads a .csv file. Open it in Google Sheets and your session logs are ready &mdash; same format you already use.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ YOUR WEEK ════════════════════════ -->
+<section>
+  <div class="container">
+    <h2>Your Week, Step by Step</h2>
+    <p class="section-sub">This is what your typical week looks like with the system running. You stay in charge of every decision &mdash; the system just handles the legwork.</p>
+
+    <div class="workflow">
+      <div class="wf-step wf-auto">
+        <div class="wf-marker"><div class="wf-dot">1</div><div class="wf-line"></div></div>
+        <div class="wf-content">
+          <h3>System Builds Your Week</h3>
+          <p>You open the Schedule page and hit "Generate Week." The system looks at last week, checks who's active and what slots they prefer, and fills in the calendar using your rules &mdash; 3pm slots first, then 5pm, then 6pm. College-bound kids get priority.</p>
+          <span class="wf-tag">Happens automatically</span>
+        </div>
+      </div>
+
+      <div class="wf-step wf-human">
+        <div class="wf-marker"><div class="wf-dot">2</div><div class="wf-line"></div></div>
+        <div class="wf-content">
+          <h3>You Review and Adjust</h3>
+          <p>Look at the proposed schedule. If something's off, drag a session to a different slot or swap clients around. The system flags things like "Tyler only has 1 session left on his package" so you know before reaching out. When it looks right, hit "Approve."</p>
+          <span class="wf-tag">Your call</span>
+        </div>
+      </div>
+
+      <div class="wf-step wf-auto">
+        <div class="wf-marker"><div class="wf-dot">3</div><div class="wf-line"></div></div>
+        <div class="wf-content">
+          <h3>Texts Go Out From Your Phone</h3>
+          <p>The system sends iMessages to each client in priority order, from your real phone number. They look and feel like texts from you &mdash; because they are. Clients don't know anything changed.</p>
+          <span class="wf-tag">Happens automatically</span>
+        </div>
+      </div>
+
+      <div class="wf-step wf-ai">
+        <div class="wf-marker"><div class="wf-dot">4</div><div class="wf-line"></div></div>
+        <div class="wf-content">
+          <h3>AI Reads the Replies</h3>
+          <p>When clients text back, the AI reads their response and figures out what they meant. "Yeah 3pm works" &rarr; confirmed. "Can we do 5 instead?" &rarr; reschedule request. "Idk let me check" &rarr; needs follow-up. If the AI isn't sure, it flags it for you.</p>
+          <span class="wf-tag">AI handles it</span>
+        </div>
+      </div>
+
+      <div class="wf-step wf-auto">
+        <div class="wf-marker"><div class="wf-dot">5</div><div class="wf-line"></div></div>
+        <div class="wf-content">
+          <h3>Schedule Fills In</h3>
+          <p>Confirmed sessions lock into the calendar. If someone declines, their slot opens back up for the next client in line. If someone doesn't reply within 24 hours, they get a follow-up text automatically.</p>
+          <span class="wf-tag">Happens automatically</span>
+        </div>
+      </div>
+
+      <div class="wf-step wf-human">
+        <div class="wf-marker"><div class="wf-dot">6</div><div class="wf-line"></div></div>
+        <div class="wf-content">
+          <h3>Export and You're Done</h3>
+          <p>Export the finalized schedule to Google Calendar with one click. At the end of the week, export your session logs to Google Sheets. The Packages page tells you if any sessions weren't deducted &mdash; no more guessing.</p>
+          <span class="wf-tag">One click each</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ HOW TEXTING WORKS ════════════════════════ -->
+<section>
+  <div class="container">
+    <h2>How the Texting Works</h2>
+    <p class="section-sub">Messages come from your real iMessage account, from your real phone number. Clients text you back like normal. The AI sorts the replies so you don't have to.</p>
+
+    <div class="two-col">
+      <div>
+        <h3 style="color:var(--green);margin-bottom:8px">Client confirms</h3>
+        <div class="msg-thread">
+          <div class="msg-label msg-label-right">Sent from your number</div>
+          <div class="msg msg-out">Hey Jake, are you free Thursday at 3pm for a session?</div>
+          <div class="msg-label">Jake texts back</div>
+          <div class="msg msg-in">Yeah 3pm works, see you then</div>
+          <div class="msg-interpretation">&rarr; Confirmed &mdash; automatically added to your schedule</div>
+        </div>
+      </div>
+      <div>
+        <h3 style="color:var(--amber);margin-bottom:8px">Client is unsure</h3>
+        <div class="msg-thread">
+          <div class="msg-label msg-label-right">Sent from your number</div>
+          <div class="msg msg-out">Hey Dylan, are you free Tuesday at 3pm for a session?</div>
+          <div class="msg-label">Dylan texts back</div>
+          <div class="msg msg-in">idk let me check with my mom</div>
+          <div class="msg-interpretation msg-interp-amber">&rarr; Unclear &mdash; flagged for you, auto follow-up in 24hrs</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col" style="margin-top:24px">
+      <div>
+        <h3 style="color:var(--accent);margin-bottom:8px">Client wants a different time</h3>
+        <div class="msg-thread">
+          <div class="msg-label msg-label-right">Sent from your number</div>
+          <div class="msg msg-out">Hey Sofia, are you free Thursday at 3pm for a session?</div>
+          <div class="msg-label">Sofia texts back</div>
+          <div class="msg msg-in">Can we do 5 instead?</div>
+          <div class="msg-interpretation msg-interp-blue">&rarr; Wants to reschedule to Thursday 5pm</div>
+        </div>
+      </div>
+      <div>
+        <h3 style="color:var(--red);margin-bottom:8px">Client can't make it</h3>
+        <div class="msg-thread">
+          <div class="msg-label msg-label-right">Sent from your number</div>
+          <div class="msg msg-out">Hey Tyler, are you free Friday at 5pm for a session?</div>
+          <div class="msg-label">Tyler texts back</div>
+          <div class="msg msg-in">Nah I cant this week</div>
+          <div class="msg-interpretation msg-interp-red">&rarr; Declined &mdash; slot opens up for the next athlete</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ PRIORITY SYSTEM ════════════════════════ -->
+<section>
+  <div class="container">
+    <h2>Your Priority System</h2>
+    <p class="section-sub">We built this from exactly how you described it. College-bound kids come first, then grade level, then who's actually putting in the work. This is what the system uses to decide who gets texted first and who gets the best time slots.</p>
+
+    <div class="card" style="margin-bottom:32px">
+      <h3 style="margin-bottom:16px">How the ranking works</h3>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span class="badge badge-purple" style="min-width:28px;text-align:center;margin-top:2px">1</span>
+          <span style="font-size:14px;line-height:1.6"><strong>College-bound athletes always come first.</strong> A college-bound sophomore outranks a non-college senior.</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span class="badge badge-purple" style="min-width:28px;text-align:center;margin-top:2px">2</span>
+          <span style="font-size:14px;line-height:1.6"><strong>Within that, grade level matters.</strong> Seniors before juniors, juniors before sophomores, sophomores before freshmen.</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span class="badge badge-purple" style="min-width:28px;text-align:center;margin-top:2px">3</span>
+          <span style="font-size:14px;line-height:1.6"><strong>Behavior score breaks ties.</strong> The kid who shows up every week and works hard ranks higher than the kid who talks big but doesn't follow through.</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span class="badge badge-purple" style="min-width:28px;text-align:center;margin-top:2px">4</span>
+          <span style="font-size:14px;line-height:1.6"><strong>3pm slots get filled first</strong> because they're the hardest to fill. Then 5pm, then 6pm.</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>Here's how your current roster stacks up</h3>
+    <div class="priority-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Priority</th>
+            <th>Athlete</th>
+            <th>Status</th>
+            <th>Grade</th>
+            <th>College</th>
+            <th>Effort</th>
+            <th>Sessions Left</th>
+            <th>Preferred Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="rank-num">1</span></td>
+            <td><strong>Jake Rivera</strong></td>
+            <td><span class="badge badge-green">In Season</span></td>
+            <td>Senior</td>
+            <td><span class="badge badge-purple">D1</span></td>
+            <td>
+              <div class="score-bar">
+                <div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip"></div>
+              </div>
+            </td>
+            <td><span class="badge badge-green">8</span></td>
+            <td>3pm</td>
+          </tr>
+          <tr>
+            <td><span class="rank-num">2</span></td>
+            <td><strong>Sofia Chen</strong></td>
+            <td><span class="badge badge-green">In Season</span></td>
+            <td>Junior</td>
+            <td><span class="badge badge-purple">D2</span></td>
+            <td>
+              <div class="score-bar">
+                <div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip"></div><div class="score-pip"></div>
+              </div>
+            </td>
+            <td><span class="badge badge-amber">3</span></td>
+            <td>3pm</td>
+          </tr>
+          <tr>
+            <td><span class="rank-num">3</span></td>
+            <td><strong>Dylan Ward</strong></td>
+            <td><span class="badge badge-green">In Season</span></td>
+            <td>Junior</td>
+            <td><span class="badge badge-purple">Yes</span></td>
+            <td>
+              <div class="score-bar">
+                <div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip"></div><div class="score-pip"></div><div class="score-pip"></div><div class="score-pip"></div><div class="score-pip"></div>
+              </div>
+            </td>
+            <td><span class="badge badge-green">5</span></td>
+            <td>3pm</td>
+          </tr>
+          <tr>
+            <td><span class="rank-num">4</span></td>
+            <td><strong>Tyler Brooks</strong></td>
+            <td><span class="badge badge-amber">Active</span></td>
+            <td>Senior</td>
+            <td><span class="badge badge-muted">&mdash;</span></td>
+            <td>
+              <div class="score-bar">
+                <div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip"></div><div class="score-pip"></div><div class="score-pip"></div>
+              </div>
+            </td>
+            <td><span class="badge badge-red">1</span></td>
+            <td>5pm</td>
+          </tr>
+          <tr>
+            <td><span class="rank-num">5</span></td>
+            <td><strong>Ava Simmons</strong></td>
+            <td><span class="badge badge-amber">Active</span></td>
+            <td>Junior</td>
+            <td><span class="badge badge-muted">&mdash;</span></td>
+            <td>
+              <div class="score-bar">
+                <div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip"></div><div class="score-pip"></div><div class="score-pip"></div>
+              </div>
+            </td>
+            <td><span class="badge badge-green">4</span></td>
+            <td>5pm</td>
+          </tr>
+          <tr>
+            <td><span class="rank-num">6</span></td>
+            <td><strong>Mia Patterson</strong></td>
+            <td><span class="badge badge-amber">Active</span></td>
+            <td>Sophomore</td>
+            <td><span class="badge badge-muted">&mdash;</span></td>
+            <td>
+              <div class="score-bar">
+                <div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip"></div><div class="score-pip"></div><div class="score-pip"></div><div class="score-pip"></div>
+              </div>
+            </td>
+            <td><span class="badge badge-green">7</span></td>
+            <td>5pm</td>
+          </tr>
+          <tr>
+            <td><span class="rank-num">7</span></td>
+            <td><strong>Emma Lawson</strong></td>
+            <td><span class="badge badge-amber">Active</span></td>
+            <td>Freshman</td>
+            <td><span class="badge badge-muted">&mdash;</span></td>
+            <td>
+              <div class="score-bar">
+                <div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip"></div><div class="score-pip"></div>
+              </div>
+            </td>
+            <td><span class="badge badge-green">4</span></td>
+            <td>6pm</td>
+          </tr>
+          <tr style="opacity:0.5">
+            <td><span class="rank-num" style="color:var(--text-muted)">&mdash;</span></td>
+            <td><strong>Carlos Gutierrez</strong></td>
+            <td><span class="badge badge-muted">On Break</span></td>
+            <td>Senior</td>
+            <td><span class="badge badge-muted">&mdash;</span></td>
+            <td>
+              <div class="score-bar">
+                <div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip filled"></div><div class="score-pip"></div><div class="score-pip"></div><div class="score-pip"></div><div class="score-pip"></div><div class="score-pip"></div><div class="score-pip"></div>
+              </div>
+            </td>
+            <td><span class="badge badge-muted">6</span></td>
+            <td>Flexible</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-top:12px">Note: "Behavior" is renamed "Effort" here &mdash; it's your 1&ndash;10 rating of consistency, effort, and follow-through. Carlos is grayed out because he's on break and won't receive outreach.</p>
+  </div>
+</section>
+
+<!-- ════════════════════════ HOW IT CONNECTS ════════════════════════ -->
+<section>
+  <div class="container">
+    <h2>How It Connects to Your Existing Tools</h2>
+    <p class="section-sub">You keep using Google Calendar, Google Sheets, and Acuity exactly like you do now. The system just fills them for you instead of you doing it by hand.</p>
+
+    <div class="connect-flow">
+      <div class="connect-item">
+        <div class="connect-icon">📅</div>
+        <div class="connect-arrow">&rarr;</div>
+        <div class="connect-text"><strong>Google Calendar:</strong> Export your confirmed schedule as a file. Open it and everything shows up on your calendar. Same as getting a calendar invite &mdash; one click.</div>
+      </div>
+      <div class="connect-item">
+        <div class="connect-icon">📊</div>
+        <div class="connect-arrow">&rarr;</div>
+        <div class="connect-text"><strong>Google Sheets:</strong> Export your session logs as a spreadsheet file. Open it in Sheets and it's ready to go. Same columns you already use &mdash; client name, date, time, session count.</div>
+      </div>
+      <div class="connect-item">
+        <div class="connect-icon">💬</div>
+        <div class="connect-arrow">&rarr;</div>
+        <div class="connect-text"><strong>iMessage:</strong> Texts come from your real phone number. Clients text you back like normal. They won't notice anything different &mdash; no apps to download, no links to click.</div>
+      </div>
+      <div class="connect-item">
+        <div class="connect-icon">💳</div>
+        <div class="connect-arrow">&rarr;</div>
+        <div class="connect-text"><strong>Acuity:</strong> The system tracks which sessions were deducted from packages and which weren't. End of week, you get a list of anything that needs to be reconciled. No more guessing.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ SCHEDULE RULES ════════════════════════ -->
+<section>
+  <div class="container">
+    <h2>Your Scheduling Rules</h2>
+    <p class="section-sub">These are the rules the system follows when it builds your week. They come straight from how you described your process.</p>
+
+    <div class="card">
+      <div style="display:flex;flex-direction:column;gap:16px;font-size:14px;line-height:1.65">
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span class="badge badge-purple" style="min-width:20px;text-align:center;margin-top:3px">1</span>
+          <span>Fill <strong>3pm slots first</strong> &mdash; they're the hardest to fill and the most valuable to lock down early</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span class="badge badge-purple" style="min-width:20px;text-align:center;margin-top:3px">2</span>
+          <span>Then fill <strong>5pm before 6pm</strong> &mdash; if 5pm fills up, you might not need to stay until 7</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span class="badge badge-purple" style="min-width:20px;text-align:center;margin-top:3px">3</span>
+          <span>If 5pm <strong>doesn't fill</strong>, move those athletes to 6pm instead</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span class="badge badge-purple" style="min-width:20px;text-align:center;margin-top:3px">4</span>
+          <span>Every serious athlete gets <strong>at least 1 session per week</strong></span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span class="badge badge-purple" style="min-width:20px;text-align:center;margin-top:3px">5</span>
+          <span>Only your top-tier college-bound athletes get <strong>2 sessions per week</strong></span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span class="badge badge-purple" style="min-width:20px;text-align:center;margin-top:3px">6</span>
+          <span><strong>No Saturdays</strong> unless absolutely necessary &mdash; that's family time. Sundays are full workdays</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px">
+          <span class="badge badge-purple" style="min-width:20px;text-align:center;margin-top:3px">7</span>
+          <span>Extra sessions only go to lower-priority athletes if there's <strong>leftover space</strong> in the week</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════ BUILD PLAN ════════════════════════ -->
+<section>
+  <div class="container">
+    <h2>What's Built &amp; What's Next</h2>
+    <p class="section-sub">We're building this in stages so you can start using it before everything's done. The texting system is already working.</p>
+
+    <div class="phases">
+      <div class="phase done">
+        <div class="phase-marker">
+          <div class="phase-num">&#10003;</div>
+          <div class="phase-est">Done</div>
+        </div>
+        <div class="phase-body">
+          <h3>Texting &amp; AI</h3>
+          <p>The system can send iMessages from your phone, read replies, and use AI to figure out what the client meant (confirmed, declined, wants to reschedule, or unclear). Tested and working.</p>
+        </div>
+      </div>
+
+      <div class="phase active">
+        <div class="phase-marker">
+          <div class="phase-num">2</div>
+          <div class="phase-est">~1 wk</div>
+        </div>
+        <div class="phase-body">
+          <h3>The Website &amp; Client Roster</h3>
+          <p>Build the website you'll actually use. Start with the Clients page so you can see your full roster ranked by priority, add/edit athletes, and manage statuses.</p>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-marker">
+          <div class="phase-num">3</div>
+          <div class="phase-est">~1 wk</div>
+        </div>
+        <div class="phase-body">
+          <h3>Schedule &amp; Calendar</h3>
+          <p>The interactive weekly calendar. Hit "Generate Week" and it fills in using your rules. Drag and drop to adjust. Export to Google Calendar with one click.</p>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-marker">
+          <div class="phase-num">4</div>
+          <div class="phase-est">~1&ndash;2 wk</div>
+        </div>
+        <div class="phase-body">
+          <h3>Outreach &amp; Messaging</h3>
+          <p>Connect the texting system to the website. See all your outreach in one place &mdash; who was contacted, who replied, what they said, and what the AI thinks it means.</p>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-marker">
+          <div class="phase-num">5</div>
+          <div class="phase-est">~1 wk</div>
+        </div>
+        <div class="phase-body">
+          <h3>Packages &amp; Payments</h3>
+          <p>Track packages, flag missed deductions, and see which sessions need to be reconciled in Acuity. This is where the money leak stops.</p>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="phase-marker">
+          <div class="phase-num">6</div>
+          <div class="phase-est">~1 wk</div>
+        </div>
+        <div class="phase-body">
+          <h3>Dashboard &amp; Reports</h3>
+          <p>Your home screen with everything at a glance, plus weekly/monthly reports. Export session logs to Google Sheets with one click. No more Sunday manual logging.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    Matt Scheduler &mdash; your system, automated
+  </div>
+</footer>
+
+</body>
+</html>
