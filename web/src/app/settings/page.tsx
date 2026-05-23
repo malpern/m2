@@ -1,5 +1,5 @@
-import { db } from "@/db";
 import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
 import { SettingsEditor } from "./settings-editor";
 
 export const dynamic = "force-dynamic";
@@ -7,8 +7,28 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-8">
-      <h1 className="text-2xl font-bold tracking-tight mb-2">Settings</h1>
-      <p className="text-muted-foreground text-sm mb-8">Configure how outreach works.</p>
+      <h1 className="text-2xl font-bold tracking-tight mb-6">Settings</h1>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+        <Link href="/schedule/priority">
+          <Card className="hover:border-foreground/20 transition-colors cursor-pointer h-full">
+            <CardContent className="pt-5 pb-4">
+              <div className="font-semibold text-sm">Priority Ranking</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Adjust how college, grade, and effort affect ranking</div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/schedule/availability">
+          <Card className="hover:border-foreground/20 transition-colors cursor-pointer h-full">
+            <CardContent className="pt-5 pb-4">
+              <div className="font-semibold text-sm">Availability</div>
+              <div className="text-xs text-muted-foreground mt-0.5">Set your default hours and weekly overrides</div>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
+      <h2 className="text-lg font-bold mb-4">Outreach Timing</h2>
       <SettingsEditor />
     </div>
   );

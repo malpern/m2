@@ -1,33 +1,5 @@
-import { db } from "@/db";
-import { outreach, clients } from "@/db/schema";
-import { desc } from "drizzle-orm";
-import { MessagesView } from "./messages-view";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default async function MessagesPage() {
-  const allMessages = await db
-    .select({
-      id: outreach.id,
-      clientId: outreach.clientId,
-      direction: outreach.direction,
-      messageText: outreach.messageText,
-      interpretation: outreach.interpretation,
-      status: outreach.status,
-      sentAt: outreach.sentAt,
-      repliedAt: outreach.repliedAt,
-    })
-    .from(outreach)
-    .orderBy(desc(outreach.sentAt))
-    .all();
-
-  const allClients = await db.select().from(clients).all();
-  const clientMap = Object.fromEntries(allClients.map((c) => [c.id, c.name]));
-
-  const messagesWithClient = allMessages.map((msg) => ({
-    ...msg,
-    clientName: clientMap[msg.clientId] ?? "Unknown",
-  }));
-
-  return <MessagesView messages={messagesWithClient} />;
+export default function MessagesPage() {
+  redirect("/outreach");
 }

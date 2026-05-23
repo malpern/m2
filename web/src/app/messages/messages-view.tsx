@@ -65,7 +65,7 @@ export function MessagesView({ messages }: { messages: Message[] }) {
   const totalShown = grouped.reduce((sum, g) => sum + g.messages.length, 0);
 
   return (
-    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
+    <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Messages</h1>

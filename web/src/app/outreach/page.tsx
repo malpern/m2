@@ -8,7 +8,7 @@ import {
   getNeedsMattAttention,
   getOutreachSummary,
 } from "@/lib/outreach-engine";
-import { OutreachDashboard } from "./outreach-dashboard";
+import { OutreachWithMessages } from "./outreach-with-messages";
 
 export const dynamic = "force-dynamic";
 
@@ -52,14 +52,34 @@ export default async function OutreachPage() {
   const nextBatch = getNextBatchToSend(items);
   const needsAttention = getNeedsMattAttention(items);
 
+  // All messages for the Messages tab
+  const allMessages = await db
+    .select({
+      id: outreach.id,
+      clientId: outreach.clientId,
+      clientName: clients.name,
+      direction: outreach.direction,
+      messageText: outreach.messageText,
+      interpretation: outreach.interpretation,
+      status: outreach.status,
+      sentAt: outreach.sentAt,
+      repliedAt: outreach.repliedAt,
+    })
+    .from(outreach)
+    .innerJoin(clients, eq(clients.id, outreach.clientId))
+    .all();
+
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
-      <OutreachDashboard
-        items={items}
-        summary={summary}
-        nextBatch={nextBatch}
-        needsAttention={needsAttention}
-        weekOf={weekStart}
+      <OutreachWithMessages
+        outreachProps={{
+          items,
+          summary,
+          nextBatch,
+          needsAttention,
+          weekOf: weekStart,
+        }}
+        messages={allMessages}
       />
     </div>
   );

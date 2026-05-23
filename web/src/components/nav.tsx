@@ -10,8 +10,6 @@ const links = [
   { href: "/schedule", label: "Schedule" },
   { href: "/clients", label: "Clients" },
   { href: "/outreach", label: "Outreach" },
-  { href: "/messages", label: "Messages" },
-  { href: "/packages", label: "Packages" },
   { href: "/reports", label: "Reports" },
   { href: "/settings", label: "Settings" },
 ];
@@ -20,17 +18,20 @@ export function Nav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const isActive = (href: string) => {
+    if (href === "/schedule") return pathname === "/schedule" || pathname.startsWith("/schedule/");
+    if (href === "/clients") return pathname.startsWith("/clients");
+    if (href === "/outreach") return pathname.startsWith("/outreach") || pathname.startsWith("/messages");
+    if (href === "/reports") return pathname.startsWith("/reports") || pathname.startsWith("/packages");
+    if (href === "/settings") return pathname.startsWith("/settings");
+    return pathname === href;
+  };
+
   return (
     <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-6xl items-center px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5 mr-8">
-          <Image
-            src="/m2logo.png"
-            alt="M2"
-            width={28}
-            height={28}
-            className="rounded-md"
-          />
+          <Image src="/m2logo.png" alt="M2" width={28} height={28} className="rounded-md" />
           <span className="text-sm font-bold tracking-tight hidden sm:inline">M2 Scheduler</span>
         </Link>
 
@@ -41,10 +42,7 @@ export function Nav() {
               href={link.href}
               className={cn(
                 "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                pathname === link.href ||
-                  (link.href === "/clients" && pathname.startsWith("/clients/")) ||
-                  (link.href === "/schedule" && pathname.startsWith("/schedule/")) ||
-                  (link.href === "/messages" && pathname.startsWith("/messages/"))
+                isActive(link.href)
                   ? "bg-accent/15 text-accent-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent/8"
               )}
@@ -56,26 +54,6 @@ export function Nav() {
 
         <div className="flex-1" />
 
-        <Link
-          href="/schedule/priority"
-          className="hidden sm:inline-flex text-xs text-muted-foreground hover:text-foreground transition-colors mr-3"
-        >
-          Priority
-        </Link>
-        <Link
-          href="/schedule/availability"
-          className="hidden sm:inline-flex text-xs text-muted-foreground hover:text-foreground transition-colors mr-3"
-        >
-          Availability
-        </Link>
-        <Link
-          href="/"
-          className="hidden sm:inline-flex text-xs text-muted-foreground hover:text-foreground transition-colors mr-3"
-        >
-          Plan Week
-        </Link>
-
-        {/* Mobile hamburger */}
         <button
           className="ml-auto sm:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5"
           onClick={() => setMobileOpen(!mobileOpen)}
@@ -96,8 +74,7 @@ export function Nav() {
               onClick={() => setMobileOpen(false)}
               className={cn(
                 "block rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                pathname === link.href ||
-                  (link.href === "/clients" && pathname.startsWith("/clients/"))
+                isActive(link.href)
                   ? "bg-accent/15 text-accent-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent/8"
               )}
@@ -105,27 +82,6 @@ export function Nav() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/schedule/priority"
-            onClick={() => setMobileOpen(false)}
-            className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            Priority
-          </Link>
-          <Link
-            href="/schedule/availability"
-            onClick={() => setMobileOpen(false)}
-            className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            Availability
-          </Link>
-          <Link
-            href="/"
-            onClick={() => setMobileOpen(false)}
-            className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            Plan Week
-          </Link>
         </div>
       )}
     </nav>

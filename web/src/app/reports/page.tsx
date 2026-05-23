@@ -1,7 +1,7 @@
 import { db } from "@/db";
-import { sessions } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
-import { ReportsDashboard } from "./reports-dashboard";
+import { clients, packages, sessions } from "@/db/schema";
+import { eq, and, sql } from "drizzle-orm";
+import { ReportsWithPackages } from "./reports-with-packages";
 
 export const dynamic = "force-dynamic";
 
@@ -16,27 +16,50 @@ export default async function ReportsPage() {
   const unreconciled = all.filter((s) => s.status === "completed" && !s.reconciled).length;
 
   const weeks = new Set(
-    all
-      .filter((s) => s.status === "completed")
-      .map((s) => {
-        const d = new Date(s.scheduledDate + "T12:00:00");
-        const day = d.getDay();
-        const mon = new Date(d);
-        mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
-        return mon.toISOString().split("T")[0];
-      })
+    all.filter((s) => s.status === "completed").map((s) => {
+      const d = new Date(s.scheduledDate + "T12:00:00");
+      const day = d.getDay();
+      const mon = new Date(d);
+      mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+      return mon.toISOString().split("T")[0];
+    })
   );
   const weeklyAvg = weeks.size > 0 ? Math.round(completed / weeks.size) : 0;
 
-  const activeClients = await db
-    .select({ count: sql<number>`count(*)` })
+  // Packages data
+  const clientPackages = (await db
+    .select({
+      clientId: clients.id,
+      clientName: clients.name,
+      category: clients.category,
+      packageId: packages.id,
+      totalSessions: packages.totalSessions,
+      sessionsUsed: packages.sessionsUsed,
+      status: packages.status,
+    })
+    .from(packages)
+    .innerJoin(clients, eq(clients.id, packages.clientId))
+    .where(eq(packages.status, "active"))
+    .all()
+  ).map((p) => ({ ...p, remaining: p.totalSessions - p.sessionsUsed }));
+
+  const unreconciledSessions = await db
+    .select({
+      sessionId: sessions.id,
+      clientId: clients.id,
+      clientName: clients.name,
+      scheduledDate: sessions.scheduledDate,
+      scheduledTime: sessions.scheduledTime,
+      slot: sessions.slot,
+    })
     .from(sessions)
-    .where(eq(sessions.status, "completed"))
-    .get();
+    .innerJoin(clients, eq(clients.id, sessions.clientId))
+    .where(and(eq(sessions.status, "completed"), eq(sessions.reconciled, false)))
+    .all();
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-8">
-      <ReportsDashboard
+      <ReportsWithPackages
         stats={{
           totalSessions: total,
           completed,
@@ -44,9 +67,11 @@ export default async function ReportsPage() {
           noShow,
           completionRate,
           unreconciled,
-          activeClients: activeClients?.count ?? 0,
+          activeClients: 0,
           weeklyAvg,
         }}
+        clientPackages={clientPackages}
+        unreconciledSessions={unreconciledSessions}
       />
     </div>
   );
