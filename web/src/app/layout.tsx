@@ -16,6 +16,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Matt Scheduler",
   description: "AI-powered training session scheduler",
+  icons: {
+    icon: "/m2logo.png",
+    apple: "/m2logo.png",
+  },
 };
 
 export const viewport: Viewport = {
