@@ -68,6 +68,24 @@ export async function updateClientStatus(id: number, status: string) {
   revalidatePath(`/clients/${id}`);
 }
 
+export async function updateClientField(id: number, field: string, value: string | number | boolean) {
+  const updates: Record<string, unknown> = {};
+  if (field === "collegeBound") {
+    updates[field] = value;
+  } else if (field === "behaviorScore" || field === "maxSessionsPerWeek") {
+    updates[field] = typeof value === "number" ? value : parseInt(value as string);
+  } else if (field === "category") {
+    updates[field] = value as Category;
+  } else if (field === "gradeLevel") {
+    updates[field] = (value || null) as Grade;
+  } else {
+    updates[field] = value;
+  }
+  db.update(clients).set(updates).where(eq(clients.id, id)).run();
+  revalidatePath("/clients");
+  revalidatePath(`/clients/${id}`);
+}
+
 export async function deleteClient(id: number) {
   db.delete(clients).where(eq(clients.id, id)).run();
   revalidatePath("/clients");

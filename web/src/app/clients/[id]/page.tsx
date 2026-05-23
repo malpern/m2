@@ -4,46 +4,36 @@ import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { StatusChanger } from "./status-changer";
 import { DeleteButton } from "./delete-button";
+import {
+  EditableText,
+  EditableNumber,
+  EditableSelect,
+  EditableToggle,
+  EditableDays,
+  EditableScoreBar,
+} from "./editable-fields";
 
 export const dynamic = "force-dynamic";
 
-function ScoreBar({ score }: { score: number }) {
-  return (
-    <div className="flex gap-1">
-      {Array.from({ length: 10 }, (_, i) => (
-        <div
-          key={i}
-          className={`h-5 w-2.5 rounded-sm ${
-            i < score ? "bg-blue-500" : "bg-muted"
-          }`}
-        />
-      ))}
-      <span className="ml-2 text-sm text-muted-foreground">{score}/10</span>
-    </div>
-  );
-}
+const STATUS_OPTIONS = [
+  { value: "active", label: "Active", className: "text-amber-400" },
+  { value: "in_season", label: "In Season", className: "text-emerald-400" },
+  { value: "on_break", label: "On Break", className: "text-muted-foreground" },
+  { value: "vacation", label: "Vacation", className: "text-muted-foreground" },
+  { value: "inactive", label: "Inactive", className: "text-muted-foreground" },
+];
 
-function categoryBadge(category: string) {
-  switch (category) {
-    case "in_season":
-      return <Badge className="bg-emerald-500/15 text-emerald-400 border-0">In Season</Badge>;
-    case "active":
-      return <Badge className="bg-amber-500/15 text-amber-400 border-0">Active</Badge>;
-    case "on_break":
-      return <Badge variant="secondary">On Break</Badge>;
-    case "vacation":
-      return <Badge variant="secondary">Vacation</Badge>;
-    case "inactive":
-      return <Badge variant="secondary">Inactive</Badge>;
-    default:
-      return <Badge variant="secondary">{category}</Badge>;
-  }
-}
+const GRADE_OPTIONS = [
+  { value: "freshman", label: "Freshman" },
+  { value: "sophomore", label: "Sophomore" },
+  { value: "junior", label: "Junior" },
+  { value: "senior", label: "Senior" },
+  { value: "post_grad", label: "Post-Grad" },
+  { value: "adult", label: "Adult" },
+];
 
 export default async function ClientDetailPage({
   params,
@@ -74,25 +64,49 @@ export default async function ClientDetailPage({
 
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{client.name}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            <EditableText clientId={clientId} field="name" value={client.name} className="text-3xl font-bold" inputClassName="text-3xl font-bold" />
+          </h1>
           <div className="flex items-center gap-3 mt-2">
-            <StatusChanger clientId={client.id} currentStatus={client.category} />
-            {client.collegeBound && (
-              <Badge className="bg-purple-500/15 text-purple-400 border-0">College Bound</Badge>
-            )}
+            <EditableSelect
+              clientId={clientId}
+              field="category"
+              value={client.category}
+              options={STATUS_OPTIONS}
+            />
+            <EditableToggle
+              clientId={clientId}
+              field="collegeBound"
+              value={client.collegeBound}
+              label="College Bound"
+            />
             {client.gradeLevel && (
-              <span className="text-sm text-muted-foreground capitalize">{client.gradeLevel}</span>
+              <EditableSelect
+                clientId={clientId}
+                field="gradeLevel"
+                value={client.gradeLevel}
+                options={GRADE_OPTIONS}
+              />
+            )}
+            {!client.gradeLevel && (
+              <EditableSelect
+                clientId={clientId}
+                field="gradeLevel"
+                value=""
+                options={[{ value: "", label: "Set grade..." }, ...GRADE_OPTIONS]}
+              />
             )}
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Link href={`/clients/${clientId}/edit`}>
-            <Button variant="outline" size="sm">Edit</Button>
-          </Link>
           <DeleteButton clientId={clientId} clientName={client.name} />
           <div className="text-right text-sm text-muted-foreground">
-            <div>{client.phone}</div>
-            <div>Max {client.maxSessionsPerWeek} session{client.maxSessionsPerWeek === 1 ? "" : "s"}/week</div>
+            <div>
+              <EditableText clientId={clientId} field="phone" value={client.phone} />
+            </div>
+            <div className="flex items-center gap-1 justify-end">
+              Max <EditableNumber clientId={clientId} field="maxSessionsPerWeek" value={client.maxSessionsPerWeek} min={1} max={7} /> session{client.maxSessionsPerWeek === 1 ? "" : "s"}/week
+            </div>
           </div>
         </div>
       </div>
@@ -105,32 +119,34 @@ export default async function ClientDetailPage({
           <CardContent className="space-y-4">
             <div>
               <div className="text-sm text-muted-foreground mb-1">Effort Score</div>
-              <ScoreBar score={client.behaviorScore} />
+              <EditableScoreBar clientId={clientId} score={client.behaviorScore} />
             </div>
             <Separator />
             <div>
               <div className="text-sm text-muted-foreground mb-1">Preferred Days</div>
-              <div className="flex gap-2">
-                {preferredDays.length > 0
-                  ? preferredDays.map((day) => (
-                      <Badge key={day} variant="secondary" className="capitalize">{day}</Badge>
-                    ))
-                  : <span className="text-sm text-muted-foreground">No preference</span>}
-              </div>
+              <EditableDays clientId={clientId} value={preferredDays} />
             </div>
             <div>
               <div className="text-sm text-muted-foreground mb-1">Preferred Time</div>
-              <div className="text-sm">{client.preferredTime ?? "Flexible"}</div>
+              <EditableText
+                clientId={clientId}
+                field="preferredTime"
+                value={client.preferredTime ?? ""}
+                className="text-sm"
+                inputClassName="text-sm"
+              />
             </div>
-            {client.notes && (
-              <>
-                <Separator />
-                <div>
-                  <div className="text-sm text-muted-foreground mb-1">Notes</div>
-                  <div className="text-sm">{client.notes}</div>
-                </div>
-              </>
-            )}
+            <Separator />
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">Notes</div>
+              <EditableText
+                clientId={clientId}
+                field="notes"
+                value={client.notes ?? ""}
+                className="text-sm"
+                inputClassName="text-sm w-full"
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -168,9 +184,7 @@ export default async function ClientDetailPage({
                   />
                 </div>
                 {activePackage.totalSessions - activePackage.sessionsUsed <= 2 && (
-                  <div className="text-sm text-red-400 font-medium">
-                    Package almost exhausted
-                  </div>
+                  <div className="text-sm text-red-400 font-medium">Package almost exhausted</div>
                 )}
               </div>
             ) : (
