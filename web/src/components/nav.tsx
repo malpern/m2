@@ -13,6 +13,7 @@ const links = [
   { href: "/messages", label: "Messages" },
   { href: "/packages", label: "Packages" },
   { href: "/reports", label: "Reports" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function Nav() {

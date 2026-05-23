@@ -23,6 +23,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { computePriorityScore, DEFAULT_WEIGHTS, type PriorityWeights } from "@/lib/priority";
+import { OUTREACH_DEFAULTS } from "@/lib/outreach-config";
 import { savePrioritySettings, saveSortOrder, clearClientSortOrder, clearAllSortOrders } from "./actions";
 
 interface ClientPreview {
@@ -261,9 +262,26 @@ export function PriorityEditor({
         <CardContent className="pt-4">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
             <SortableContext items={rankedClients.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-              {rankedClients.map((client, i) => (
-                <SortableClientRow key={client.id} client={client} rank={i + 1} onUnpin={() => handleUnpin(client.id)} />
-              ))}
+              {rankedClients.map((client, i) => {
+                const wave1End = OUTREACH_DEFAULTS.wave1Size;
+                const wave2End = OUTREACH_DEFAULTS.wave1Size * 2;
+                const showWaveDivider =
+                  (i === wave1End || i === wave2End) && i < rankedClients.length;
+                const waveLabel = i === wave1End ? "Wave 2 — sent ~45 min later" : i === wave2End ? "Wave 3 — sent ~2 hours later" : "";
+
+                return (
+                  <div key={client.id}>
+                    {showWaveDivider && (
+                      <div className="flex items-center gap-3 py-2 my-1">
+                        <div className="flex-1 h-px bg-border" />
+                        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{waveLabel}</span>
+                        <div className="flex-1 h-px bg-border" />
+                      </div>
+                    )}
+                    <SortableClientRow client={client} rank={i + 1} onUnpin={() => handleUnpin(client.id)} />
+                  </div>
+                );
+              })}
             </SortableContext>
           </DndContext>
         </CardContent>
