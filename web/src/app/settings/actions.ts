@@ -1,10 +1,9 @@
 "use server";
 
+import { db } from "@/db";
+import { outreachSettings } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import path from "path";
-
-const CONFIG_PATH = path.join(process.cwd(), "outreach-settings.json");
 
 export type OutreachSettings = {
   wave1Size: number;
@@ -27,18 +26,50 @@ const DEFAULTS: OutreachSettings = {
 };
 
 export async function getOutreachSettings(): Promise<OutreachSettings> {
-  if (existsSync(CONFIG_PATH)) {
-    try {
-      return { ...DEFAULTS, ...JSON.parse(readFileSync(CONFIG_PATH, "utf-8")) };
-    } catch {
-      return DEFAULTS;
-    }
+  let row = await db.select().from(outreachSettings).get();
+  if (!row) {
+    await db.insert(outreachSettings).values({}).run();
+    row = (await db.select().from(outreachSettings).get())!;
   }
-  return DEFAULTS;
+  return {
+    wave1Size: row.wave1Size,
+    wave2DelayMinutes: row.wave2DelayMinutes,
+    wave3DelayMinutes: row.wave3DelayMinutes,
+    followUpAfterMinutes: row.followUpAfterMinutes,
+    moveOnAfterMinutes: row.moveOnAfterMinutes,
+    outreachDay: row.outreachDay,
+    outreachHour: row.outreachHour,
+  };
 }
 
 export async function saveOutreachSettings(settings: OutreachSettings) {
-  writeFileSync(CONFIG_PATH, JSON.stringify(settings, null, 2));
+  const existing = await db.select().from(outreachSettings).get();
+  if (existing) {
+    await db.update(outreachSettings)
+      .set({
+        wave1Size: settings.wave1Size,
+        wave2DelayMinutes: settings.wave2DelayMinutes,
+        wave3DelayMinutes: settings.wave3DelayMinutes,
+        followUpAfterMinutes: settings.followUpAfterMinutes,
+        moveOnAfterMinutes: settings.moveOnAfterMinutes,
+        outreachDay: settings.outreachDay,
+        outreachHour: settings.outreachHour,
+      })
+      .where(eq(outreachSettings.id, existing.id))
+      .run();
+  } else {
+    await db.insert(outreachSettings)
+      .values({
+        wave1Size: settings.wave1Size,
+        wave2DelayMinutes: settings.wave2DelayMinutes,
+        wave3DelayMinutes: settings.wave3DelayMinutes,
+        followUpAfterMinutes: settings.followUpAfterMinutes,
+        moveOnAfterMinutes: settings.moveOnAfterMinutes,
+        outreachDay: settings.outreachDay,
+        outreachHour: settings.outreachHour,
+      })
+      .run();
+  }
   revalidatePath("/settings");
   revalidatePath("/outreach");
 }

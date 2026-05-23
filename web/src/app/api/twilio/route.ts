@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { outreach, clients } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
+import { classifyReply } from "@/lib/classify-reply";
 
 function twiml(message?: string): Response {
   const body = message
@@ -50,15 +51,8 @@ export async function POST(request: NextRequest) {
       .filter((o) => o.direction === "sent")
       .sort((a, b) => (b.sentAt ?? "").localeCompare(a.sentAt ?? ""))[0];
 
-    let interpretation: "confirmed" | "declined" | "reschedule_request" | "ambiguous" = "ambiguous";
-
-    if (/^(yes|yeah|yep|yup|sure|sounds good|see you|perfect|ok|okay|i'm in|let's do it|confirmed|down|bet|absolutely|for sure|works for me|i'll be there)/i.test(lower)) {
-      interpretation = "confirmed";
-    } else if (/^(no|nah|can't|cant|not this week|pass|skip|i'm out|busy|won't make it)/i.test(lower)) {
-      interpretation = "declined";
-    } else if (/instead|different|switch|change|move|reschedule|how about|what about|can we do|another time|later/i.test(lower)) {
-      interpretation = "reschedule_request";
-    }
+    const outreachMessage = lastSent?.messageText ?? "";
+    const { interpretation } = await classifyReply(outreachMessage, body);
 
     await db.insert(outreach).values({
       clientId: client.id,

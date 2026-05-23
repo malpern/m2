@@ -119,6 +119,18 @@ export const prioritySettings = sqliteTable("priority_settings", {
   updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const outreachSettings = sqliteTable("outreach_settings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  wave1Size: integer("wave1_size").notNull().default(8),
+  wave2DelayMinutes: integer("wave2_delay_minutes").notNull().default(45),
+  wave3DelayMinutes: integer("wave3_delay_minutes").notNull().default(120),
+  followUpAfterMinutes: integer("follow_up_after_minutes").notNull().default(60),
+  moveOnAfterMinutes: integer("move_on_after_minutes").notNull().default(180),
+  outreachDay: text("outreach_day").notNull().default("saturday"),
+  outreachHour: integer("outreach_hour").notNull().default(9),
+  updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type Client = typeof clients.$inferSelect;
 export type PrioritySettingsRow = typeof prioritySettings.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
