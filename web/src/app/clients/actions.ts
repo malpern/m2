@@ -33,6 +33,10 @@ export async function createClient(formData: FormData) {
     maxSessionsPerWeek: parseInt(formData.get("maxSessionsPerWeek") as string) || 1,
     standingSlot: (formData.get("standingSlot") as string) || null,
     notes: (formData.get("notes") as string) || null,
+    sessionRate: formData.get("sessionRate") ? Math.round(parseFloat(formData.get("sessionRate") as string) * 100) : null,
+    sessionType: ((formData.get("sessionType") as string) || null) as "individual" | "dual" | "group" | null,
+    parentGuardian: (formData.get("parentGuardian") as string) || null,
+    email: (formData.get("email") as string) || null,
   };
 
   await db.insert(clients).values(data).run();
@@ -54,6 +58,10 @@ export async function updateClient(id: number, formData: FormData) {
       maxSessionsPerWeek: parseInt(formData.get("maxSessionsPerWeek") as string) || 1,
       standingSlot: (formData.get("standingSlot") as string) || null,
       notes: (formData.get("notes") as string) || null,
+      sessionRate: formData.get("sessionRate") ? Math.round(parseFloat(formData.get("sessionRate") as string) * 100) : null,
+      sessionType: ((formData.get("sessionType") as string) || null) as "individual" | "dual" | "group" | null,
+      parentGuardian: (formData.get("parentGuardian") as string) || null,
+      email: (formData.get("email") as string) || null,
     })
     .where(eq(clients.id, id))
     .run();
@@ -74,7 +82,7 @@ export async function updateClientStatus(id: number, status: string) {
 const ALLOWED_FIELDS = new Set([
   "name", "phone", "category", "gradeLevel", "collegeBound",
   "behaviorScore", "preferredDays", "preferredTime", "maxSessionsPerWeek",
-  "standingSlot", "notes",
+  "standingSlot", "notes", "sessionRate", "sessionType", "parentGuardian", "email",
 ]);
 
 export async function updateClientField(id: number, field: string, value: string | number | boolean) {
@@ -85,6 +93,8 @@ export async function updateClientField(id: number, field: string, value: string
   const updates: Record<string, unknown> = {};
   if (field === "collegeBound") {
     updates[field] = value;
+  } else if (field === "sessionRate") {
+    updates[field] = typeof value === "number" ? value : parseInt(value as string) || null;
   } else if (field === "behaviorScore" || field === "maxSessionsPerWeek") {
     updates[field] = typeof value === "number" ? value : parseInt(value as string);
   } else if (field === "category") {

@@ -20,6 +20,7 @@ function makeSession(overrides: Record<string, unknown> = {}) {
     scheduledTime: "15:00",
     slot: "3pm" as const,
     status: "proposed" as const,
+    sessionType: null,
     gcalEventId: null,
     loggedToSheets: false,
     reconciled: false,

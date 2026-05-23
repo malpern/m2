@@ -31,6 +31,7 @@ export default async function OutreachPage() {
       scheduledTime: sessions.scheduledTime,
       slot: sessions.slot,
       status: sessions.status,
+      sessionType: sessions.sessionType,
       gcalEventId: sessions.gcalEventId,
       loggedToSheets: sessions.loggedToSheets,
       reconciled: sessions.reconciled,

@@ -24,6 +24,12 @@ export const clients = sqliteTable("clients", {
   sortOrder: integer("sort_order"),
   notes: text("notes"),
   googleSheetsName: text("google_sheets_name"),
+  sessionRate: integer("session_rate"),
+  sessionType: text("session_type", {
+    enum: ["individual", "dual", "group"],
+  }),
+  parentGuardian: text("parent_guardian"),
+  email: text("email"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
 });
@@ -42,6 +48,7 @@ export const packages = sqliteTable("packages", {
   })
     .notNull()
     .default("active"),
+  pricePerSession: integer("price_per_session"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -61,6 +68,9 @@ export const sessions = sqliteTable("sessions", {
   })
     .notNull()
     .default("proposed"),
+  sessionType: text("session_type", {
+    enum: ["individual", "group", "late_cancel"],
+  }),
   gcalEventId: text("gcal_event_id"),
   loggedToSheets: integer("logged_to_sheets", { mode: "boolean" })
     .notNull()

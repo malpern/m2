@@ -59,6 +59,42 @@ export function ClientForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" name="email" type="email" defaultValue={client?.email ?? ""} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="parentGuardian">Parent / Guardian</Label>
+          <Input id="parentGuardian" name="parentGuardian" defaultValue={client?.parentGuardian ?? ""} />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="sessionRate">Session Rate ($)</Label>
+          <Input
+            id="sessionRate"
+            name="sessionRate"
+            type="number"
+            min={0}
+            defaultValue={client?.sessionRate ? client.sessionRate / 100 : ""}
+            placeholder="e.g. 150"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="sessionType">Session Type</Label>
+          <Select name="sessionType" defaultValue={client?.sessionType ?? ""}>
+            <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="individual">Individual</SelectItem>
+              <SelectItem value="dual">Dual</SelectItem>
+              <SelectItem value="group">Group</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
           <Label htmlFor="category">Status</Label>
           <Select name="category" defaultValue={client?.category ?? "active"}>
             <SelectTrigger><SelectValue /></SelectTrigger>

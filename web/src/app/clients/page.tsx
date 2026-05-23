@@ -31,6 +31,10 @@ export default async function ClientsPage() {
       sortOrder: clients.sortOrder,
       notes: clients.notes,
       googleSheetsName: clients.googleSheetsName,
+      sessionRate: clients.sessionRate,
+      sessionType: clients.sessionType,
+      parentGuardian: clients.parentGuardian,
+      email: clients.email,
       createdAt: clients.createdAt,
       updatedAt: clients.updatedAt,
       sessionsRemaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`.as(

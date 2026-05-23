@@ -13,6 +13,10 @@ CREATE TABLE clients (
     sort_order INTEGER,
     notes TEXT,
     google_sheets_name TEXT,
+    session_rate INTEGER,
+    session_type TEXT,
+    parent_guardian TEXT,
+    email TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
@@ -25,6 +29,7 @@ CREATE TABLE packages (
     sessions_used INTEGER NOT NULL DEFAULT 0,
     purchase_date TEXT,
     status TEXT NOT NULL DEFAULT 'active',
+    price_per_session INTEGER,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -36,6 +41,7 @@ CREATE TABLE sessions (
     scheduled_time TEXT NOT NULL,
     slot TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'proposed',
+    session_type TEXT,
     gcal_event_id TEXT,
     logged_to_sheets INTEGER NOT NULL DEFAULT 0,
     reconciled INTEGER NOT NULL DEFAULT 0,

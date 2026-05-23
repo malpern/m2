@@ -68,6 +68,7 @@ export default async function DashboardPage() {
     standingSlot: clients.standingSlot, packageId: sessions.packageId, scheduledDate: sessions.scheduledDate,
     scheduledTime: sessions.scheduledTime, slot: sessions.slot, status: sessions.status,
     gcalEventId: sessions.gcalEventId, loggedToSheets: sessions.loggedToSheets, reconciled: sessions.reconciled, createdAt: sessions.createdAt,
+    sessionType: sessions.sessionType,
   }).from(sessions).innerJoin(clients, eq(clients.id, sessions.clientId)).where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd))).all();
 
   const outreachItems = buildOutreachQueue(currentWeekFullSessions, weekOutreach);

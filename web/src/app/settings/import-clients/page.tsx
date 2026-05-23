@@ -5,21 +5,19 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-
-type PreviewClient = {
-  name: string;
-  inSheets: boolean;
-  inCalendar: boolean;
-  sessions2026: number;
-  lastDate: string;
-};
+import type { ImportPreviewClient } from "@/app/api/import-clients/route";
 
 type PreviewData = {
-  preview: PreviewClient[];
+  preview: ImportPreviewClient[];
   existingCount: number;
   sheetsCount: number;
   calendarCount: number;
 };
+
+function formatRate(cents: number | null): string {
+  if (!cents) return "—";
+  return `$${(cents / 100).toFixed(0)}`;
+}
 
 export default function ImportClientsPage() {
   const router = useRouter();
@@ -35,12 +33,7 @@ export default function ImportClientsPage() {
       .then((r) => r.json())
       .then((d: PreviewData) => {
         setData(d);
-        const defaultSelected = new Set(
-          d.preview
-            .filter((c) => c.inSheets && c.inCalendar)
-            .map((c) => c.name)
-        );
-        setSelected(defaultSelected);
+        setSelected(new Set(d.preview.map((c) => c.name)));
       })
       .catch(() => setError("Failed to load client data from Google"))
       .finally(() => setLoading(false));
@@ -65,15 +58,23 @@ export default function ImportClientsPage() {
   }
 
   async function handleImport() {
-    if (!confirm(`This will replace all ${data?.existingCount ?? 0} existing clients with ${selected.size} real clients. Continue?`))
+    if (!data) return;
+    if (
+      !confirm(
+        `This will replace all ${data.existingCount} existing clients with ${selected.size} real clients. Continue?`
+      )
+    )
       return;
 
     setImporting(true);
     try {
+      const selectedClients = data.preview.filter((c) =>
+        selected.has(c.name)
+      );
       const res = await fetch("/api/import-clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ selectedNames: Array.from(selected) }),
+        body: JSON.stringify({ selectedClients }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -94,13 +95,17 @@ export default function ImportClientsPage() {
               {result.imported} clients imported
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              All fake test data has been replaced with real client data.
+              All test data has been replaced with real clients, rates, and
+              packages.
             </p>
             <div className="flex gap-3 justify-center">
               <Button onClick={() => router.push("/clients")}>
                 View Clients
               </Button>
-              <Button variant="outline" onClick={() => router.push("/settings")}>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/settings")}
+              >
                 Back to Settings
               </Button>
             </div>
@@ -111,10 +116,13 @@ export default function ImportClientsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-8">
-      <h1 className="text-2xl font-bold tracking-tight mb-1">Import Clients</h1>
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
+      <h1 className="text-2xl font-bold tracking-tight mb-1">
+        Import Clients
+      </h1>
       <p className="text-sm text-muted-foreground mb-6">
-        Pull real client names from Google Sheets and Calendar. This replaces all existing test data.
+        Pull real client data from Google Sheets and Calendar. This replaces all
+        existing test data.
       </p>
 
       {error && (
@@ -143,7 +151,9 @@ export default function ImportClientsPage() {
             <Card>
               <CardContent className="pt-4 pb-3 text-center">
                 <div className="text-2xl font-bold">{data.calendarCount}</div>
-                <div className="text-xs text-muted-foreground">In Calendar</div>
+                <div className="text-xs text-muted-foreground">
+                  In Calendar
+                </div>
               </CardContent>
             </Card>
             <Card>
@@ -171,28 +181,57 @@ export default function ImportClientsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-1">
+              <div className="hidden sm:grid grid-cols-[auto_1fr_60px_70px_80px_90px] gap-x-3 px-2 pb-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider border-b">
+                <div className="w-4" />
+                <div>Name</div>
+                <div className="text-right">Rate</div>
+                <div className="text-right">Sessions</div>
+                <div className="text-right">Package</div>
+                <div className="text-right">Source</div>
+              </div>
+              <div className="space-y-0.5 mt-1">
                 {data.preview.map((client) => (
                   <label
                     key={client.name}
-                    className="flex items-center gap-3 py-2 px-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                    className="grid grid-cols-1 sm:grid-cols-[auto_1fr_60px_70px_80px_90px] gap-x-3 items-center py-2 px-2 rounded-md hover:bg-muted/50 cursor-pointer"
                   >
                     <Checkbox
                       checked={selected.has(client.name)}
                       onCheckedChange={() => toggle(client.name)}
                     />
-                    <span className="font-medium text-sm flex-1">
-                      {client.name}
-                    </span>
-                    <div className="flex gap-1.5">
+                    <div>
+                      <span className="font-medium text-sm">
+                        {client.name}
+                      </span>
+                      {client.parentGuardian && (
+                        <span className="text-[11px] text-muted-foreground ml-1.5">
+                          ({client.parentGuardian})
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right text-sm tabular-nums">
+                      {formatRate(client.rate)}
+                    </div>
+                    <div className="text-right text-sm tabular-nums text-muted-foreground">
+                      {client.sessions2026 || "—"}
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground">
+                      {client.lastPackage || "—"}
+                    </div>
+                    <div className="flex gap-1 justify-end">
                       {client.inSheets && (
                         <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                          Sheets ({client.sessions2026})
+                          Sheets
                         </span>
                       )}
                       {client.inCalendar && (
                         <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">
-                          Calendar
+                          Cal
+                        </span>
+                      )}
+                      {client.hasDue && (
+                        <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded">
+                          DUE
                         </span>
                       )}
                     </div>
@@ -211,13 +250,17 @@ export default function ImportClientsPage() {
                 ? "Importing..."
                 : `Import ${selected.size} Clients`}
             </Button>
-            <Button variant="outline" onClick={() => router.push("/settings")}>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/settings")}
+            >
               Cancel
             </Button>
           </div>
 
           <p className="text-xs text-muted-foreground mt-3">
-            To revert, re-seed the database with test data from the command line.
+            To revert, re-seed the database with test data from the command
+            line.
           </p>
         </>
       )}
