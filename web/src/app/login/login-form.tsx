@@ -82,9 +82,6 @@ export function LoginForm() {
             }`}
           />
         </div>
-        {error && (
-          <p className="text-sm text-red-400 text-center fade-up">Wrong password</p>
-        )}
         {success && (
           <div className="flex items-center justify-center gap-2 fade-up">
             <svg className="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">

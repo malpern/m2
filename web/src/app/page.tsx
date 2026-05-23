@@ -1,67 +1,59 @@
 import { db } from "@/db";
-import { clients, packages, sessions, outreach, defaultAvailability, weeklyOverrides } from "@/db/schema";
+import { clients, packages, sessions, outreach, defaultAvailability } from "@/db/schema";
 import { eq, sql, and, gte, lte } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { WeeklyPlanner } from "@/components/weekly-planner";
 import { SessionList } from "@/components/session-list";
+import { TodayCard } from "@/components/today-card";
+import { WeekRecap } from "@/components/week-recap";
+import { OutreachMini } from "@/components/outreach-mini";
 import Link from "next/link";
 import { getMonday } from "@/lib/scheduler";
+import {
+  buildOutreachQueue,
+  getOutreachSummary,
+  getNeedsMattAttention,
+} from "@/lib/outreach-engine";
 
 export const dynamic = "force-dynamic";
 
+type DashboardState = "plan_week" | "review_send" | "outreach_active" | "week_booked" | "end_of_week";
+
 export default async function DashboardPage() {
+  const now = new Date();
+  const todayStr = now.toISOString().split("T")[0];
+  const dayOfWeek = now.getDay();
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
   const monday = getMonday();
   const weekStart = monday.toISOString().split("T")[0];
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
+  const weekEnd = sunday.toISOString().split("T")[0];
 
-  const activeCount = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(clients)
-    .where(sql`${clients.category} IN ('active', 'in_season')`)
-    .get();
+  // Tomorrow
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-  const lowPackages = await db
-    .select({
-      name: clients.name,
-      clientId: clients.id,
-      remaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`,
-    })
-    .from(packages)
-    .innerJoin(clients, eq(clients.id, packages.clientId))
-    .where(
-      and(
-        eq(packages.status, "active"),
-        sql`${packages.totalSessions} - ${packages.sessionsUsed} <= 2`
-      )
-    )
-    .all();
+  // Core queries
+  const activeCount = await db.select({ count: sql<number>`count(*)` }).from(clients).where(sql`${clients.category} IN ('active', 'in_season')`).get();
 
-  const unreconciledCount = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(sessions)
-    .where(and(eq(sessions.status, "completed"), eq(sessions.reconciled, false)))
-    .get();
+  const lowPackages = await db.select({
+    name: clients.name, clientId: clients.id,
+    remaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`,
+  }).from(packages).innerJoin(clients, eq(clients.id, packages.clientId)).where(and(eq(packages.status, "active"), sql`${packages.totalSessions} - ${packages.sessionsUsed} <= 2`)).all();
 
-  const thisWeekSessions = await db
-    .select({
-      id: sessions.id,
-      clientId: sessions.clientId,
-      clientName: clients.name,
-      date: sessions.scheduledDate,
-      time: sessions.scheduledTime,
-      slot: sessions.slot,
-      status: sessions.status,
-    })
-    .from(sessions)
-    .innerJoin(clients, eq(clients.id, sessions.clientId))
-    .where(gte(sessions.scheduledDate, weekStart))
-    .all();
+  const unreconciledCount = await db.select({ count: sql<number>`count(*)` }).from(sessions).where(and(eq(sessions.status, "completed"), eq(sessions.reconciled, false))).get();
 
-  const confirmed = thisWeekSessions.filter((s) => s.status === "confirmed").length;
-  const proposed = thisWeekSessions.filter((s) => s.status === "proposed").length;
+  const thisWeekSessions = await db.select({
+    id: sessions.id, clientId: sessions.clientId, clientName: clients.name,
+    date: sessions.scheduledDate, time: sessions.scheduledTime, slot: sessions.slot, status: sessions.status,
+  }).from(sessions).innerJoin(clients, eq(clients.id, sessions.clientId)).where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd))).all();
 
-  // Next week planner state
+  // Next week data
   const nextMonday = new Date(monday);
   nextMonday.setDate(nextMonday.getDate() + 7);
   const nextWeekStart = nextMonday.toISOString().split("T")[0];
@@ -69,33 +61,59 @@ export default async function DashboardPage() {
   nextSunday.setDate(nextSunday.getDate() + 6);
   const nextWeekEnd = nextSunday.toISOString().split("T")[0];
 
-  const nextWeekSessions = await db
-    .select({ id: sessions.id, status: sessions.status })
-    .from(sessions)
-    .where(and(gte(sessions.scheduledDate, nextWeekStart), lte(sessions.scheduledDate, nextWeekEnd)))
-    .all();
+  const nextWeekSessions = await db.select({ id: sessions.id, status: sessions.status }).from(sessions).where(and(gte(sessions.scheduledDate, nextWeekStart), lte(sessions.scheduledDate, nextWeekEnd))).all();
 
-  const nextWeekOutreach = await db
-    .select()
-    .from(outreach)
-    .where(eq(outreach.weekOf, nextWeekStart))
-    .all();
+  const nextWeekOutreach = await db.select().from(outreach).where(eq(outreach.weekOf, nextWeekStart)).all();
 
-  const availabilityRows = await db.select().from(defaultAvailability).all();
-  const hasAvailability = availabilityRows.some((a) => a.enabled);
+  const hasAvailability = (await db.select().from(defaultAvailability).all()).some((a) => a.enabled);
+  const totalActiveClients = activeCount?.count ?? 0;
 
-  const totalActiveClients = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(clients)
-    .where(sql`${clients.category} IN ('active', 'in_season')`)
-    .get();
+  // Outreach data for current week
+  const weekOutreach = await db.select().from(outreach).where(eq(outreach.weekOf, weekStart)).all();
+  const currentWeekFullSessions = await db.select({
+    id: sessions.id, clientId: sessions.clientId, clientName: clients.name, clientPhone: clients.phone,
+    standingSlot: clients.standingSlot, packageId: sessions.packageId, scheduledDate: sessions.scheduledDate,
+    scheduledTime: sessions.scheduledTime, slot: sessions.slot, status: sessions.status,
+    gcalEventId: sessions.gcalEventId, loggedToSheets: sessions.loggedToSheets, reconciled: sessions.reconciled, createdAt: sessions.createdAt,
+  }).from(sessions).innerJoin(clients, eq(clients.id, sessions.clientId)).where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd))).all();
 
+  const outreachItems = buildOutreachQueue(currentWeekFullSessions, weekOutreach);
+  const outreachSummary = getOutreachSummary(outreachItems);
+  const flaggedItems = getNeedsMattAttention(outreachItems);
+
+  // Week stats
+  const confirmed = thisWeekSessions.filter((s) => s.status === "confirmed").length;
+  const proposed = thisWeekSessions.filter((s) => s.status === "proposed").length;
+  const completed = thisWeekSessions.filter((s) => s.status === "completed").length;
+  const cancelled = thisWeekSessions.filter((s) => s.status === "cancelled").length;
+  const noShow = thisWeekSessions.filter((s) => s.status === "no_show").length;
+
+  // Today/tomorrow
+  const todaySessions = thisWeekSessions.filter((s) => s.date === todayStr);
+  const tomorrowSessions = thisWeekSessions.filter((s) => s.date === tomorrowStr);
+
+  // State detection
+  const outreachSentCount = weekOutreach.filter((o) => o.direction === "sent").length;
+  let state: DashboardState;
+
+  if (nextWeekSessions.length === 0 && isWeekend) {
+    state = "plan_week";
+  } else if (nextWeekSessions.length > 0 && outreachSentCount === 0 && isWeekend) {
+    state = "review_send";
+  } else if (outreachSentCount > 0 && confirmed < totalActiveClients) {
+    state = "outreach_active";
+  } else if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+    state = "week_booked";
+  } else {
+    state = "end_of_week";
+  }
+
+  // Planner state
   const nextWeekLabel = nextMonday.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-
   const plannerState = {
     hasAvailability,
     hasProposedSessions: nextWeekSessions.length > 0,
-    totalClients: totalActiveClients?.count ?? 0,
+    totalClients: totalActiveClients,
     confirmedCount: nextWeekSessions.filter((s) => s.status === "confirmed").length,
     proposedCount: nextWeekSessions.filter((s) => s.status === "proposed").length,
     sentCount: nextWeekOutreach.filter((o) => o.direction === "sent").length,
@@ -103,9 +121,20 @@ export default async function DashboardPage() {
     weekLabel: nextWeekLabel,
   };
 
-  const today = new Date();
-  const greeting = today.getHours() < 12 ? "Good morning" : today.getHours() < 17 ? "Good afternoon" : "Good evening";
-  const dayLabel = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const greeting = now.getHours() < 12 ? "Good morning" : now.getHours() < 17 ? "Good afternoon" : "Good evening";
+  const dayLabel = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+
+  // Stat cards — reorder by urgency
+  const statCards = [
+    { key: "unreconciled", count: unreconciledCount?.count ?? 0, alert: true },
+    { key: "lowPackages", count: lowPackages.length, alert: true },
+    { key: "thisWeek", count: proposed + confirmed, alert: false },
+    { key: "active", count: totalActiveClients, alert: false },
+  ].sort((a, b) => {
+    if (a.alert && a.count > 0 && !(b.alert && b.count > 0)) return -1;
+    if (b.alert && b.count > 0 && !(a.alert && a.count > 0)) return 1;
+    return 0;
+  });
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-8">
@@ -114,118 +143,162 @@ export default async function DashboardPage() {
         <p className="text-muted-foreground text-sm mt-1">{dayLabel}</p>
       </div>
 
-      <WeeklyPlanner state={plannerState} />
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-        <Link href="/clients">
-          <Card className="group relative overflow-hidden hover:border-purple-500/30 transition-colors cursor-pointer">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent" />
-            <CardContent className="relative pt-5 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-500/15 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{activeCount?.count ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">Active Athletes</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/schedule">
-          <Card className="group relative overflow-hidden hover:border-blue-500/30 transition-colors cursor-pointer">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
-            <CardContent className="relative pt-5 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/15 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-blue-400" viewBox="0 0 24 24" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2z"/></svg>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-blue-400">{proposed + confirmed}</div>
-                  <div className="text-xs text-muted-foreground">This Week</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/packages">
-          <Card className={`group relative overflow-hidden transition-colors cursor-pointer ${lowPackages.length > 0 ? "hover:border-amber-500/30" : "hover:border-emerald-500/30"}`}>
-            <div className={`absolute inset-0 bg-gradient-to-br ${lowPackages.length > 0 ? "from-amber-500/10" : "from-emerald-500/10"} to-transparent`} />
-            <CardContent className="relative pt-5 pb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${lowPackages.length > 0 ? "bg-amber-500/15" : "bg-emerald-500/15"}`}>
-                  <svg className={`w-5 h-5 ${lowPackages.length > 0 ? "text-amber-400" : "text-emerald-400"}`} viewBox="0 0 24 24" fill="currentColor"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
-                </div>
-                <div>
-                  <div className={`text-2xl font-bold ${lowPackages.length > 0 ? "text-amber-400" : "text-emerald-400"}`}>{lowPackages.length}</div>
-                  <div className="text-xs text-muted-foreground">Low Packages</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/packages">
-          <Card className={`group relative overflow-hidden transition-colors cursor-pointer ${(unreconciledCount?.count ?? 0) > 0 ? "hover:border-red-500/30" : "hover:border-emerald-500/30"}`}>
-            <div className={`absolute inset-0 bg-gradient-to-br ${(unreconciledCount?.count ?? 0) > 0 ? "from-red-500/10" : "from-emerald-500/10"} to-transparent`} />
-            <CardContent className="relative pt-5 pb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${(unreconciledCount?.count ?? 0) > 0 ? "bg-red-500/15" : "bg-emerald-500/15"}`}>
-                  <svg className={`w-5 h-5 ${(unreconciledCount?.count ?? 0) > 0 ? "text-red-400" : "text-emerald-400"}`} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                </div>
-                <div>
-                  <div className={`text-2xl font-bold ${(unreconciledCount?.count ?? 0) > 0 ? "text-red-400" : "text-emerald-400"}`}>{unreconciledCount?.count ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">Unreconciled</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
-
-      {/* This week */}
-      {thisWeekSessions.length > 0 ? (
-        <Card className="mb-4">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm">This Week</CardTitle>
-              <Link href="/schedule" className="text-xs text-accent hover:underline">View schedule &rarr;</Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <SessionList sessions={thisWeekSessions} />
-          </CardContent>
-        </Card>
-      ) : (
-        <EmptyState
-          illustration="calendar-plus"
-          heading="No sessions this week"
-          description="Head to the schedule to generate sessions for your athletes."
-          ctaLabel="Go to Schedule"
-          ctaHref="/schedule"
-        />
+      {/* State: Plan the week */}
+      {state === "plan_week" && (
+        <>
+          <WeeklyPlanner state={plannerState} />
+          {completed + cancelled + noShow > 0 && (
+            <WeekRecap completed={completed} cancelled={cancelled} noShow={noShow} unreconciled={unreconciledCount?.count ?? 0} />
+          )}
+        </>
       )}
 
-      {lowPackages.length > 0 && (
-        <Card className="border-amber-500/30">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm text-amber-400">Package Alerts</CardTitle>
-              <Link href="/packages" className="text-xs text-accent hover:underline">All packages &rarr;</Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {lowPackages.map((p) => (
-              <div key={p.name} className="flex items-center justify-between py-2 text-sm border-b border-border last:border-0">
-                <Link href={`/clients/${p.clientId}`} className="font-medium hover:underline">{p.name}</Link>
-                <Badge className={`border-0 ${p.remaining <= 0 ? "bg-red-500/15 text-red-400" : "bg-amber-500/15 text-amber-400"}`}>
-                  {p.remaining} left
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+      {/* State: Review & Send */}
+      {state === "review_send" && (
+        <>
+          <WeeklyPlanner state={plannerState} />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <StatCard label="Active Athletes" count={totalActiveClients} href="/clients" color="purple" icon="people" />
+            <StatCard label="This Week" count={proposed + confirmed} href="/schedule" color="blue" icon="calendar" />
+            <StatCard label="Low Packages" count={lowPackages.length} href="/reports" color={lowPackages.length > 0 ? "amber" : "emerald"} icon="pkg" />
+            <StatCard label="Unreconciled" count={unreconciledCount?.count ?? 0} href="/reports" color={(unreconciledCount?.count ?? 0) > 0 ? "red" : "emerald"} icon="alert" />
+          </div>
+          {thisWeekSessions.length > 0 && (
+            <Card className="mb-4">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm">Proposed Schedule</CardTitle>
+                  <Link href="/schedule" className="text-xs text-accent hover:underline">View calendar &rarr;</Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <SessionList sessions={thisWeekSessions} />
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+
+      {/* State: Outreach active */}
+      {state === "outreach_active" && (
+        <>
+          <OutreachMini
+            confirmed={outreachSummary.confirmed}
+            waiting={outreachSummary.sent}
+            needsYou={outreachSummary.needsAttention}
+            total={outreachSummary.total - outreachSummary.standing}
+            flaggedItems={flaggedItems.map((i) => ({
+              sessionId: i.sessionId, clientId: i.clientId, clientName: i.clientName,
+              slot: i.slot, date: i.date, status: i.status, replyText: i.replyText,
+            }))}
+          />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <StatCard label="Active Athletes" count={totalActiveClients} href="/clients" color="purple" icon="people" />
+            <StatCard label="This Week" count={proposed + confirmed} href="/schedule" color="blue" icon="calendar" />
+            <StatCard label="Low Packages" count={lowPackages.length} href="/reports" color={lowPackages.length > 0 ? "amber" : "emerald"} icon="pkg" />
+            <StatCard label="Unreconciled" count={unreconciledCount?.count ?? 0} href="/reports" color={(unreconciledCount?.count ?? 0) > 0 ? "red" : "emerald"} icon="alert" />
+          </div>
+        </>
+      )}
+
+      {/* State: Week is booked */}
+      {state === "week_booked" && (
+        <>
+          <TodayCard todaySessions={todaySessions} tomorrowSessions={tomorrowSessions} />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <StatCard label="Active Athletes" count={totalActiveClients} href="/clients" color="purple" icon="people" />
+            <StatCard label="This Week" count={proposed + confirmed} href="/schedule" color="blue" icon="calendar" />
+            <StatCard label="Low Packages" count={lowPackages.length} href="/reports" color={lowPackages.length > 0 ? "amber" : "emerald"} icon="pkg" />
+            <StatCard label="Unreconciled" count={unreconciledCount?.count ?? 0} href="/reports" color={(unreconciledCount?.count ?? 0) > 0 ? "red" : "emerald"} icon="alert" />
+          </div>
+          {lowPackages.length > 0 && <PackageAlerts lowPackages={lowPackages} />}
+        </>
+      )}
+
+      {/* State: End of week */}
+      {state === "end_of_week" && (
+        <>
+          <WeekRecap completed={completed} cancelled={cancelled} noShow={noShow} unreconciled={unreconciledCount?.count ?? 0} />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <StatCard label="Active Athletes" count={totalActiveClients} href="/clients" color="purple" icon="people" />
+            <StatCard label="This Week" count={completed} href="/schedule" color="blue" icon="calendar" />
+            <StatCard label="Low Packages" count={lowPackages.length} href="/reports" color={lowPackages.length > 0 ? "amber" : "emerald"} icon="pkg" />
+            <StatCard label="Unreconciled" count={unreconciledCount?.count ?? 0} href="/reports" color={(unreconciledCount?.count ?? 0) > 0 ? "red" : "emerald"} icon="alert" />
+          </div>
+          {lowPackages.length > 0 && <PackageAlerts lowPackages={lowPackages} />}
+          <WeeklyPlanner state={plannerState} />
+        </>
       )}
     </div>
+  );
+}
+
+// --- Helper components ---
+
+function StatCard({ label, count, href, color, icon }: { label: string; count: number; href: string; color: string; icon: string }) {
+  const colors: Record<string, { bg: string; text: string; iconBg: string }> = {
+    purple: { bg: "from-purple-500/10", text: "", iconBg: "bg-purple-500/15" },
+    blue: { bg: "from-blue-500/10", text: "text-blue-400", iconBg: "bg-blue-500/15" },
+    amber: { bg: "from-amber-500/10", text: "text-amber-400", iconBg: "bg-amber-500/15" },
+    red: { bg: "from-red-500/10", text: "text-red-400", iconBg: "bg-red-500/15" },
+    emerald: { bg: "from-emerald-500/10", text: "text-emerald-400", iconBg: "bg-emerald-500/15" },
+  };
+  const c = colors[color] ?? colors.blue;
+
+  const iconColors: Record<string, string> = {
+    purple: "text-purple-400", blue: "text-blue-400", amber: "text-amber-400",
+    red: "text-red-400", emerald: "text-emerald-400",
+  };
+  const ic = iconColors[color] ?? "text-blue-400";
+
+  const iconSvg = (
+    <svg className={`w-5 h-5 ${ic}`} viewBox="0 0 24 24" fill="currentColor">
+      {icon === "people" && <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />}
+      {icon === "calendar" && <path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zm0 16H5V10h14v10z" />}
+      {icon === "pkg" && <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />}
+      {icon === "alert" && <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />}
+    </svg>
+  );
+
+  return (
+    <Link href={href}>
+      <Card className="group relative overflow-hidden hover:border-foreground/20 transition-colors cursor-pointer">
+        <div className={`absolute inset-0 bg-gradient-to-br ${c.bg} to-transparent`} />
+        <CardContent className="relative pt-5 pb-4">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-lg ${c.iconBg} flex items-center justify-center`}>
+              {iconSvg}
+            </div>
+            <div>
+              <div className={`text-2xl font-bold ${c.text}`}>{count}</div>
+              <div className="text-xs text-muted-foreground">{label}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function PackageAlerts({ lowPackages }: { lowPackages: { name: string; clientId: number; remaining: number }[] }) {
+  return (
+    <Card className="mb-4 border-amber-500/30">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm text-amber-400">Package Alerts</CardTitle>
+          <Link href="/reports" className="text-xs text-accent hover:underline">All packages &rarr;</Link>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {lowPackages.map((p) => (
+          <div key={p.name} className="flex items-center justify-between py-2 text-sm border-b border-border last:border-0">
+            <Link href={`/clients/${p.clientId}`} className="font-medium hover:underline">{p.name}</Link>
+            <Badge className={`border-0 ${p.remaining <= 0 ? "bg-red-500/15 text-red-400" : "bg-amber-500/15 text-amber-400"}`}>
+              {p.remaining} left
+            </Badge>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
