@@ -133,7 +133,7 @@ export function ScheduleCalendar({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-background p-4 [&_.fc]:text-sm [&_.fc-timegrid-slot]:h-12 [&_.fc-col-header-cell]:py-2 [&_.fc-col-header-cell]:text-xs [&_.fc-col-header-cell]:uppercase [&_.fc-col-header-cell]:tracking-wider [&_.fc-col-header-cell]:text-muted-foreground [&_.fc-col-header-cell]:font-semibold [&_.fc-timegrid-slot-label]:text-xs [&_.fc-timegrid-slot-label]:text-muted-foreground [&_.fc-event]:rounded-md [&_.fc-event]:px-2 [&_.fc-event]:py-1 [&_.fc-event]:text-xs [&_.fc-event]:font-semibold [&_.fc-event]:cursor-grab [&_.fc-event]:border-0 [&_.fc-scrollgrid]:border-border [&_.fc-scrollgrid td]:border-border [&_.fc-scrollgrid th]:border-border [&_.fc-timegrid-divider]:hidden [&_.fc-day-today]:bg-accent/5">
+      <div className="rounded-lg border bg-background p-6 [&_.fc]:text-sm [&_.fc-timegrid-slot]:h-20 [&_.fc-col-header-cell]:py-3 [&_.fc-col-header-cell]:text-xs [&_.fc-col-header-cell]:uppercase [&_.fc-col-header-cell]:tracking-wider [&_.fc-col-header-cell]:text-muted-foreground [&_.fc-col-header-cell]:font-semibold [&_.fc-timegrid-slot-label]:text-sm [&_.fc-timegrid-slot-label]:text-muted-foreground [&_.fc-timegrid-slot-label]:pr-3 [&_.fc-event]:rounded-lg [&_.fc-event]:px-3 [&_.fc-event]:py-2 [&_.fc-event]:text-sm [&_.fc-event]:font-semibold [&_.fc-event]:cursor-grab [&_.fc-event]:border-0 [&_.fc-event]:shadow-sm [&_.fc-scrollgrid]:border-border [&_.fc-scrollgrid td]:border-border [&_.fc-scrollgrid th]:border-border [&_.fc-timegrid-divider]:hidden [&_.fc-day-today]:bg-accent/5">
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, interactionPlugin]}
