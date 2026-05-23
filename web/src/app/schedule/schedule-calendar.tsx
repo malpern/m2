@@ -148,6 +148,17 @@ export function ScheduleCalendar({
           <Button onClick={handleExport} disabled={isExporting} variant="outline" size="sm">
             {isExporting ? "Exporting..." : "Export .ics"}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const url = `${window.location.origin}/api/calendar`;
+              navigator.clipboard.writeText(url);
+              alert("Calendar URL copied! Paste it in Google Calendar → Other calendars → From URL");
+            }}
+          >
+            Subscribe
+          </Button>
           <Link href="/outreach">
             <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700">
               Outreach &rarr;
