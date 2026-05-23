@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { prioritySettings } from "@/db/schema";
+import { prioritySettings, clients } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import type { PriorityWeights } from "@/lib/priority";
@@ -38,4 +38,22 @@ export async function savePrioritySettings(
   revalidatePath("/schedule/priority");
   revalidatePath("/clients");
   revalidatePath("/schedule");
+}
+
+export async function saveSortOrder(clientId: number, sortOrder: number) {
+  db.update(clients).set({ sortOrder }).where(eq(clients.id, clientId)).run();
+  revalidatePath("/schedule/priority");
+  revalidatePath("/clients");
+}
+
+export async function clearClientSortOrder(clientId: number) {
+  db.update(clients).set({ sortOrder: null }).where(eq(clients.id, clientId)).run();
+  revalidatePath("/schedule/priority");
+  revalidatePath("/clients");
+}
+
+export async function clearAllSortOrders() {
+  db.update(clients).set({ sortOrder: null }).run();
+  revalidatePath("/schedule/priority");
+  revalidatePath("/clients");
 }

@@ -17,6 +17,7 @@ export default async function PriorityPage() {
       collegeBound: clients.collegeBound,
       gradeLevel: clients.gradeLevel,
       behaviorScore: clients.behaviorScore,
+      sortOrder: clients.sortOrder,
     })
     .from(clients)
     .where(sql`${clients.category} IN ('active', 'in_season')`)
