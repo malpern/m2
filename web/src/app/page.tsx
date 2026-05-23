@@ -70,30 +70,70 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold">{activeCount?.count ?? 0}</div>
-            <div className="text-xs text-muted-foreground">Active Athletes</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-blue-400">{proposed + confirmed}</div>
-            <div className="text-xs text-muted-foreground">This Week</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-amber-400">{lowPackages.length}</div>
-            <div className="text-xs text-muted-foreground">Low Packages</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-red-400">{unreconciledCount?.count ?? 0}</div>
-            <div className="text-xs text-muted-foreground">Unreconciled</div>
-          </CardContent>
-        </Card>
+        <Link href="/clients">
+          <Card className="group relative overflow-hidden hover:border-purple-500/30 transition-colors cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent" />
+            <CardContent className="relative pt-5 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-purple-500/15 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold">{activeCount?.count ?? 0}</div>
+                  <div className="text-xs text-muted-foreground">Active Athletes</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/schedule">
+          <Card className="group relative overflow-hidden hover:border-blue-500/30 transition-colors cursor-pointer">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
+            <CardContent className="relative pt-5 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/15 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-400" viewBox="0 0 24 24" fill="currentColor"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2z"/></svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-blue-400">{proposed + confirmed}</div>
+                  <div className="text-xs text-muted-foreground">This Week</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/packages">
+          <Card className={`group relative overflow-hidden transition-colors cursor-pointer ${lowPackages.length > 0 ? "hover:border-amber-500/30" : "hover:border-emerald-500/30"}`}>
+            <div className={`absolute inset-0 bg-gradient-to-br ${lowPackages.length > 0 ? "from-amber-500/10" : "from-emerald-500/10"} to-transparent`} />
+            <CardContent className="relative pt-5 pb-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${lowPackages.length > 0 ? "bg-amber-500/15" : "bg-emerald-500/15"}`}>
+                  <svg className={`w-5 h-5 ${lowPackages.length > 0 ? "text-amber-400" : "text-emerald-400"}`} viewBox="0 0 24 24" fill="currentColor"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+                </div>
+                <div>
+                  <div className={`text-2xl font-bold ${lowPackages.length > 0 ? "text-amber-400" : "text-emerald-400"}`}>{lowPackages.length}</div>
+                  <div className="text-xs text-muted-foreground">Low Packages</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/packages">
+          <Card className={`group relative overflow-hidden transition-colors cursor-pointer ${(unreconciledCount?.count ?? 0) > 0 ? "hover:border-red-500/30" : "hover:border-emerald-500/30"}`}>
+            <div className={`absolute inset-0 bg-gradient-to-br ${(unreconciledCount?.count ?? 0) > 0 ? "from-red-500/10" : "from-emerald-500/10"} to-transparent`} />
+            <CardContent className="relative pt-5 pb-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${(unreconciledCount?.count ?? 0) > 0 ? "bg-red-500/15" : "bg-emerald-500/15"}`}>
+                  <svg className={`w-5 h-5 ${(unreconciledCount?.count ?? 0) > 0 ? "text-red-400" : "text-emerald-400"}`} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                </div>
+                <div>
+                  <div className={`text-2xl font-bold ${(unreconciledCount?.count ?? 0) > 0 ? "text-red-400" : "text-emerald-400"}`}>{unreconciledCount?.count ?? 0}</div>
+                  <div className="text-xs text-muted-foreground">Unreconciled</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* This week */}
