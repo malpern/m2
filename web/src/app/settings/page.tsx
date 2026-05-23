@@ -4,10 +4,14 @@ import { Separator } from "@/components/ui/separator";
 import { SettingsEditor } from "./settings-editor";
 import { FeedbackSection } from "./feedback";
 import { getFeedbackItems } from "./feedback-actions";
+import { GoogleCalendarCard } from "./google-calendar-card";
+import { isConnected } from "@/lib/google-calendar";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
+  const googleStatus = await isConnected();
+
   let feedbackItems: Awaited<ReturnType<typeof getFeedbackItems>> = [];
   try {
     feedbackItems = await getFeedbackItems();
@@ -19,7 +23,7 @@ export default async function SettingsPage() {
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-8">
       <h1 className="text-2xl font-bold tracking-tight mb-6">Settings</h1>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <Link href="/schedule/priority">
           <Card className="hover:border-foreground/20 transition-colors cursor-pointer h-full">
             <CardContent className="pt-5 pb-4">
@@ -36,6 +40,10 @@ export default async function SettingsPage() {
             </CardContent>
           </Card>
         </Link>
+      </div>
+
+      <div className="mb-8">
+        <GoogleCalendarCard connected={googleStatus.connected} email={googleStatus.email} />
       </div>
 
       <h2 className="text-lg font-bold mb-4">Outreach Timing</h2>

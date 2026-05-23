@@ -131,6 +131,15 @@ export const outreachSettings = sqliteTable("outreach_settings", {
   updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const googleTokens = sqliteTable("google_tokens", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  email: text("email"),
+  updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type Client = typeof clients.$inferSelect;
 export type PrioritySettingsRow = typeof prioritySettings.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
