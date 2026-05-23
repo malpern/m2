@@ -48,9 +48,22 @@ export default async function SettingsPage({
         </Link>
       </div>
 
-      <div className="mb-8">
+      <div className="mb-4">
         <GoogleCalendarCard connected={googleStatus.connected} email={googleStatus.email} status={calendarStatus} />
       </div>
+
+      {googleStatus.connected && (
+        <div className="mb-8">
+          <Link href="/settings/import-clients">
+            <Card className="hover:border-foreground/20 transition-colors cursor-pointer">
+              <CardContent className="pt-5 pb-4">
+                <div className="font-semibold text-sm">Import Real Clients</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Pull client names from Google Sheets &amp; Calendar to replace test data</div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      )}
 
       <h2 className="text-lg font-bold mb-4">Outreach Timing</h2>
       <SettingsEditor />

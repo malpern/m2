@@ -23,6 +23,7 @@ export const clients = sqliteTable("clients", {
   standingSlot: text("standing_slot"),
   sortOrder: integer("sort_order"),
   notes: text("notes"),
+  googleSheetsName: text("google_sheets_name"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
 });

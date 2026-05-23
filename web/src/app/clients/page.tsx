@@ -30,6 +30,7 @@ export default async function ClientsPage() {
       standingSlot: clients.standingSlot,
       sortOrder: clients.sortOrder,
       notes: clients.notes,
+      googleSheetsName: clients.googleSheetsName,
       createdAt: clients.createdAt,
       updatedAt: clients.updatedAt,
       sessionsRemaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`.as(

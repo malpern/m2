@@ -15,6 +15,7 @@ function makeClient(overrides: Partial<Client> & { id: number; name: string }): 
     standingSlot: null,
     sortOrder: null,
     notes: null,
+    googleSheetsName: null,
     createdAt: null,
     updatedAt: null,
     ...overrides,

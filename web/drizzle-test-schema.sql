@@ -12,6 +12,7 @@ CREATE TABLE clients (
     standing_slot TEXT,
     sort_order INTEGER,
     notes TEXT,
+    google_sheets_name TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
