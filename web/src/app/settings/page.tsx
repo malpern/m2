@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { SettingsEditor } from "./settings-editor";
+import { FeedbackSection } from "./feedback";
+import { getFeedbackItems } from "./feedback-actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
+  const feedbackItems = await getFeedbackItems();
+
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-8">
       <h1 className="text-2xl font-bold tracking-tight mb-6">Settings</h1>
@@ -30,6 +35,10 @@ export default async function SettingsPage() {
 
       <h2 className="text-lg font-bold mb-4">Outreach Timing</h2>
       <SettingsEditor />
+
+      <Separator className="my-10" />
+
+      <FeedbackSection initialItems={feedbackItems} />
     </div>
   );
 }
