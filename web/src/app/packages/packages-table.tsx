@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { EmptyState } from "@/components/empty-state";
 
 export type PackageRow = {
   clientId: number;
@@ -126,6 +127,23 @@ export function PackagesTable({
 
   const thClass =
     "cursor-pointer select-none hover:text-foreground transition-colors";
+
+  if (clientPackages.length === 0) {
+    return (
+      <>
+        <div className="flex items-center gap-3 mb-6">
+          <h1 className="text-2xl font-bold tracking-tight">Packages</h1>
+        </div>
+        <EmptyState
+          illustration="package"
+          heading="No packages yet"
+          description="Add clients and create session packages to start tracking usage."
+          ctaLabel="Go to Clients"
+          ctaHref="/clients"
+        />
+      </>
+    );
+  }
 
   return (
     <>

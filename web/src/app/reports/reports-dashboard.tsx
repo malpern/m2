@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/empty-state";
 import { exportSessionsCSV, exportClientsCSV } from "./actions";
 
 function downloadCSV(content: string, filename: string) {
@@ -57,6 +58,23 @@ export function ReportsDashboard({
       downloadCSV(csv, "m2-clients.csv");
     });
   };
+
+  if (stats.totalSessions === 0) {
+    return (
+      <div>
+        <div className="flex items-center gap-3 mb-6">
+          <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
+        </div>
+        <EmptyState
+          illustration="bar-chart"
+          heading="No session data yet"
+          description="Once you start scheduling and completing sessions, reports will appear here."
+          ctaLabel="Go to Schedule"
+          ctaHref="/schedule"
+        />
+      </div>
+    );
+  }
 
   return (
     <div>

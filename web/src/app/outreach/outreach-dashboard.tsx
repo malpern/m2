@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { markConfirmed, markDeclined, overrideStatus, sendOutreachBatch } from "./actions";
+import { EmptyState } from "@/components/empty-state";
 import type { OutreachItem } from "@/lib/outreach-engine";
 
 function statusBadge(status: string) {
@@ -151,6 +152,23 @@ export function OutreachDashboard({
     day: "numeric",
     year: "numeric",
   });
+
+  if (items.length === 0) {
+    return (
+      <div>
+        <div className="flex items-center gap-3 mb-6">
+          <h1 className="text-2xl font-bold tracking-tight">Outreach</h1>
+        </div>
+        <EmptyState
+          illustration="message"
+          heading="No outreach to send"
+          description="Generate a schedule first, then come back to send outreach."
+          ctaLabel="Go to Schedule"
+          ctaHref="/schedule"
+        />
+      </div>
+    );
+  }
 
   return (
     <div>

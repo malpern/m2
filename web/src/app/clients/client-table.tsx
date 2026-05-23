@@ -30,6 +30,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { updateClientOrder } from "./actions";
+import { EmptyState } from "@/components/empty-state";
 import type { Client } from "@/db/schema";
 
 type ClientWithPackage = Client & { sessionsRemaining: number | null };
@@ -312,6 +313,23 @@ export function ClientTable({
   const thClass = "cursor-pointer select-none hover:text-foreground transition-colors";
 
   const allIds = [...filteredActive, ...filteredInactive].map((c) => c.id);
+
+  if (localActive.length === 0 && inactiveClients.length === 0) {
+    return (
+      <>
+        <div className="flex items-center gap-3 mb-6">
+          <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
+        </div>
+        <EmptyState
+          illustration="people"
+          heading="No clients yet"
+          description="Add your first athlete to start building your roster and scheduling sessions."
+          ctaLabel="Add Client"
+          ctaHref="/clients/new"
+        />
+      </>
+    );
+  }
 
   return (
     <>

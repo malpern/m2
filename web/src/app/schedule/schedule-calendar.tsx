@@ -404,6 +404,29 @@ export function ScheduleCalendar({
       </div>
 
       <p className="text-xs text-muted-foreground mt-2">Click a session to cancel it. Drag to move. Confirmed sessions will prompt you to notify the client.</p>
+
+      {sessions.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="16" width="60" height="52" rx="6" stroke="#6c8cff" strokeWidth="1.5" fill="rgba(108,140,255,0.1)" />
+            <path d="M10 22C10 18.6863 12.6863 16 16 16H64C67.3137 16 70 18.6863 70 22V28H10V22Z" fill="#6c8cff" fillOpacity="0.15" stroke="#6c8cff" strokeWidth="1.5" />
+            <line x1="26" y1="10" x2="26" y2="20" stroke="#6c8cff" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="54" y1="10" x2="54" y2="20" stroke="#6c8cff" strokeWidth="1.5" strokeLinecap="round" />
+            <line x1="10" y1="40" x2="70" y2="40" stroke="#2e3345" strokeWidth="0.75" strokeOpacity="0.3" />
+            <line x1="10" y1="52" x2="70" y2="52" stroke="#2e3345" strokeWidth="0.75" strokeOpacity="0.3" />
+            <line x1="30" y1="28" x2="30" y2="68" stroke="#2e3345" strokeWidth="0.75" strokeOpacity="0.3" />
+            <line x1="50" y1="28" x2="50" y2="68" stroke="#2e3345" strokeWidth="0.75" strokeOpacity="0.3" />
+            <rect x="30" y="40" width="20" height="12" fill="#6c8cff" fillOpacity="0.12" rx="2" />
+          </svg>
+          <h2 className="text-lg font-semibold text-foreground mt-5 mb-1">No sessions yet</h2>
+          <p className="text-sm text-muted-foreground mb-6 text-center max-w-xs">
+            Generate a schedule to fill this week with sessions for your athletes.
+          </p>
+          <Button size="sm" onClick={handleGenerate} disabled={isPending}>
+            Generate Week
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

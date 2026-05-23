@@ -3,6 +3,7 @@ import { clients, packages, sessions } from "@/db/schema";
 import { eq, sql, and, gte } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/empty-state";
 import Link from "next/link";
 import { getMonday } from "@/lib/scheduler";
 
@@ -89,7 +90,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* This week */}
-      {thisWeekSessions.length > 0 && (
+      {thisWeekSessions.length > 0 ? (
         <Card className="mb-4">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -126,6 +127,14 @@ export default async function DashboardPage() {
             )}
           </CardContent>
         </Card>
+      ) : (
+        <EmptyState
+          illustration="calendar-plus"
+          heading="No sessions this week"
+          description="Head to the schedule to generate sessions for your athletes."
+          ctaLabel="Go to Schedule"
+          ctaHref="/schedule"
+        />
       )}
 
       {/* Alerts */}
