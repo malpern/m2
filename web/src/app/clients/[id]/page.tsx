@@ -19,6 +19,17 @@ import {
 
 export const dynamic = "force-dynamic";
 
+function formatPhoneNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  return phone;
+}
+
 const STATUS_OPTIONS = [
   { value: "active", label: "Active", className: "text-amber-400" },
   { value: "in_season", label: "In Season", className: "text-emerald-400" },
@@ -141,14 +152,12 @@ export default async function ClientDetailPage({
         </div>
         <div className="flex items-center gap-3">
           <DeleteButton clientId={clientId} clientName={client.name} />
-          <div className="text-left sm:text-right text-sm text-muted-foreground">
-            <div>
-              <EditableText clientId={clientId} field="phone" value={client.phone} />
-            </div>
-            <div className="flex items-center gap-1 sm:justify-end">
-              Max <EditableNumber clientId={clientId} field="maxSessionsPerWeek" value={client.maxSessionsPerWeek} min={1} max={7} /> session{client.maxSessionsPerWeek === 1 ? "" : "s"}/week
-            </div>
-          </div>
+          <a
+            href={`tel:${client.phone}`}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {formatPhoneNumber(client.phone)}
+          </a>
         </div>
       </div>
 
@@ -233,6 +242,13 @@ export default async function ClientDetailPage({
                 inputClassName="text-sm w-full"
               />
               <div className="text-xs text-muted-foreground mt-1">e.g. "Mon 3pm, Wed 3pm" — auto-fills each week, no text needed</div>
+            </div>
+            <Separator />
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">Sessions per week</div>
+              <div className="flex items-center gap-1 text-sm">
+                <EditableNumber clientId={clientId} field="maxSessionsPerWeek" value={client.maxSessionsPerWeek} min={1} max={7} /> max
+              </div>
             </div>
             <Separator />
             <div>
