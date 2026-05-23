@@ -14,14 +14,22 @@ function getClient() {
   return _client;
 }
 
+const USE_WHATSAPP = process.env.TWILIO_USE_WHATSAPP === "true";
+const WHATSAPP_SANDBOX = "whatsapp:+14155238886";
+
 export async function sendSMS(to: string, body: string): Promise<string> {
-  const from = process.env.TWILIO_PHONE_NUMBER;
+  const from = USE_WHATSAPP
+    ? WHATSAPP_SANDBOX
+    : process.env.TWILIO_PHONE_NUMBER;
+
   if (!from) throw new Error("TWILIO_PHONE_NUMBER must be set");
+
+  const toNumber = USE_WHATSAPP ? `whatsapp:${to}` : to;
 
   const message = await getClient().messages.create({
     body,
     from,
-    to,
+    to: toNumber,
   });
   return message.sid;
 }
