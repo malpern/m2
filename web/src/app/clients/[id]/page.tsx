@@ -138,6 +138,18 @@ export default async function ClientDetailPage({
             </div>
             <Separator />
             <div>
+              <div className="text-sm text-muted-foreground mb-1">Standing Slot</div>
+              <EditableText
+                clientId={clientId}
+                field="standingSlot"
+                value={client.standingSlot ?? ""}
+                className="text-sm"
+                inputClassName="text-sm w-full"
+              />
+              <div className="text-xs text-muted-foreground mt-1">e.g. "Mon 3pm, Wed 3pm" — auto-fills each week, no text needed</div>
+            </div>
+            <Separator />
+            <div>
               <div className="text-sm text-muted-foreground mb-1">Notes</div>
               <EditableText
                 clientId={clientId}

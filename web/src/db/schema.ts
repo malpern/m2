@@ -20,6 +20,7 @@ export const clients = sqliteTable("clients", {
   preferredDays: text("preferred_days"),
   preferredTime: text("preferred_time"),
   maxSessionsPerWeek: integer("max_sessions_per_week").notNull().default(1),
+  standingSlot: text("standing_slot"),
   sortOrder: integer("sort_order"),
   notes: text("notes"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),

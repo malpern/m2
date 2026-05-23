@@ -9,6 +9,7 @@ CREATE TABLE clients (
     preferred_days TEXT,
     preferred_time TEXT,
     max_sessions_per_week INTEGER NOT NULL DEFAULT 1,
+    standing_slot TEXT,
     sort_order INTEGER,
     notes TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,

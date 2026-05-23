@@ -52,6 +52,35 @@ function parsePreferredDays(client: Client): DayOfWeek[] {
   }
 }
 
+const DAY_ALIASES: Record<string, DayOfWeek> = {
+  mon: "monday", tue: "tuesday", wed: "wednesday",
+  thu: "thursday", fri: "friday", sun: "sunday",
+  monday: "monday", tuesday: "tuesday", wednesday: "wednesday",
+  thursday: "thursday", friday: "friday", sunday: "sunday",
+};
+
+const SLOT_ALIASES: Record<string, TimeSlot> = {
+  "3pm": "3pm", "3": "3pm", "3:00": "3pm", "15:00": "3pm",
+  "4pm": "4pm", "4": "4pm", "4:00": "4pm", "16:00": "4pm",
+  "5pm": "5pm", "5": "5pm", "5:00": "5pm", "17:00": "5pm",
+  "6pm": "6pm", "6": "6pm", "6:00": "6pm", "18:00": "6pm",
+  "7pm": "7pm", "7": "7pm", "7:00": "7pm", "19:00": "7pm",
+};
+
+function parseStandingSlot(standing: string): { day: DayOfWeek; slot: TimeSlot }[] {
+  const results: { day: DayOfWeek; slot: TimeSlot }[] = [];
+  const parts = standing.split(/[,;]+/).map((s) => s.trim().toLowerCase());
+  for (const part of parts) {
+    const tokens = part.split(/\s+/);
+    if (tokens.length >= 2) {
+      const day = DAY_ALIASES[tokens[0]];
+      const slot = SLOT_ALIASES[tokens[1]];
+      if (day && slot) results.push({ day, slot });
+    }
+  }
+  return results;
+}
+
 function preferredSlot(client: Client): TimeSlot {
   const time = client.preferredTime?.toLowerCase() ?? "";
   if (time.includes("3")) return "3pm";
@@ -78,8 +107,31 @@ export function generateWeek(
   // Track sessions assigned per client this week
   const sessionsAssigned = new Map<number, number>();
 
-  // First pass: give every client their first session
+  // Pre-fill standing slots (locked clients who don't need outreach)
+  for (const client of schedulable) {
+    if (!client.standingSlot) continue;
+    const entries = parseStandingSlot(client.standingSlot);
+    for (const { day, slot } of entries) {
+      if (day in weekDates && !filled.has(key(day, slot))) {
+        proposed.push({
+          clientId: client.id,
+          clientName: client.name,
+          day,
+          slot,
+          date: weekDates[day],
+          time: SLOT_TIMES[slot],
+        });
+        filled.set(key(day, slot), client.id);
+        sessionsAssigned.set(client.id, (sessionsAssigned.get(client.id) ?? 0) + 1);
+      }
+    }
+  }
+
+  // First pass: give every client their first session (skip those already at max from standing slots)
   for (const client of ranked) {
+    const currentSessions = sessionsAssigned.get(client.id) ?? 0;
+    if (currentSessions >= client.maxSessionsPerWeek) continue;
+
     const days = parsePreferredDays(client);
     const slot = preferredSlot(client);
 

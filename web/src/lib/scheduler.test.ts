@@ -12,6 +12,7 @@ function makeClient(overrides: Partial<Client> & { id: number; name: string }): 
     preferredDays: null,
     preferredTime: null,
     maxSessionsPerWeek: 1,
+    standingSlot: null,
     sortOrder: null,
     notes: null,
     createdAt: null,
@@ -146,6 +147,61 @@ describe("generateWeek", () => {
     const result = generateWeek(clients, MONDAY);
     const monday3pm = result.find((s) => s.day === "monday" && s.slot === "3pm");
     expect(monday3pm?.clientName).toBe("HighPriority");
+  });
+});
+
+describe("standing slots", () => {
+  it("auto-fills standing slots before priority algorithm", () => {
+    const clients = [
+      makeClient({
+        id: 1,
+        name: "StandingClient",
+        standingSlot: "Mon 3pm, Wed 3pm",
+        maxSessionsPerWeek: 2,
+      }),
+      makeClient({
+        id: 2,
+        name: "RegularClient",
+        preferredDays: '["monday"]',
+        preferredTime: "3pm",
+      }),
+    ];
+
+    const result = generateWeek(clients, MONDAY);
+    const mon3pm = result.find((s) => s.day === "monday" && s.slot === "3pm");
+    expect(mon3pm?.clientName).toBe("StandingClient");
+    const wed3pm = result.find((s) => s.day === "wednesday" && s.slot === "3pm");
+    expect(wed3pm?.clientName).toBe("StandingClient");
+  });
+
+  it("skips additional scheduling if standing slots fill the max", () => {
+    const clients = [
+      makeClient({
+        id: 1,
+        name: "FullyBooked",
+        standingSlot: "Mon 3pm",
+        maxSessionsPerWeek: 1,
+      }),
+    ];
+
+    const result = generateWeek(clients, MONDAY);
+    const sessions = result.filter((s) => s.clientId === 1);
+    expect(sessions).toHaveLength(1);
+  });
+
+  it("parses various standing slot formats", () => {
+    const clients = [
+      makeClient({
+        id: 1,
+        name: "FlexFormat",
+        standingSlot: "Tue 5pm; Thu 3pm",
+        maxSessionsPerWeek: 2,
+      }),
+    ];
+
+    const result = generateWeek(clients, MONDAY);
+    expect(result.find((s) => s.day === "tuesday" && s.slot === "5pm")).toBeTruthy();
+    expect(result.find((s) => s.day === "thursday" && s.slot === "3pm")).toBeTruthy();
   });
 });
 

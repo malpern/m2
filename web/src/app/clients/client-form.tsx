@@ -151,6 +151,16 @@ export function ClientForm({
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="standingSlot">Standing Slot</Label>
+        <Input
+          id="standingSlot"
+          name="standingSlot"
+          defaultValue={client?.standingSlot ?? ""}
+          placeholder="e.g. Mon 3pm, Wed 3pm — auto-fills each week"
+        />
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="notes">Notes</Label>
         <textarea
           id="notes"

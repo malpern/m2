@@ -30,6 +30,7 @@ export async function createClient(formData: FormData) {
     preferredDays: formData.get("preferredDays") as string || null,
     preferredTime: (formData.get("preferredTime") as string) || null,
     maxSessionsPerWeek: parseInt(formData.get("maxSessionsPerWeek") as string) || 1,
+    standingSlot: (formData.get("standingSlot") as string) || null,
     notes: (formData.get("notes") as string) || null,
   };
 
@@ -50,6 +51,7 @@ export async function updateClient(id: number, formData: FormData) {
       preferredDays: formData.get("preferredDays") as string || null,
       preferredTime: (formData.get("preferredTime") as string) || null,
       maxSessionsPerWeek: parseInt(formData.get("maxSessionsPerWeek") as string) || 1,
+      standingSlot: (formData.get("standingSlot") as string) || null,
       notes: (formData.get("notes") as string) || null,
     })
     .where(eq(clients.id, id))
