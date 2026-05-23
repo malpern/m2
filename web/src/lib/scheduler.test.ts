@@ -205,6 +205,64 @@ describe("standing slots", () => {
   });
 });
 
+describe("generateWeek with custom weights", () => {
+  it("respects custom weights for priority order", () => {
+    const highEffortWeights = {
+      collegeBoundWeight: 1,
+      gradeLevelWeight: 1,
+      effortWeight: 5,
+    };
+    const clients = [
+      makeClient({
+        id: 1,
+        name: "CollegeLowEffort",
+        collegeBound: true,
+        gradeLevel: "senior",
+        behaviorScore: 2,
+        preferredDays: '["monday"]',
+        preferredTime: "3pm",
+      }),
+      makeClient({
+        id: 2,
+        name: "NoCollegeHighEffort",
+        collegeBound: false,
+        gradeLevel: "freshman",
+        behaviorScore: 10,
+        preferredDays: '["monday"]',
+        preferredTime: "3pm",
+      }),
+    ];
+
+    const result = generateWeek(clients, MONDAY, highEffortWeights);
+    const mon3pm = result.find((s) => s.day === "monday" && s.slot === "3pm");
+    expect(mon3pm?.clientName).toBe("NoCollegeHighEffort");
+  });
+
+  it("uses default priority when no weights provided", () => {
+    const clients = [
+      makeClient({
+        id: 1,
+        name: "College",
+        collegeBound: true,
+        preferredDays: '["monday"]',
+        preferredTime: "3pm",
+      }),
+      makeClient({
+        id: 2,
+        name: "NotCollege",
+        collegeBound: false,
+        behaviorScore: 10,
+        preferredDays: '["monday"]',
+        preferredTime: "3pm",
+      }),
+    ];
+
+    const result = generateWeek(clients, MONDAY);
+    const mon3pm = result.find((s) => s.day === "monday" && s.slot === "3pm");
+    expect(mon3pm?.clientName).toBe("College");
+  });
+});
+
 describe("getMonday", () => {
   it("returns Monday for a Wednesday", () => {
     const wed = new Date(2026, 4, 27); // Wednesday

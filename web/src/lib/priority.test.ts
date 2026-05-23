@@ -152,6 +152,25 @@ describe("computePriorityScore", () => {
     expect(score).toBe(20);
   });
 
+  it("handles null gradeLevel", () => {
+    const score = computePriorityScore(
+      makeClient({ gradeLevel: null, behaviorScore: 7 }),
+      DEFAULT_WEIGHTS
+    );
+    // 0*5 + 0*3 + 7*2 = 14
+    expect(score).toBe(14);
+  });
+
+  it("handles all weights set to 1", () => {
+    const weights: PriorityWeights = { collegeBoundWeight: 1, gradeLevelWeight: 1, effortWeight: 1 };
+    const score = computePriorityScore(
+      makeClient({ collegeBound: true, gradeLevel: "senior", behaviorScore: 10 }),
+      weights
+    );
+    // 10*1 + 8*1 + 10*1 = 28
+    expect(score).toBe(28);
+  });
+
   it("responds to weight changes", () => {
     const client = makeClient({ collegeBound: false, gradeLevel: "senior", behaviorScore: 10 });
     const lowEffort: PriorityWeights = { collegeBoundWeight: 5, gradeLevelWeight: 3, effortWeight: 1 };

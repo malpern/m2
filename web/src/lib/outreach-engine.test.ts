@@ -181,6 +181,54 @@ describe("getNeedsMattAttention", () => {
   });
 });
 
+describe("getNeedsMattAttention", () => {
+  it("does not flag confirmed or sent items", () => {
+    const items = [
+      { status: "confirmed" as const },
+      { status: "sent" as const },
+      { status: "standing" as const },
+      { status: "pending" as const },
+    ].map((o, i) => ({
+      sessionId: i, clientId: i, clientName: "", clientPhone: "",
+      day: "", slot: "", date: "", time: "",
+      isStanding: false, sentAt: null, repliedAt: null,
+      replyText: null, interpretation: null, batchNumber: 1, ...o,
+    }));
+
+    const flagged = getNeedsMattAttention(items);
+    expect(flagged).toHaveLength(0);
+  });
+});
+
+describe("follow-up timing edge cases", () => {
+  it("does not flag items sent less than 1 hour ago", () => {
+    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const items = [{
+      sessionId: 1, clientId: 1, clientName: "", clientPhone: "",
+      day: "", slot: "", date: "", time: "",
+      status: "sent" as const, isStanding: false,
+      sentAt: thirtyMinAgo, repliedAt: null,
+      replyText: null, interpretation: null, batchNumber: 1,
+    }];
+
+    expect(getNeedsFollowUp(items)).toHaveLength(0);
+    expect(getNeedsMoveOn(items)).toHaveLength(0);
+  });
+
+  it("does not flag non-sent items for follow-up", () => {
+    const twoHoursAgo = new Date(Date.now() - 120 * 60 * 1000).toISOString();
+    const items = [{
+      sessionId: 1, clientId: 1, clientName: "", clientPhone: "",
+      day: "", slot: "", date: "", time: "",
+      status: "confirmed" as const, isStanding: false,
+      sentAt: twoHoursAgo, repliedAt: null,
+      replyText: null, interpretation: null, batchNumber: 1,
+    }];
+
+    expect(getNeedsFollowUp(items)).toHaveLength(0);
+  });
+});
+
 describe("getOutreachSummary", () => {
   it("counts all statuses", () => {
     const items = [
