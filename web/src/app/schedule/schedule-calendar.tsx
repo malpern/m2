@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useTransition, useState } from "react";
+import Link from "next/link";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -96,6 +97,9 @@ export function ScheduleCalendar({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link href="/schedule/availability">
+            <Button variant="outline" size="sm">Availability</Button>
+          </Link>
           <Button onClick={handleGenerate} disabled={isPending} size="sm">
             Generate Week
           </Button>

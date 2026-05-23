@@ -90,6 +90,26 @@ export const outreach = sqliteTable("outreach", {
   repliedAt: text("replied_at"),
 });
 
+export const defaultAvailability = sqliteTable("default_availability", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  day: text("day", {
+    enum: ["monday", "tuesday", "wednesday", "thursday", "friday", "sunday"],
+  }).notNull(),
+  slot: text("slot").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+});
+
+export const weeklyOverrides = sqliteTable("weekly_overrides", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  weekOf: text("week_of").notNull(),
+  day: text("day", {
+    enum: ["monday", "tuesday", "wednesday", "thursday", "friday", "sunday"],
+  }).notNull(),
+  slot: text("slot").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  note: text("note"),
+});
+
 export type Client = typeof clients.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
 export type Package = typeof packages.$inferSelect;

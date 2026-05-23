@@ -52,3 +52,19 @@ CREATE TABLE outreach (
     sent_at TEXT,
     replied_at TEXT
 );
+
+CREATE TABLE default_availability (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    day TEXT NOT NULL,
+    slot TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE weekly_overrides (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    week_of TEXT NOT NULL,
+    day TEXT NOT NULL,
+    slot TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    note TEXT
+);
