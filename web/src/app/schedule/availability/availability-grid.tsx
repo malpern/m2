@@ -44,8 +44,8 @@ function SlotChip({
         isPending ? "opacity-40" : ""
       } ${
         enabled
-          ? "bg-accent/20 text-accent hover:bg-accent/30"
-          : "bg-muted text-muted-foreground/40 hover:bg-muted/80 line-through"
+          ? "bg-accent/25 text-foreground hover:bg-accent/35"
+          : "bg-muted text-muted-foreground/30 hover:bg-muted/80 line-through"
       } ${overridden ? "ring-1 ring-amber-400/50" : ""}`}
     >
       {slot}
