@@ -8,7 +8,12 @@ import { getFeedbackItems } from "./feedback-actions";
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const feedbackItems = await getFeedbackItems();
+  let feedbackItems: Awaited<ReturnType<typeof getFeedbackItems>> = [];
+  try {
+    feedbackItems = await getFeedbackItems();
+  } catch {
+    // GitHub token might not be set
+  }
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-6 sm:py-8">

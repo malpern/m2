@@ -28,11 +28,15 @@ export function FeedbackSection({ initialItems }: { initialItems: FeedbackItem[]
       : body;
 
     startTransition(async () => {
-      const item = await submitFeedback(title.trim(), fullBody);
-      setItems([item, ...items]);
-      setTitle("");
-      setBody("");
-      setImagePreview(null);
+      try {
+        const item = await submitFeedback(title.trim(), fullBody);
+        setItems([item, ...items]);
+        setTitle("");
+        setBody("");
+        setImagePreview(null);
+      } catch (e) {
+        alert("Failed to submit feedback. Please try again.");
+      }
     });
   };
 
