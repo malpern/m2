@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -316,7 +317,12 @@ export function ClientTable({
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
+            <Link href="/clients/new">
+              <Button size="sm" variant="outline" className="h-7 text-xs">+ Add Client</Button>
+            </Link>
+          </div>
           <p className="text-muted-foreground mt-1 text-sm">
             {localActive.length} active, ranked by priority.
             {inactiveClients.length > 0 && ` ${inactiveClients.length} on break or inactive.`}
