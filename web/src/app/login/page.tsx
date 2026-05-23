@@ -9,11 +9,11 @@ export default function LoginPage() {
         className="absolute inset-0 bg-cover bg-center"
         style={{
           backgroundImage: "url('https://images.squarespace-cdn.com/content/v1/64fc0161bc537d4f094715eb/a9dbfaf7-19b1-4fc1-bcc6-7a1e223432f6/DSC08829.jpg')",
-          filter: "brightness(0.2) saturate(0.4)",
+          filter: "brightness(0.35) saturate(0.5)",
         }}
       />
       {/* Gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
 
       <div className="relative z-10 w-full max-w-sm">
         <div className="text-center mb-8">
