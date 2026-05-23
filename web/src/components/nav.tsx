@@ -30,7 +30,7 @@ export function Nav() {
             height={28}
             className="rounded-md"
           />
-          <span className="text-sm font-bold tracking-tight hidden sm:inline">Matt Scheduler</span>
+          <span className="text-sm font-bold tracking-tight hidden sm:inline">M2 Scheduler</span>
         </Link>
 
         <div className="hidden sm:flex gap-0.5">

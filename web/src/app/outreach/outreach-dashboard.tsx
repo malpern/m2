@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useTransition } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -55,7 +56,7 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-sm">{item.clientName}</div>
+          <Link href={`/clients/${item.clientId}`} className="font-semibold text-sm hover:underline">{item.clientName}</Link>
           {item.replyText && (
             <div className="text-xs text-muted-foreground mt-0.5 truncate">
               &ldquo;{item.replyText}&rdquo;

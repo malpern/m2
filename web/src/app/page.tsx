@@ -45,6 +45,7 @@ export default async function DashboardPage() {
   const thisWeekSessions = db
     .select({
       id: sessions.id,
+      clientId: sessions.clientId,
       clientName: clients.name,
       date: sessions.scheduledDate,
       time: sessions.scheduledTime,
@@ -199,7 +200,7 @@ export default async function DashboardPage() {
                   <span className="text-muted-foreground w-16">
                     {new Date(s.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" })}
                   </span>
-                  <span className="font-medium">{s.clientName}</span>
+                  <Link href={`/clients/${s.clientId}`} className="font-medium hover:underline">{s.clientName}</Link>
                   <span className="text-muted-foreground">{s.slot}</span>
                 </div>
                 <Badge className={`border-0 ${

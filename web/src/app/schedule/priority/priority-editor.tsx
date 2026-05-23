@@ -84,7 +84,7 @@ function SortableClientRow({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm">{client.name}</span>
+          <a href={`/clients/${client.id}`} className="font-semibold text-sm hover:underline">{client.name}</a>
           {isPinned && (
             <button
               onClick={(e) => { e.stopPropagation(); onUnpin(); }}

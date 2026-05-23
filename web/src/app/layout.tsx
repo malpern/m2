@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Matt Scheduler",
+  title: "M2 Scheduler",
   description: "AI-powered training session scheduler",
   icons: {
     icon: "/m2logo.png",
