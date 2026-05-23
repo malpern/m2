@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { WeeklyPlanner } from "@/components/weekly-planner";
+import { SessionList } from "@/components/session-list";
 import Link from "next/link";
 import { getMonday } from "@/lib/scheduler";
 
@@ -191,32 +192,7 @@ export default async function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {thisWeekSessions
-              .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
-              .slice(0, 8)
-              .map((s) => (
-              <div key={s.id} className="flex items-center justify-between py-2 text-sm border-b border-border last:border-0">
-                <div className="flex items-center gap-3">
-                  <span className="text-muted-foreground w-16">
-                    {new Date(s.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" })}
-                  </span>
-                  <Link href={`/clients/${s.clientId}`} className="font-medium hover:underline">{s.clientName}</Link>
-                  <span className="text-muted-foreground">{s.slot}</span>
-                </div>
-                <Badge className={`border-0 ${
-                  s.status === "confirmed" ? "bg-emerald-500/15 text-emerald-400"
-                  : s.status === "proposed" ? "bg-blue-500/15 text-blue-400"
-                  : "bg-muted text-muted-foreground"
-                }`}>
-                  {s.status}
-                </Badge>
-              </div>
-            ))}
-            {thisWeekSessions.length > 8 && (
-              <div className="text-xs text-muted-foreground mt-2">
-                +{thisWeekSessions.length - 8} more sessions
-              </div>
-            )}
+            <SessionList sessions={thisWeekSessions} />
           </CardContent>
         </Card>
       ) : (
@@ -229,9 +205,8 @@ export default async function DashboardPage() {
         />
       )}
 
-      {/* Alerts */}
       {lowPackages.length > 0 && (
-        <Card className="mb-4 border-amber-500/30">
+        <Card className="border-amber-500/30">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm text-amber-400">Package Alerts</CardTitle>
@@ -250,27 +225,6 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       )}
-
-      {/* Quick nav */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {[
-          { href: "/schedule", label: "Schedule", desc: "Plan your week" },
-          { href: "/clients", label: "Clients", desc: "Manage roster" },
-          { href: "/outreach", label: "Outreach", desc: "Text athletes" },
-          { href: "/packages", label: "Packages", desc: "Track payments" },
-          { href: "/reports", label: "Reports", desc: "Export data" },
-          { href: "/schedule/availability", label: "Availability", desc: "Set your hours" },
-        ].map((item) => (
-          <Link key={item.href} href={item.href}>
-            <Card className="hover:border-foreground/20 transition-colors cursor-pointer h-full">
-              <CardContent className="pt-4 pb-3">
-                <div className="font-semibold text-sm">{item.label}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">{item.desc}</div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
     </div>
   );
 }
