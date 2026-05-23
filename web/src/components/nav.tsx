@@ -10,6 +10,7 @@ const links = [
   { href: "/schedule", label: "Schedule" },
   { href: "/clients", label: "Clients" },
   { href: "/outreach", label: "Outreach" },
+  { href: "/messages", label: "Messages" },
   { href: "/packages", label: "Packages" },
   { href: "/reports", label: "Reports" },
 ];
@@ -41,7 +42,8 @@ export function Nav() {
                 "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                 pathname === link.href ||
                   (link.href === "/clients" && pathname.startsWith("/clients/")) ||
-                  (link.href === "/schedule" && pathname.startsWith("/schedule/"))
+                  (link.href === "/schedule" && pathname.startsWith("/schedule/")) ||
+                  (link.href === "/messages" && pathname.startsWith("/messages/"))
                   ? "bg-accent/15 text-accent-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent/8"
               )}
