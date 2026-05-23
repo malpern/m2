@@ -58,9 +58,16 @@ export default async function DashboardPage() {
   const confirmed = thisWeekSessions.filter((s) => s.status === "confirmed").length;
   const proposed = thisWeekSessions.filter((s) => s.status === "proposed").length;
 
+  const today = new Date();
+  const greeting = today.getHours() < 12 ? "Good morning" : today.getHours() < 17 ? "Good afternoon" : "Good evening";
+  const dayLabel = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-8">
-      <h1 className="text-2xl font-bold tracking-tight mb-6">Dashboard</h1>
+      <div className="mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{greeting}, Matt</h1>
+        <p className="text-muted-foreground text-sm mt-1">{dayLabel}</p>
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         <Card>
