@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { EmptyState } from "@/components/empty-state";
 
 interface Message {
   id: number;
@@ -96,12 +97,13 @@ export function MessagesView({ messages }: { messages: Message[] }) {
       </div>
 
       {grouped.length > 0 ? (
-        <div className="space-y-8">
-          {grouped.map((group) => (
+        <div className="space-y-2">
+          {grouped.map((group, groupIdx) => (
             <div key={group.clientId}>
+              {groupIdx > 0 && <hr className="border-border my-6" />}
               <Link
                 href={`/clients/${group.clientId}`}
-                className="text-sm font-semibold text-foreground hover:text-blue-400 transition-colors mb-3 inline-block"
+                className="text-lg font-bold text-foreground hover:text-blue-400 transition-colors mb-4 inline-block"
               >
                 {group.clientName}
               </Link>
@@ -146,8 +148,20 @@ export function MessagesView({ messages }: { messages: Message[] }) {
           ))}
         </div>
       ) : (
-        <div className="text-sm text-muted-foreground text-center py-12">
-          {query ? `No messages matching "${search}"` : "No messages yet."}
+        <div>
+          {query ? (
+            <div className="text-sm text-muted-foreground text-center py-12">
+              No messages matching &ldquo;{search}&rdquo;
+            </div>
+          ) : (
+            <EmptyState
+              illustration="message"
+              heading="No messages yet"
+              description="Messages will appear here once you start reaching out to clients."
+              ctaLabel="Go to Outreach"
+              ctaHref="/outreach"
+            />
+          )}
         </div>
       )}
     </div>
