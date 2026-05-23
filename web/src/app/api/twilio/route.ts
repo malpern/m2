@@ -32,15 +32,12 @@ export async function POST(request: NextRequest) {
   }
 
   // Handle START / opt-in
-  if (lower === "start" || lower === "subscribe" || lower === "yes" && !await findClient(from)) {
+  if (lower === "start" || lower === "subscribe" || (lower === "yes" && !await findClient(from))) {
     return twiml("M2 Performance: You're signed up for session scheduling texts. For help, reply HELP. To opt out, reply STOP. Msg & data rates may apply.");
   }
 
-  // Normalize phone
-  const normalized = from.replace(/\s/g, "");
-
   // Find the client
-  const client = await findClient(normalized);
+  const client = await findClient(from);
 
   if (client) {
     const recentOutreach = await db
@@ -81,12 +78,13 @@ export async function POST(request: NextRequest) {
 }
 
 async function findClient(phone: string) {
-  const normalized = phone.replace(/\s/g, "");
+  // Strip whatsapp: prefix and whitespace
+  const normalized = phone.replace(/^whatsapp:/i, "").replace(/\s/g, "");
+  const digits = normalized.replace(/\D/g, "");
   const allClients = await db.select().from(clients).all();
   return allClients.find((c) => {
-    const clientPhone = c.phone.replace(/\s/g, "");
-    return clientPhone === normalized
-      || clientPhone === normalized.replace("+1", "")
-      || `+1${clientPhone.replace(/\D/g, "")}` === normalized;
+    const clientDigits = c.phone.replace(/\D/g, "");
+    // Match on last 10 digits to handle +1 prefix variations
+    return clientDigits.slice(-10) === digits.slice(-10);
   }) ?? null;
 }
