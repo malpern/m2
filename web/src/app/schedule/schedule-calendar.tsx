@@ -48,6 +48,14 @@ export function ScheduleCalendar({
   const [isPending, startTransition] = useTransition();
   const [isExporting, setIsExporting] = useState(false);
 
+  const prevDate = new Date(weekStart + "T12:00:00");
+  prevDate.setDate(prevDate.getDate() - 7);
+  const prevWeek = prevDate.toISOString().split("T")[0];
+
+  const nextDate = new Date(weekStart + "T12:00:00");
+  nextDate.setDate(nextDate.getDate() + 7);
+  const nextWeek = nextDate.toISOString().split("T")[0];
+
   const events: EventInput[] = sessions.map((s) => ({
     id: String(s.id),
     title: s.clientName,
@@ -91,10 +99,21 @@ export function ScheduleCalendar({
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Schedule</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Week of {new Date(weekStart + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-            {isPending && <span className="ml-2 text-blue-400">Updating...</span>}
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <Link href={`/schedule?week=${prevWeek}`}>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground">&larr;</Button>
+            </Link>
+            <span className="text-muted-foreground text-sm">
+              Week of {new Date(weekStart + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+            </span>
+            <Link href={`/schedule?week=${nextWeek}`}>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-muted-foreground">&rarr;</Button>
+            </Link>
+            <Link href="/schedule">
+              <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground">Today</Button>
+            </Link>
+            {isPending && <span className="text-blue-400 text-sm">Updating...</span>}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/schedule/availability">

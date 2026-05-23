@@ -6,8 +6,20 @@ import { ScheduleCalendar } from "./schedule-calendar";
 
 export const dynamic = "force-dynamic";
 
-export default async function SchedulePage() {
-  const monday = getMonday();
+export default async function SchedulePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ week?: string }>;
+}) {
+  const params = await searchParams;
+  let monday: Date;
+
+  if (params.week) {
+    monday = new Date(params.week + "T12:00:00");
+  } else {
+    monday = getMonday();
+  }
+
   const weekStart = monday.toISOString().split("T")[0];
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
