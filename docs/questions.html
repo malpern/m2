@@ -228,14 +228,58 @@
   /* Answer box */
   .answer-box {
     margin-top: 12px;
-    border: 1px dashed var(--border);
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 12px 16px;
     min-height: 48px;
-    font-size: 13px;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface-2);
+    width: 100%;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.5;
+    outline: none;
+  }
+  .answer-box:focus {
+    border-color: var(--accent);
+  }
+  .answer-box::placeholder {
     color: var(--text-muted);
     font-style: italic;
   }
+
+  /* Submit bar */
+  .submit-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    justify-content: center;
+    z-index: 100;
+  }
+  .submit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 32px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+  }
+  .submit-btn:hover { background: #5570e8; transform: translateY(-1px); }
+
+  /* Bottom padding so content isn't hidden behind submit bar */
+  footer { padding-bottom: 80px; }
 
   /* Footer */
   footer {
@@ -321,7 +365,7 @@
         <div class="q-num">1</div>
         <h3>What days do you take clients?</h3>
         <p>We know Saturdays are off (family time) and Sundays are full workdays. What about Mon-Fri — do you take clients every day?</p>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
 
       <div class="q">
@@ -331,7 +375,7 @@
         <div class="q-example">
           <strong>Example:</strong> "Mon-Fri I do 3pm, 5pm, 6pm. Sundays I start at 10am and go all day."
         </div>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
 
       <div class="q">
@@ -343,7 +387,7 @@
           <div class="q-opt">Sometimes small groups</div>
           <div class="q-opt">Depends on the client</div>
         </div>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
     </div>
   </div>
@@ -362,7 +406,7 @@
         <div class="q-example">
           <strong>If yes:</strong> Who are they, and what's their standing slot? We'll auto-fill those before the outreach cycle starts — no texting needed.
         </div>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
 
       <div class="q">
@@ -374,7 +418,7 @@
           <div class="q-opt">I still confirm each week</div>
           <div class="q-opt">Depends on the person</div>
         </div>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
     </div>
   </div>
@@ -398,7 +442,7 @@
           <div class="q-opt">A few at once</div>
           <div class="q-opt">All at once</div>
         </div>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
 
       <div class="q">
@@ -411,7 +455,7 @@
           <div class="q-opt">A few days before each session</div>
           <div class="q-opt">Varies</div>
         </div>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
 
       <div class="q">
@@ -421,7 +465,7 @@
         <div class="q-example">
           <strong>Example:</strong> "I follow up after about a day. If I still don't hear back by Tuesday, I move on."
         </div>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
 
       <div class="q">
@@ -431,7 +475,7 @@
         <div class="q-example">
           <strong>Example:</strong> "Hey Jake, you good for Thursday at 3?" or "What's your schedule looking like this week?"
         </div>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
     </div>
   </div>
@@ -452,14 +496,14 @@
           <div class="q-opt">Usually leave it empty</div>
           <div class="q-opt">Depends on the slot</div>
         </div>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
 
       <div class="q">
         <div class="q-num">11</div>
         <h3>Do clients ever text you to add a session?</h3>
         <p>Does a client ever reach out and say "hey can I get an extra session this week?" If so, how do you handle that?</p>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
     </div>
   </div>
@@ -475,14 +519,14 @@
         <div class="q-num">12</div>
         <h3>When does "in-season" vs "off-season" change?</h3>
         <p>Is there a specific date when athletes shift from in-season to off-season? Does it vary by sport? We can automate this if there's a pattern.</p>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
 
       <div class="q">
         <div class="q-num">13</div>
         <h3>When a client goes "on break," how do you know they're back?</h3>
         <p>Do they text you? Do you check in after a set time? We want to make sure nobody gets lost.</p>
-        <div class="answer-box">Matt's answer:</div>
+        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
       </div>
     </div>
   </div>
@@ -530,11 +574,40 @@
   </div>
 </section>
 
+<div class="submit-bar">
+  <button class="submit-btn" onclick="sendAnswers()">
+    Send Answers to Micah &rarr;
+  </button>
+</div>
+
 <footer>
   <div class="container">
     <a href="index.html">Matt Scheduler</a> &mdash; M2 Performance &amp; Therapy
   </div>
 </footer>
+
+<script>
+function sendAnswers() {
+  var questions = document.querySelectorAll('.q');
+  var lines = ['Matt Scheduler - Questions & Answers\n'];
+
+  questions.forEach(function(q) {
+    var num = q.querySelector('.q-num').textContent;
+    var title = q.querySelector('h3').textContent;
+    var textarea = q.querySelector('.answer-box');
+    var answer = textarea ? textarea.value.trim() : '';
+
+    lines.push('Q' + num + ': ' + title);
+    lines.push('A: ' + (answer || '(no answer)'));
+    lines.push('');
+  });
+
+  var body = lines.join('\n');
+  var subject = 'Matt Scheduler - My Answers';
+  var mailto = 'mailto:malpern@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+  window.location.href = mailto;
+}
+</script>
 
 </body>
 </html>
