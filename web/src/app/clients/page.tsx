@@ -27,6 +27,7 @@ export default async function ClientsPage() {
       preferredDays: clients.preferredDays,
       preferredTime: clients.preferredTime,
       maxSessionsPerWeek: clients.maxSessionsPerWeek,
+      standingSlot: clients.standingSlot,
       sortOrder: clients.sortOrder,
       notes: clients.notes,
       createdAt: clients.createdAt,

@@ -106,6 +106,11 @@ export function ScheduleCalendar({
           <Button onClick={handleExport} disabled={isExporting} variant="outline" size="sm">
             {isExporting ? "Exporting..." : "Export .ics"}
           </Button>
+          <Link href="/outreach">
+            <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+              Outreach &rarr;
+            </Button>
+          </Link>
         </div>
       </div>
 
