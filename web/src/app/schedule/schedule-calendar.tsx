@@ -130,9 +130,11 @@ function NotifyDialog({
 export function ScheduleCalendar({
   sessions,
   weekStart,
+  addSessionButton,
 }: {
   sessions: SessionEvent[];
   weekStart: string;
+  addSessionButton?: React.ReactNode;
 }) {
   const calendarRef = useRef<FullCalendar>(null);
   const [isPending, startTransition] = useTransition();
@@ -314,6 +316,7 @@ export function ScheduleCalendar({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {addSessionButton}
           <Link href="/schedule/availability">
             <Button variant="outline" size="sm">Availability</Button>
           </Link>

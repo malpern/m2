@@ -59,6 +59,23 @@ export async function updateSessionTime(
   revalidatePath("/schedule");
 }
 
+export async function addManualSession(clientId: number, date: string, time: string) {
+  const hour = parseInt(time.split(":")[0]);
+  const slotMap: Record<number, string> = { 10: "3pm", 11: "3pm", 12: "5pm", 13: "5pm", 14: "5pm", 15: "3pm", 16: "4pm", 17: "5pm", 18: "6pm", 19: "7pm" };
+  type Slot = "3pm" | "4pm" | "5pm" | "6pm" | "7pm";
+  const slot = (slotMap[hour] ?? "5pm") as Slot;
+
+  db.insert(sessions).values({
+    clientId,
+    scheduledDate: date,
+    scheduledTime: time,
+    slot,
+    status: "confirmed",
+  }).run();
+
+  revalidatePath("/schedule");
+}
+
 export async function confirmSession(sessionId: number) {
   db.update(sessions)
     .set({ status: "confirmed" })

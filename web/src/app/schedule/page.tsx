@@ -3,6 +3,7 @@ import { clients, sessions } from "@/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { getMonday } from "@/lib/scheduler";
 import { ScheduleCalendar } from "./schedule-calendar";
+import { AddSessionButton } from "./add-session";
 
 export const dynamic = "force-dynamic";
 
@@ -39,9 +40,19 @@ export default async function SchedulePage({
     .where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd)))
     .all();
 
+  const allClients = db
+    .select({ id: clients.id, name: clients.name })
+    .from(clients)
+    .where(eq(clients.category, "active"))
+    .all();
+
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
-      <ScheduleCalendar sessions={weekSessions} weekStart={weekStart} />
+      <ScheduleCalendar
+        sessions={weekSessions}
+        weekStart={weekStart}
+        addSessionButton={<AddSessionButton clients={allClients} weekStart={weekStart} />}
+      />
     </div>
   );
 }
