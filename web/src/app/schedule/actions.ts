@@ -9,9 +9,9 @@ import { revalidatePath } from "next/cache";
 
 export async function generateSchedule(weekStartISO: string) {
   const weekStart = new Date(weekStartISO);
-  const allClients = db.select().from(clients).all();
+  const allClients = await db.select().from(clients).all();
 
-  const savedWeights = db.select().from(prioritySettings).get();
+  const savedWeights = await db.select().from(prioritySettings).get();
   const weights = savedWeights
     ? { collegeBoundWeight: savedWeights.collegeBoundWeight, gradeLevelWeight: savedWeights.gradeLevelWeight, effortWeight: savedWeights.effortWeight }
     : DEFAULT_WEIGHTS;
@@ -23,7 +23,7 @@ export async function generateSchedule(weekStartISO: string) {
   const startStr = weekStart.toISOString().split("T")[0];
   const endStr = weekEnd.toISOString().split("T")[0];
 
-  db.delete(sessions)
+  await db.delete(sessions)
     .where(
       and(
         eq(sessions.status, "proposed"),
@@ -34,7 +34,7 @@ export async function generateSchedule(weekStartISO: string) {
     .run();
 
   for (const p of proposed) {
-    db.insert(sessions)
+    await db.insert(sessions)
       .values({
         clientId: p.clientId,
         scheduledDate: p.date,
@@ -58,7 +58,7 @@ export async function updateSessionTime(
   type Slot = "3pm" | "4pm" | "5pm" | "6pm" | "7pm";
   const slot = (slotMap[hour] ?? "5pm") as Slot;
 
-  db.update(sessions)
+  await db.update(sessions)
     .set({ scheduledDate: newDate, scheduledTime: newTime, slot })
     .where(eq(sessions.id, sessionId))
     .run();
@@ -72,7 +72,7 @@ export async function addManualSession(clientId: number, date: string, time: str
   type Slot = "3pm" | "4pm" | "5pm" | "6pm" | "7pm";
   const slot = (slotMap[hour] ?? "5pm") as Slot;
 
-  db.insert(sessions).values({
+  await db.insert(sessions).values({
     clientId,
     scheduledDate: date,
     scheduledTime: time,
@@ -84,7 +84,7 @@ export async function addManualSession(clientId: number, date: string, time: str
 }
 
 export async function confirmSession(sessionId: number) {
-  db.update(sessions)
+  await db.update(sessions)
     .set({ status: "confirmed" })
     .where(eq(sessions.id, sessionId))
     .run();
@@ -92,7 +92,7 @@ export async function confirmSession(sessionId: number) {
 }
 
 export async function cancelSession(sessionId: number) {
-  db.update(sessions)
+  await db.update(sessions)
     .set({ status: "cancelled" })
     .where(eq(sessions.id, sessionId))
     .run();
@@ -100,12 +100,12 @@ export async function cancelSession(sessionId: number) {
 }
 
 export async function deleteSession(sessionId: number) {
-  db.delete(sessions).where(eq(sessions.id, sessionId)).run();
+  await db.delete(sessions).where(eq(sessions.id, sessionId)).run();
   revalidatePath("/schedule");
 }
 
 export async function queueNotification(sessionId: number, message: string) {
-  const session = db
+  const session = await db
     .select({
       clientId: sessions.clientId,
       clientName: clients.name,
@@ -120,7 +120,7 @@ export async function queueNotification(sessionId: number, message: string) {
 
   if (!session) return;
 
-  db.insert(outreach).values({
+  await db.insert(outreach).values({
     clientId: session.clientId,
     sessionId,
     weekOf: session.scheduledDate,
@@ -142,7 +142,7 @@ export async function exportICS(weekStartISO: string): Promise<string> {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
 
-  const weekSessions = db
+  const weekSessionsAll = await db
     .select({
       id: sessions.id,
       clientId: sessions.clientId,
@@ -159,8 +159,8 @@ export async function exportICS(weekStartISO: string): Promise<string> {
         lte(sessions.scheduledDate, weekEnd.toISOString().split("T")[0])
       )
     )
-    .all()
-    .filter((s) => s.status === "confirmed" || s.status === "proposed");
+    .all();
+  const weekSessions = weekSessionsAll.filter((s) => s.status === "confirmed" || s.status === "proposed");
 
   const lines = [
     "BEGIN:VCALENDAR",

@@ -6,13 +6,13 @@ import { eq, and, gte, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function markConfirmed(sessionId: number) {
-  db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, sessionId)).run();
+  await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, sessionId)).run();
   revalidatePath("/outreach");
   revalidatePath("/schedule");
 }
 
 export async function markDeclined(sessionId: number) {
-  db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sessionId)).run();
+  await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sessionId)).run();
   revalidatePath("/outreach");
   revalidatePath("/schedule");
 }
@@ -26,14 +26,14 @@ export async function overrideStatus(sessionId: number, newStatus: string) {
   };
   type SessionStatus = "proposed" | "confirmed" | "completed" | "cancelled" | "no_show";
   const sessionStatus = (statusMap[newStatus] ?? "proposed") as SessionStatus;
-  db.update(sessions).set({ status: sessionStatus }).where(eq(sessions.id, sessionId)).run();
+  await db.update(sessions).set({ status: sessionStatus }).where(eq(sessions.id, sessionId)).run();
   revalidatePath("/outreach");
   revalidatePath("/schedule");
 }
 
 export async function sendOutreachBatch(sessionIds: number[], weekOf: string) {
   for (const sessionId of sessionIds) {
-    const session = db.select({
+    const session = await db.select({
       id: sessions.id,
       clientId: sessions.clientId,
       clientName: clients.name,
@@ -51,7 +51,7 @@ export async function sendOutreachBatch(sessionIds: number[], weekOf: string) {
 
     const message = `Hey ${session.clientName.split(" ")[0]}, are you free ${formatDay(session.scheduledDate)} at ${session.slot} for a session?`;
 
-    db.insert(outreach).values({
+    await db.insert(outreach).values({
       clientId: session.clientId,
       sessionId: session.id,
       weekOf,

@@ -161,8 +161,8 @@ const clientConfigs: ClientConvoConfig[] = [
   { name: "Micah Alpern", days: ["Monday", "Wednesday", "Friday"], times: ["12pm", "12pm", "1:15pm"], threadCount: 7 },
 ];
 
-function seedMessages() {
-  const allClients = db.select().from(clients).all();
+async function seedMessages() {
+  const allClients = await db.select().from(clients).all();
   let totalInserted = 0;
 
   for (const config of clientConfigs) {
@@ -204,7 +204,7 @@ function seedMessages() {
         const baseHour = 9; // 9am start
         const ts = isoTimestamp(monday, baseHour + Math.floor(msg.hourOffset), msg.minuteOffset + (msg.hourOffset % 1) * 60);
 
-        db.insert(outreach)
+        await db.insert(outreach)
           .values({
             clientId: client.id,
             weekOf: weekOfStr,

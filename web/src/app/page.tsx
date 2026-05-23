@@ -15,13 +15,13 @@ export default async function DashboardPage() {
   const monday = getMonday();
   const weekStart = monday.toISOString().split("T")[0];
 
-  const activeCount = db
+  const activeCount = await db
     .select({ count: sql<number>`count(*)` })
     .from(clients)
     .where(sql`${clients.category} IN ('active', 'in_season')`)
     .get();
 
-  const lowPackages = db
+  const lowPackages = await db
     .select({
       name: clients.name,
       clientId: clients.id,
@@ -37,13 +37,13 @@ export default async function DashboardPage() {
     )
     .all();
 
-  const unreconciledCount = db
+  const unreconciledCount = await db
     .select({ count: sql<number>`count(*)` })
     .from(sessions)
     .where(and(eq(sessions.status, "completed"), eq(sessions.reconciled, false)))
     .get();
 
-  const thisWeekSessions = db
+  const thisWeekSessions = await db
     .select({
       id: sessions.id,
       clientId: sessions.clientId,
@@ -69,21 +69,22 @@ export default async function DashboardPage() {
   nextSunday.setDate(nextSunday.getDate() + 6);
   const nextWeekEnd = nextSunday.toISOString().split("T")[0];
 
-  const nextWeekSessions = db
+  const nextWeekSessions = await db
     .select({ id: sessions.id, status: sessions.status })
     .from(sessions)
     .where(and(gte(sessions.scheduledDate, nextWeekStart), lte(sessions.scheduledDate, nextWeekEnd)))
     .all();
 
-  const nextWeekOutreach = db
+  const nextWeekOutreach = await db
     .select()
     .from(outreach)
     .where(eq(outreach.weekOf, nextWeekStart))
     .all();
 
-  const hasAvailability = db.select().from(defaultAvailability).all().some((a) => a.enabled);
+  const availabilityRows = await db.select().from(defaultAvailability).all();
+  const hasAvailability = availabilityRows.some((a) => a.enabled);
 
-  const totalActiveClients = db
+  const totalActiveClients = await db
     .select({ count: sql<number>`count(*)` })
     .from(clients)
     .where(sql`${clients.category} IN ('active', 'in_season')`)

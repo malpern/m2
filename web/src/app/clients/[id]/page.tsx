@@ -56,20 +56,20 @@ export default async function ClientDetailPage({
   const clientId = parseInt(id, 10);
   if (isNaN(clientId)) notFound();
 
-  const client = db.select().from(clients).where(eq(clients.id, clientId)).get();
+  const client = await db.select().from(clients).where(eq(clients.id, clientId)).get();
   if (!client) notFound();
 
-  const clientPackages = db.select().from(packages).where(eq(packages.clientId, clientId)).all();
-  const recentSessions = db.select().from(sessions).where(eq(sessions.clientId, clientId)).orderBy(desc(sessions.scheduledDate)).limit(10).all();
+  const clientPackages = await db.select().from(packages).where(eq(packages.clientId, clientId)).all();
+  const recentSessions = await db.select().from(sessions).where(eq(sessions.clientId, clientId)).orderBy(desc(sessions.scheduledDate)).limit(10).all();
 
-  const clientMessages = db
+  const clientMessages = await db
     .select()
     .from(outreach)
     .where(eq(outreach.clientId, clientId))
     .orderBy(outreach.sentAt)
     .all();
 
-  const allClientSessions = db
+  const allClientSessions = await db
     .select()
     .from(sessions)
     .where(eq(sessions.clientId, clientId))

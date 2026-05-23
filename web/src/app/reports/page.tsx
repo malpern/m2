@@ -6,7 +6,7 @@ import { ReportsDashboard } from "./reports-dashboard";
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
-  const all = db.select().from(sessions).all();
+  const all = await db.select().from(sessions).all();
 
   const completed = all.filter((s) => s.status === "completed").length;
   const cancelled = all.filter((s) => s.status === "cancelled").length;
@@ -28,7 +28,7 @@ export default async function ReportsPage() {
   );
   const weeklyAvg = weeks.size > 0 ? Math.round(completed / weeks.size) : 0;
 
-  const activeClients = db
+  const activeClients = await db
     .select({ count: sql<number>`count(*)` })
     .from(sessions)
     .where(eq(sessions.status, "completed"))

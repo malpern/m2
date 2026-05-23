@@ -15,7 +15,7 @@ export default async function EditClientPage({
   const clientId = parseInt(id, 10);
   if (isNaN(clientId)) notFound();
 
-  const client = db.select().from(clients).where(eq(clients.id, clientId)).get();
+  const client = await db.select().from(clients).where(eq(clients.id, clientId)).get();
   if (!client) notFound();
 
   const boundAction = updateClient.bind(null, clientId);

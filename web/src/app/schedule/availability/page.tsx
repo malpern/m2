@@ -9,7 +9,7 @@ import { DefaultAvailabilityGrid, WeeklyOverrideGrid } from "./availability-grid
 export const dynamic = "force-dynamic";
 
 export default async function AvailabilityPage() {
-  const defaults = db.select().from(defaultAvailability).all();
+  const defaults = await db.select().from(defaultAvailability).all();
 
   const nextMonday = getMonday();
   nextMonday.setDate(nextMonday.getDate() + 7);
@@ -20,7 +20,7 @@ export default async function AvailabilityPage() {
     year: "numeric",
   });
 
-  const overrides = db
+  const overrides = await db
     .select()
     .from(weeklyOverrides)
     .where(eq(weeklyOverrides.weekOf, weekOf))

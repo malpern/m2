@@ -9,7 +9,7 @@ export async function GET() {
   fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
   const startDate = fourWeeksAgo.toISOString().split("T")[0];
 
-  const allSessions = db
+  const allSessions = await db
     .select({
       id: sessions.id,
       clientName: clients.name,
@@ -29,7 +29,7 @@ export async function GET() {
 
   // Also include proposed sessions for upcoming dates
   const today = new Date().toISOString().split("T")[0];
-  const proposedSessions = db
+  const proposedSessions = await db
     .select({
       id: sessions.id,
       clientName: clients.name,

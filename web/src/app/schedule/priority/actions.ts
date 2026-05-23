@@ -7,10 +7,10 @@ import { revalidatePath } from "next/cache";
 import type { PriorityWeights } from "@/lib/priority";
 
 export async function getPrioritySettings(): Promise<PriorityWeights> {
-  let row = db.select().from(prioritySettings).get();
+  let row = await db.select().from(prioritySettings).get();
   if (!row) {
-    db.insert(prioritySettings).values({}).run();
-    row = db.select().from(prioritySettings).get()!;
+    await db.insert(prioritySettings).values({}).run();
+    row = (await db.select().from(prioritySettings).get())!;
   }
   return {
     collegeBoundWeight: row.collegeBoundWeight,
@@ -24,14 +24,14 @@ export async function savePrioritySettings(
   gradeLevelWeight: number,
   effortWeight: number,
 ) {
-  const existing = db.select().from(prioritySettings).get();
+  const existing = await db.select().from(prioritySettings).get();
   if (existing) {
-    db.update(prioritySettings)
+    await db.update(prioritySettings)
       .set({ collegeBoundWeight, gradeLevelWeight, effortWeight })
       .where(eq(prioritySettings.id, existing.id))
       .run();
   } else {
-    db.insert(prioritySettings)
+    await db.insert(prioritySettings)
       .values({ collegeBoundWeight, gradeLevelWeight, effortWeight })
       .run();
   }
@@ -41,19 +41,19 @@ export async function savePrioritySettings(
 }
 
 export async function saveSortOrder(clientId: number, sortOrder: number) {
-  db.update(clients).set({ sortOrder }).where(eq(clients.id, clientId)).run();
+  await db.update(clients).set({ sortOrder }).where(eq(clients.id, clientId)).run();
   revalidatePath("/schedule/priority");
   revalidatePath("/clients");
 }
 
 export async function clearClientSortOrder(clientId: number) {
-  db.update(clients).set({ sortOrder: null }).where(eq(clients.id, clientId)).run();
+  await db.update(clients).set({ sortOrder: null }).where(eq(clients.id, clientId)).run();
   revalidatePath("/schedule/priority");
   revalidatePath("/clients");
 }
 
 export async function clearAllSortOrders() {
-  db.update(clients).set({ sortOrder: null }).run();
+  await db.update(clients).set({ sortOrder: null }).run();
   revalidatePath("/schedule/priority");
   revalidatePath("/clients");
 }

@@ -26,7 +26,7 @@ export default async function SchedulePage({
   sunday.setDate(sunday.getDate() + 6);
   const weekEnd = sunday.toISOString().split("T")[0];
 
-  const weekSessions = db
+  const weekSessions = await db
     .select({
       id: sessions.id,
       clientId: sessions.clientId,
@@ -40,7 +40,7 @@ export default async function SchedulePage({
     .where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd)))
     .all();
 
-  const allClients = db
+  const allClients = await db
     .select({ id: clients.id, name: clients.name })
     .from(clients)
     .where(eq(clients.category, "active"))

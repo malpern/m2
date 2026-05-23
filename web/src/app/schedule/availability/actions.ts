@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 type Day = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "sunday";
 
 export async function toggleDefaultSlot(id: number, enabled: boolean) {
-  db.update(defaultAvailability)
+  await db.update(defaultAvailability)
     .set({ enabled })
     .where(eq(defaultAvailability.id, id))
     .run();
@@ -16,12 +16,12 @@ export async function toggleDefaultSlot(id: number, enabled: boolean) {
 }
 
 export async function addDefaultSlot(day: string, slot: string) {
-  db.insert(defaultAvailability).values({ day: day as Day, slot, enabled: true }).run();
+  await db.insert(defaultAvailability).values({ day: day as Day, slot, enabled: true }).run();
   revalidatePath("/schedule/availability");
 }
 
 export async function removeDefaultSlot(id: number) {
-  db.delete(defaultAvailability).where(eq(defaultAvailability.id, id)).run();
+  await db.delete(defaultAvailability).where(eq(defaultAvailability.id, id)).run();
   revalidatePath("/schedule/availability");
 }
 
@@ -32,7 +32,7 @@ export async function setWeeklyOverride(
   enabled: boolean,
   note?: string,
 ) {
-  const existing = db
+  const existing = await db
     .select()
     .from(weeklyOverrides)
     .where(
@@ -45,12 +45,12 @@ export async function setWeeklyOverride(
     .get();
 
   if (existing) {
-    db.update(weeklyOverrides)
+    await db.update(weeklyOverrides)
       .set({ enabled, note: note ?? existing.note })
       .where(eq(weeklyOverrides.id, existing.id))
       .run();
   } else {
-    db.insert(weeklyOverrides)
+    await db.insert(weeklyOverrides)
       .values({ weekOf, day: day as Day, slot, enabled, note: note ?? null })
       .run();
   }
@@ -59,6 +59,6 @@ export async function setWeeklyOverride(
 }
 
 export async function clearWeeklyOverrides(weekOf: string) {
-  db.delete(weeklyOverrides).where(eq(weeklyOverrides.weekOf, weekOf)).run();
+  await db.delete(weeklyOverrides).where(eq(weeklyOverrides.weekOf, weekOf)).run();
   revalidatePath("/schedule/availability");
 }

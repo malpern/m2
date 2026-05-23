@@ -19,7 +19,7 @@ export default async function OutreachPage() {
   sunday.setDate(sunday.getDate() + 6);
   const weekEnd = sunday.toISOString().split("T")[0];
 
-  const weekSessions = db
+  const weekSessions = await db
     .select({
       id: sessions.id,
       clientId: sessions.clientId,
@@ -41,7 +41,7 @@ export default async function OutreachPage() {
     .where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd)))
     .all();
 
-  const weekOutreach = db
+  const weekOutreach = await db
     .select()
     .from(outreach)
     .where(eq(outreach.weekOf, weekStart))

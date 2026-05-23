@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function PriorityPage() {
   const weights = await getPrioritySettings();
 
-  const activeClients = db
+  const activeClients = await db
     .select({
       id: clients.id,
       name: clients.name,

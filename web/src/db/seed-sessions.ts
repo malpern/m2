@@ -38,7 +38,7 @@ function formatDate(d: Date): string {
 }
 
 async function seedSessions() {
-  const allClients = db.select().from(clients).all();
+  const allClients = await db.select().from(clients).all();
 
   let totalCreated = 0;
   let totalCompleted = 0;
@@ -72,10 +72,10 @@ async function seedSessions() {
           totalNoShow++;
         }
 
-        const pkg = db.select().from(packages).where(eq(packages.clientId, client.id)).get();
+        const pkg = await db.select().from(packages).where(eq(packages.clientId, client.id)).get();
         const reconciled = Math.random() > 0.15;
 
-        db.insert(sessions).values({
+        await db.insert(sessions).values({
           clientId: client.id,
           packageId: pkg?.id ?? null,
           scheduledDate: dateStr,
@@ -87,7 +87,7 @@ async function seedSessions() {
         }).run();
 
         if (status === "completed" && pkg) {
-          db.update(packages)
+          await db.update(packages)
             .set({ sessionsUsed: pkg.sessionsUsed + 1 })
             .where(eq(packages.id, pkg.id))
             .run();
@@ -103,7 +103,8 @@ async function seedSessions() {
   console.log(`  ${totalCancelled} cancelled`);
   console.log(`  ${totalNoShow} no-show`);
 
-  const unreconciledCount = db.select().from(sessions).all()
+  const allSessions = await db.select().from(sessions).all();
+  const unreconciledCount = allSessions
     .filter(s => s.status === "completed" && !s.reconciled).length;
   console.log(`  ${unreconciledCount} unreconciled (the money leak)`);
 }

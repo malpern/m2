@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 
 export async function updateClientOrder(orderedIds: number[]) {
   for (let i = 0; i < orderedIds.length; i++) {
-    db.update(clients)
+    await db.update(clients)
       .set({ sortOrder: i })
       .where(eq(clients.id, orderedIds[i]))
       .run();
@@ -34,13 +34,13 @@ export async function createClient(formData: FormData) {
     notes: (formData.get("notes") as string) || null,
   };
 
-  db.insert(clients).values(data).run();
+  await db.insert(clients).values(data).run();
   revalidatePath("/clients");
   redirect("/clients");
 }
 
 export async function updateClient(id: number, formData: FormData) {
-  db.update(clients)
+  await db.update(clients)
     .set({
       name: formData.get("name") as string,
       phone: formData.get("phone") as string,
@@ -62,7 +62,7 @@ export async function updateClient(id: number, formData: FormData) {
 }
 
 export async function updateClientStatus(id: number, status: string) {
-  db.update(clients)
+  await db.update(clients)
     .set({ category: status as Category })
     .where(eq(clients.id, id))
     .run();
@@ -83,20 +83,20 @@ export async function updateClientField(id: number, field: string, value: string
   } else {
     updates[field] = value;
   }
-  db.update(clients).set(updates).where(eq(clients.id, id)).run();
+  await db.update(clients).set(updates).where(eq(clients.id, id)).run();
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
 }
 
 export async function clearAllSortOrders() {
-  db.update(clients).set({ sortOrder: null }).run();
+  await db.update(clients).set({ sortOrder: null }).run();
   revalidatePath("/clients");
 }
 
 export async function sendDirectMessage(clientId: number, message: string) {
   const today = new Date().toISOString().split("T")[0];
 
-  db.insert(outreach).values({
+  await db.insert(outreach).values({
     clientId,
     weekOf: today,
     direction: "sent",
@@ -113,7 +113,7 @@ export async function sendDirectMessage(clientId: number, message: string) {
 }
 
 export async function deleteClient(id: number) {
-  db.delete(clients).where(eq(clients.id, id)).run();
+  await db.delete(clients).where(eq(clients.id, id)).run();
   revalidatePath("/clients");
   redirect("/clients");
 }

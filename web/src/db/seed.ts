@@ -30,12 +30,12 @@ const mockPackages = [
 async function seed() {
   console.log("Seeding database...");
 
-  const inserted = db.insert(clients).values(mockClients).returning().all();
+  const inserted = await db.insert(clients).values(mockClients).returning().all();
 
   for (const pkg of mockPackages) {
     const client = inserted.find((c) => c.name === pkg.clientName);
     if (client) {
-      db.insert(packages)
+      await db.insert(packages)
         .values({
           clientId: client.id,
           totalSessions: pkg.totalSessions,

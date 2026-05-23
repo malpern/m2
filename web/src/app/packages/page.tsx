@@ -6,7 +6,7 @@ import { PackagesTable } from "./packages-table";
 export const dynamic = "force-dynamic";
 
 export default async function PackagesPage() {
-  const clientPackages = db
+  const clientPackagesRaw = await db
     .select({
       clientId: clients.id,
       clientName: clients.name,
@@ -19,13 +19,13 @@ export default async function PackagesPage() {
     .from(packages)
     .innerJoin(clients, eq(clients.id, packages.clientId))
     .where(eq(packages.status, "active"))
-    .all()
-    .map((p) => ({
+    .all();
+  const clientPackages = clientPackagesRaw.map((p) => ({
       ...p,
       remaining: p.totalSessions - p.sessionsUsed,
     }));
 
-  const unreconciled = db
+  const unreconciled = await db
     .select({
       sessionId: sessions.id,
       clientId: clients.id,

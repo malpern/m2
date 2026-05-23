@@ -15,7 +15,7 @@ const GRADE_RANK: Record<string, number> = {
 export const dynamic = "force-dynamic";
 
 export default async function ClientsPage() {
-  const allClients = db
+  const allClients = await db
     .select({
       id: clients.id,
       name: clients.name,

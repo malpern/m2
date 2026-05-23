@@ -5,8 +5,8 @@ import { MessagesView } from "./messages-view";
 
 export const dynamic = "force-dynamic";
 
-export default function MessagesPage() {
-  const allMessages = db
+export default async function MessagesPage() {
+  const allMessages = await db
     .select({
       id: outreach.id,
       clientId: outreach.clientId,
@@ -21,7 +21,7 @@ export default function MessagesPage() {
     .orderBy(desc(outreach.sentAt))
     .all();
 
-  const allClients = db.select().from(clients).all();
+  const allClients = await db.select().from(clients).all();
   const clientMap = Object.fromEntries(allClients.map((c) => [c.id, c.name]));
 
   const messagesWithClient = allMessages.map((msg) => ({

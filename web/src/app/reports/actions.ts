@@ -5,7 +5,7 @@ import { clients, sessions, packages } from "@/db/schema";
 import { eq, and, gte, lte, sql } from "drizzle-orm";
 
 export async function exportSessionsCSV(startDate: string, endDate: string): Promise<string> {
-  const rows = db
+  const rows = await db
     .select({
       clientName: clients.name,
       date: sessions.scheduledDate,
@@ -29,7 +29,7 @@ export async function exportSessionsCSV(startDate: string, endDate: string): Pro
 }
 
 export async function exportClientsCSV(): Promise<string> {
-  const rows = db
+  const rows = await db
     .select({
       name: clients.name,
       phone: clients.phone,
