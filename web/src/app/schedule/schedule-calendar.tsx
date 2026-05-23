@@ -330,7 +330,7 @@ export function ScheduleCalendar({
             variant="outline"
             size="sm"
             onClick={() => {
-              const url = `${window.location.origin}/api/calendar`;
+              const url = `${window.location.origin}/api/calendar?token=${process.env.NEXT_PUBLIC_CALENDAR_TOKEN ?? ""}`;
               navigator.clipboard.writeText(url);
               alert("Calendar URL copied! Paste it in Google Calendar → Other calendars → From URL");
             }}

@@ -4,9 +4,15 @@ import { redirect } from "next/navigation";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
+  const state = request.nextUrl.searchParams.get("state");
+  const storedState = request.cookies.get("oauth_state")?.value;
 
   if (!code) {
     redirect("/settings?error=no_code");
+  }
+
+  if (!state || !storedState || state !== storedState) {
+    redirect("/settings?error=invalid_state");
   }
 
   try {

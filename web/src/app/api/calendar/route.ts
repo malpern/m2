@@ -1,10 +1,17 @@
 import { db } from "@/db";
 import { clients, sessions } from "@/db/schema";
 import { eq, and, gte } from "drizzle-orm";
+import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const token = request.nextUrl.searchParams.get("token");
+  const expectedToken = process.env.CALENDAR_FEED_TOKEN;
+
+  if (expectedToken && token !== expectedToken) {
+    return new Response("Unauthorized", { status: 401 });
+  }
   const fourWeeksAgo = new Date();
   fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
   const startDate = fourWeeksAgo.toISOString().split("T")[0];

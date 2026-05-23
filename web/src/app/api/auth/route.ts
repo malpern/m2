@@ -1,7 +1,17 @@
 import { getAuthUrl } from "@/lib/google-calendar";
-import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 
 export async function GET() {
-  const url = getAuthUrl();
-  redirect(url);
+  const { url, state } = getAuthUrl();
+
+  const response = NextResponse.redirect(url);
+  response.cookies.set("oauth_state", state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 600,
+    path: "/",
+  });
+
+  return response;
 }

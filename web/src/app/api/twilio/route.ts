@@ -3,20 +3,42 @@ import { outreach, clients } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { classifyReply } from "@/lib/classify-reply";
+import twilio from "twilio";
+
+function escapeXml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
 function twiml(message?: string): Response {
   const body = message
-    ? `<Response><Message>${message}</Message></Response>`
+    ? `<Response><Message>${escapeXml(message)}</Message></Response>`
     : "<Response/>";
   return new Response(body, {
     headers: { "Content-Type": "text/xml" },
   });
 }
 
+function verifyTwilioSignature(request: NextRequest, params: Record<string, string>): boolean {
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (!authToken) return false;
+
+  const signature = request.headers.get("x-twilio-signature") ?? "";
+  const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://web-jet-mu-62.vercel.app"}/api/twilio`;
+
+  return twilio.validateRequest(authToken, signature, url, params);
+}
+
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
-  const from = formData.get("From") as string;
-  const body = formData.get("Body") as string;
+  const params: Record<string, string> = {};
+  formData.forEach((value, key) => { params[key] = value.toString(); });
+
+  if (!verifyTwilioSignature(request, params)) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
+  const from = params.From ?? "";
+  const body = params.Body ?? "";
 
   if (!from || !body) return twiml();
 

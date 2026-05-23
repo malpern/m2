@@ -11,13 +11,16 @@ function getOAuth2Client() {
   );
 }
 
-export function getAuthUrl(): string {
+export function getAuthUrl(): { url: string; state: string } {
+  const state = crypto.randomUUID();
   const oauth2 = getOAuth2Client();
-  return oauth2.generateAuthUrl({
+  const url = oauth2.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
     scope: ["https://www.googleapis.com/auth/calendar.readonly"],
+    state,
   });
+  return { url, state };
 }
 
 export async function handleCallback(code: string) {

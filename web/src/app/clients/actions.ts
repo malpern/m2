@@ -71,7 +71,17 @@ export async function updateClientStatus(id: number, status: string) {
   revalidatePath(`/clients/${id}`);
 }
 
+const ALLOWED_FIELDS = new Set([
+  "name", "phone", "category", "gradeLevel", "collegeBound",
+  "behaviorScore", "preferredDays", "preferredTime", "maxSessionsPerWeek",
+  "standingSlot", "notes",
+]);
+
 export async function updateClientField(id: number, field: string, value: string | number | boolean) {
+  if (!ALLOWED_FIELDS.has(field)) {
+    throw new Error(`Field "${field}" is not editable`);
+  }
+
   const updates: Record<string, unknown> = {};
   if (field === "collegeBound") {
     updates[field] = value;
