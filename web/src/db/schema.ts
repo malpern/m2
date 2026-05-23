@@ -111,7 +111,16 @@ export const weeklyOverrides = sqliteTable("weekly_overrides", {
   note: text("note"),
 });
 
+export const prioritySettings = sqliteTable("priority_settings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  collegeBoundWeight: integer("college_bound_weight").notNull().default(5),
+  gradeLevelWeight: integer("grade_level_weight").notNull().default(3),
+  effortWeight: integer("effort_weight").notNull().default(2),
+  updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type Client = typeof clients.$inferSelect;
+export type PrioritySettingsRow = typeof prioritySettings.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
 export type Package = typeof packages.$inferSelect;
 export type Session = typeof sessions.$inferSelect;

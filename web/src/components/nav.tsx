@@ -54,6 +54,12 @@ export function Nav() {
         <div className="flex-1" />
 
         <Link
+          href="/schedule/priority"
+          className="hidden sm:inline-flex text-xs text-muted-foreground hover:text-foreground transition-colors mr-3"
+        >
+          Priority
+        </Link>
+        <Link
           href="/schedule/availability"
           className="hidden sm:inline-flex text-xs text-muted-foreground hover:text-foreground transition-colors mr-3"
         >
@@ -90,6 +96,13 @@ export function Nav() {
               {link.label}
             </Link>
           ))}
+          <Link
+            href="/schedule/priority"
+            onClick={() => setMobileOpen(false)}
+            className="block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            Priority
+          </Link>
           <Link
             href="/schedule/availability"
             onClick={() => setMobileOpen(false)}

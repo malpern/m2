@@ -1,6 +1,6 @@
 import type { Client } from "@/db/schema";
 
-const GRADE_RANK: Record<string, number> = {
+export const GRADE_RANK: Record<string, number> = {
   adult: 0,
   freshman: 1,
   sophomore: 2,
@@ -9,9 +9,36 @@ const GRADE_RANK: Record<string, number> = {
   post_grad: 5,
 };
 
-export function sortByPriority<T extends Pick<Client, "collegeBound" | "gradeLevel" | "behaviorScore" | "sortOrder">>(
-  clients: T[]
-): T[] {
+export type PriorityWeights = {
+  collegeBoundWeight: number;
+  gradeLevelWeight: number;
+  effortWeight: number;
+};
+
+export const DEFAULT_WEIGHTS: PriorityWeights = {
+  collegeBoundWeight: 5,
+  gradeLevelWeight: 3,
+  effortWeight: 2,
+};
+
+export function computePriorityScore(
+  client: Pick<Client, "collegeBound" | "gradeLevel" | "behaviorScore">,
+  weights: PriorityWeights
+): number {
+  const collegeValue = client.collegeBound ? 10 : 0;
+  const gradeValue = (GRADE_RANK[client.gradeLevel ?? ""] ?? 0) * 2;
+  const effortValue = client.behaviorScore;
+
+  return (
+    collegeValue * weights.collegeBoundWeight +
+    gradeValue * weights.gradeLevelWeight +
+    effortValue * weights.effortWeight
+  );
+}
+
+export function sortByWeightedPriority<
+  T extends Pick<Client, "collegeBound" | "gradeLevel" | "behaviorScore" | "sortOrder">
+>(clients: T[], weights: PriorityWeights): T[] {
   const sorted = [...clients];
   const hasManualOrder = sorted.some((c) => c.sortOrder != null);
 
@@ -21,14 +48,16 @@ export function sortByPriority<T extends Pick<Client, "collegeBound" | "gradeLev
       const orderB = b.sortOrder ?? 999;
       if (orderA !== orderB) return orderA - orderB;
     }
-    if (a.collegeBound !== b.collegeBound) return a.collegeBound ? -1 : 1;
-    const gradeA = GRADE_RANK[a.gradeLevel ?? ""] ?? 0;
-    const gradeB = GRADE_RANK[b.gradeLevel ?? ""] ?? 0;
-    if (gradeA !== gradeB) return gradeB - gradeA;
-    return b.behaviorScore - a.behaviorScore;
+    return computePriorityScore(b, weights) - computePriorityScore(a, weights);
   });
 
   return sorted;
+}
+
+export function sortByPriority<T extends Pick<Client, "collegeBound" | "gradeLevel" | "behaviorScore" | "sortOrder">>(
+  clients: T[]
+): T[] {
+  return sortByWeightedPriority(clients, DEFAULT_WEIGHTS);
 }
 
 export function isSchedulable(client: Pick<Client, "category">) {

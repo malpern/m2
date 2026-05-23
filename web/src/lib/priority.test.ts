@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { sortByPriority, isSchedulable } from "./priority";
+import {
+  sortByPriority,
+  sortByWeightedPriority,
+  computePriorityScore,
+  isSchedulable,
+  DEFAULT_WEIGHTS,
+  type PriorityWeights,
+} from "./priority";
 
 function makeClient(overrides: Record<string, unknown> = {}) {
   return {
@@ -22,9 +29,9 @@ describe("sortByPriority", () => {
     expect(sorted[0].collegeBound).toBe(true);
   });
 
-  it("sorts by grade level within college-bound group", () => {
+  it("sorts by grade level within college-bound group (same effort)", () => {
     const clients = [
-      makeClient({ collegeBound: true, gradeLevel: "junior", behaviorScore: 9 }),
+      makeClient({ collegeBound: true, gradeLevel: "junior", behaviorScore: 5 }),
       makeClient({ collegeBound: true, gradeLevel: "senior", behaviorScore: 5 }),
     ];
 
@@ -42,9 +49,9 @@ describe("sortByPriority", () => {
     expect(sorted[0].behaviorScore).toBe(9);
   });
 
-  it("ranks adults below freshmen in the algorithmic sort", () => {
+  it("ranks adults below freshmen when effort is equal", () => {
     const clients = [
-      makeClient({ gradeLevel: "adult", behaviorScore: 10 }),
+      makeClient({ gradeLevel: "adult", behaviorScore: 5 }),
       makeClient({ gradeLevel: "freshman", behaviorScore: 5 }),
     ];
 
@@ -123,6 +130,104 @@ describe("sortByPriority", () => {
     expect(sorted[5]).toMatchObject({ gradeLevel: "sophomore", behaviorScore: 6 });
     expect(sorted[6]).toMatchObject({ gradeLevel: "freshman", behaviorScore: 8 });
     expect(sorted[7]).toMatchObject({ gradeLevel: "adult", behaviorScore: 10 });
+  });
+});
+
+describe("computePriorityScore", () => {
+  it("scores a college-bound senior with high effort", () => {
+    const score = computePriorityScore(
+      makeClient({ collegeBound: true, gradeLevel: "senior", behaviorScore: 9 }),
+      DEFAULT_WEIGHTS
+    );
+    // 10*5 + 8*3 + 9*2 = 50+24+18 = 92
+    expect(score).toBe(92);
+  });
+
+  it("scores a non-college adult with max effort", () => {
+    const score = computePriorityScore(
+      makeClient({ collegeBound: false, gradeLevel: "adult", behaviorScore: 10 }),
+      DEFAULT_WEIGHTS
+    );
+    // 0*5 + 0*3 + 10*2 = 20
+    expect(score).toBe(20);
+  });
+
+  it("responds to weight changes", () => {
+    const client = makeClient({ collegeBound: false, gradeLevel: "senior", behaviorScore: 10 });
+    const lowEffort: PriorityWeights = { collegeBoundWeight: 5, gradeLevelWeight: 3, effortWeight: 1 };
+    const highEffort: PriorityWeights = { collegeBoundWeight: 5, gradeLevelWeight: 3, effortWeight: 5 };
+
+    const scoreLow = computePriorityScore(client, lowEffort);
+    const scoreHigh = computePriorityScore(client, highEffort);
+    expect(scoreHigh).toBeGreaterThan(scoreLow);
+  });
+});
+
+describe("sortByWeightedPriority", () => {
+  it("with default weights, college-bound ranks above non-college", () => {
+    const clients = [
+      makeClient({ collegeBound: false, gradeLevel: "senior", behaviorScore: 10 }),
+      makeClient({ collegeBound: true, gradeLevel: "freshman", behaviorScore: 1 }),
+    ];
+    const sorted = sortByWeightedPriority(clients, DEFAULT_WEIGHTS);
+    expect(sorted[0].collegeBound).toBe(true);
+  });
+
+  it("high effort weight lets non-college athlete beat low-effort college athlete", () => {
+    const highEffortWeights: PriorityWeights = {
+      collegeBoundWeight: 1,
+      gradeLevelWeight: 1,
+      effortWeight: 5,
+    };
+    const clients = [
+      makeClient({ collegeBound: true, gradeLevel: "junior", behaviorScore: 2 }),
+      makeClient({ collegeBound: false, gradeLevel: "freshman", behaviorScore: 9 }),
+    ];
+    const sorted = sortByWeightedPriority(clients, highEffortWeights);
+    expect(sorted[0].collegeBound).toBe(false);
+    expect(sorted[0].behaviorScore).toBe(9);
+  });
+
+  it("manual sortOrder still overrides weighted scoring", () => {
+    const clients = [
+      makeClient({ collegeBound: true, behaviorScore: 10, sortOrder: 2 }),
+      makeClient({ collegeBound: false, behaviorScore: 1, sortOrder: 1 }),
+    ];
+    const sorted = sortByWeightedPriority(clients, DEFAULT_WEIGHTS);
+    expect(sorted[0].behaviorScore).toBe(1);
+  });
+
+  it("equal weights rank by total factor value", () => {
+    const equalWeights: PriorityWeights = {
+      collegeBoundWeight: 1,
+      gradeLevelWeight: 1,
+      effortWeight: 1,
+    };
+    const clients = [
+      makeClient({ collegeBound: false, gradeLevel: "senior", behaviorScore: 10 }),
+      makeClient({ collegeBound: true, gradeLevel: "freshman", behaviorScore: 1 }),
+    ];
+    const sorted = sortByWeightedPriority(clients, equalWeights);
+    // non-college senior effort 10: 0+8+10=18
+    // college freshman effort 1: 10+2+1=13
+    expect(sorted[0].collegeBound).toBe(false);
+  });
+
+  it("default weights produce same top-level ordering as sortByPriority", () => {
+    const roster = [
+      makeClient({ collegeBound: false, gradeLevel: "freshman", behaviorScore: 8 }),
+      makeClient({ collegeBound: true, gradeLevel: "senior", behaviorScore: 9 }),
+      makeClient({ collegeBound: true, gradeLevel: "junior", behaviorScore: 8 }),
+      makeClient({ collegeBound: false, gradeLevel: "senior", behaviorScore: 7 }),
+    ];
+    const tiered = sortByPriority(roster);
+    const weighted = sortByWeightedPriority(roster, DEFAULT_WEIGHTS);
+
+    // College-bound should be first in both
+    expect(tiered[0].collegeBound).toBe(true);
+    expect(weighted[0].collegeBound).toBe(true);
+    expect(tiered[1].collegeBound).toBe(true);
+    expect(weighted[1].collegeBound).toBe(true);
   });
 });
 

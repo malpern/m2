@@ -1,15 +1,22 @@
 "use server";
 
 import { db } from "@/db";
-import { clients, sessions, outreach } from "@/db/schema";
+import { clients, sessions, outreach, prioritySettings } from "@/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { generateWeek, getMonday } from "@/lib/scheduler";
+import { DEFAULT_WEIGHTS } from "@/lib/priority";
 import { revalidatePath } from "next/cache";
 
 export async function generateSchedule(weekStartISO: string) {
   const weekStart = new Date(weekStartISO);
   const allClients = db.select().from(clients).all();
-  const proposed = generateWeek(allClients, weekStart);
+
+  const savedWeights = db.select().from(prioritySettings).get();
+  const weights = savedWeights
+    ? { collegeBoundWeight: savedWeights.collegeBoundWeight, gradeLevelWeight: savedWeights.gradeLevelWeight, effortWeight: savedWeights.effortWeight }
+    : DEFAULT_WEIGHTS;
+
+  const proposed = generateWeek(allClients, weekStart, weights);
 
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);

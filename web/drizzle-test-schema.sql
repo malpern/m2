@@ -54,6 +54,14 @@ CREATE TABLE outreach (
     replied_at TEXT
 );
 
+CREATE TABLE priority_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    college_bound_weight INTEGER NOT NULL DEFAULT 5,
+    grade_level_weight INTEGER NOT NULL DEFAULT 3,
+    effort_weight INTEGER NOT NULL DEFAULT 2,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE default_availability (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     day TEXT NOT NULL,

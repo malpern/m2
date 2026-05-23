@@ -1,5 +1,5 @@
 import type { Client } from "@/db/schema";
-import { sortByPriority, isSchedulable } from "./priority";
+import { sortByPriority, sortByWeightedPriority, isSchedulable, type PriorityWeights } from "./priority";
 
 export type TimeSlot = "3pm" | "4pm" | "5pm" | "6pm" | "7pm";
 export type DayOfWeek = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "sunday";
@@ -94,9 +94,12 @@ function preferredSlot(client: Client): TimeSlot {
 export function generateWeek(
   allClients: Client[],
   weekStart: Date,
+  weights?: PriorityWeights,
 ): ProposedSession[] {
   const schedulable = allClients.filter(isSchedulable);
-  const ranked = sortByPriority(schedulable);
+  const ranked = weights
+    ? sortByWeightedPriority(schedulable, weights)
+    : sortByPriority(schedulable);
   const weekDates = getWeekDates(weekStart);
   const proposed: ProposedSession[] = [];
 
