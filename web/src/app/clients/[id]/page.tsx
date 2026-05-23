@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { clients, packages, sessions } from "@/db/schema";
+import { clients, packages, sessions, outreach } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DeleteButton } from "./delete-button";
+import { MessageHistory } from "./message-history";
 import {
   EditableText,
   EditableNumber,
@@ -49,6 +50,13 @@ export default async function ClientDetailPage({
 
   const clientPackages = db.select().from(packages).where(eq(packages.clientId, clientId)).all();
   const recentSessions = db.select().from(sessions).where(eq(sessions.clientId, clientId)).orderBy(desc(sessions.scheduledDate)).limit(10).all();
+
+  const clientMessages = db
+    .select()
+    .from(outreach)
+    .where(eq(outreach.clientId, clientId))
+    .orderBy(outreach.sentAt)
+    .all();
 
   const activePackage = clientPackages.find((p) => p.status === "active");
   const preferredDays: string[] = client.preferredDays ? JSON.parse(client.preferredDays) : [];
@@ -234,6 +242,19 @@ export default async function ClientDetailPage({
             ) : (
               <div className="text-sm text-muted-foreground py-4">No sessions recorded yet.</div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-base">Messages</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <MessageHistory
+              clientId={clientId}
+              clientName={client.name}
+              messages={clientMessages}
+            />
           </CardContent>
         </Card>
       </div>

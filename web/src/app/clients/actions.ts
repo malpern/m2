@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { clients, type NewClient } from "@/db/schema";
+import { clients, outreach, type NewClient } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -86,6 +86,25 @@ export async function updateClientField(id: number, field: string, value: string
   db.update(clients).set(updates).where(eq(clients.id, id)).run();
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
+}
+
+export async function sendDirectMessage(clientId: number, message: string) {
+  const today = new Date().toISOString().split("T")[0];
+
+  db.insert(outreach).values({
+    clientId,
+    weekOf: today,
+    direction: "sent",
+    messageText: message,
+    status: "awaiting_reply",
+    sentAt: new Date().toISOString(),
+  }).run();
+
+  // TODO: Call iMessage bridge API to send
+  // const client = db.select().from(clients).where(eq(clients.id, clientId)).get();
+  // await fetch("http://localhost:8787/send", { method: "POST", body: JSON.stringify({ phone: client.phone, message }) });
+
+  revalidatePath(`/clients/${clientId}`);
 }
 
 export async function deleteClient(id: number) {
