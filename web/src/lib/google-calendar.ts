@@ -20,6 +20,7 @@ export function getAuthUrl(): { url: string; state: string } {
     scope: [
       "https://www.googleapis.com/auth/calendar.readonly",
       "https://www.googleapis.com/auth/spreadsheets.readonly",
+      "https://www.googleapis.com/auth/drive.readonly",
     ],
     state,
   });
