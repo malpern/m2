@@ -526,9 +526,77 @@
     color: var(--text-muted);
     font-size: 13px;
   }
+  /* ── App Nav ── */
+  .app-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(15,17,23,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+  }
+  .app-nav-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    height: 48px;
+    gap: 4px;
+  }
+  .app-nav-brand {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    text-decoration: none;
+    margin-right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .app-nav-brand img { height: 22px; }
+  .app-nav a.nav-link {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .app-nav a.nav-link:hover {
+    color: var(--text);
+    background: rgba(108,140,255,0.08);
+  }
+  .app-nav .nav-spacer { flex: 1; }
+  .app-nav .nav-cta {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent);
+    padding: 6px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .app-nav .nav-cta:hover { background: #5570e8; }
 </style>
 </head>
 <body>
+
+<nav class="app-nav">
+  <div class="app-nav-inner">
+    <a href="index.html" class="app-nav-brand"><img src="images/m2logo.png" alt="M2">Matt Scheduler</a>
+    <a href="http://localhost:3000/schedule" class="nav-link">Schedule</a>
+    <a href="http://localhost:3000/clients" class="nav-link">Clients</a>
+    <a href="http://localhost:3000/outreach" class="nav-link">Outreach</a>
+    <a href="http://localhost:3000/packages" class="nav-link">Packages</a>
+    <a href="http://localhost:3000/reports" class="nav-link">Reports</a>
+    <a href="questions.html" class="nav-link">Questions</a>
+    <div class="nav-spacer"></div>
+    <a href="http://localhost:3000" class="nav-cta">Open App</a>
+  </div>
+</nav>
 
 <!-- ════════════════════════ HERO ════════════════════════ -->
 <section class="hero">
