@@ -29,7 +29,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { updateClientOrder } from "./actions";
+import { updateClientOrder, clearAllSortOrders } from "./actions";
 import { EmptyState } from "@/components/empty-state";
 import type { Client } from "@/db/schema";
 
@@ -340,6 +340,16 @@ export function ClientTable({
             <Link href="/clients/new">
               <Button size="sm" variant="outline" className="h-7 text-xs">+ Add Client</Button>
             </Link>
+            {localActive.some((c) => c.sortOrder != null) && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs text-muted-foreground"
+                onClick={() => startTransition(() => clearAllSortOrders())}
+              >
+                Reset ranking
+              </Button>
+            )}
           </div>
           <p className="text-muted-foreground mt-1 text-sm">
             {localActive.length} active, ranked by priority.

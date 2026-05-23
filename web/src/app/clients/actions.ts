@@ -88,6 +88,11 @@ export async function updateClientField(id: number, field: string, value: string
   revalidatePath(`/clients/${id}`);
 }
 
+export async function clearAllSortOrders() {
+  db.update(clients).set({ sortOrder: null }).run();
+  revalidatePath("/clients");
+}
+
 export async function sendDirectMessage(clientId: number, message: string) {
   const today = new Date().toISOString().split("T")[0];
 
