@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useTransition, useState } from "react";
+import { useRef, useTransition, useState, useEffect } from "react";
 import Link from "next/link";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
+import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventInput } from "@fullcalendar/core";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,17 @@ function statusColor(status: string) {
   }
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
+
 export function ScheduleCalendar({
   sessions,
   weekStart,
@@ -49,6 +61,7 @@ export function ScheduleCalendar({
   const calendarRef = useRef<FullCalendar>(null);
   const [isPending, startTransition] = useTransition();
   const [isExporting, setIsExporting] = useState(false);
+  const isMobile = useIsMobile();
 
   const prevDate = new Date(weekStart + "T12:00:00");
   prevDate.setDate(prevDate.getDate() - 7);
@@ -96,9 +109,17 @@ export function ScheduleCalendar({
     setIsExporting(false);
   };
 
+  // Switch view when mobile state changes
+  useEffect(() => {
+    const api = calendarRef.current?.getApi();
+    if (api) {
+      api.changeView(isMobile ? "listWeek" : "timeGridWeek");
+    }
+  }, [isMobile]);
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Schedule</h1>
           <div className="flex items-center gap-3 mt-1">
@@ -117,7 +138,7 @@ export function ScheduleCalendar({
             {isPending && <span className="text-blue-400 text-sm">Updating...</span>}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link href="/schedule/availability">
             <Button variant="outline" size="sm">Availability</Button>
           </Link>
@@ -135,7 +156,7 @@ export function ScheduleCalendar({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-background p-6" style={{ ['--fc-event-text-color' as string]: '#fff' }}>
+      <div className="rounded-lg border bg-background p-3 sm:p-6" style={{ ['--fc-event-text-color' as string]: '#fff' }}>
         <style>{`
           .fc .fc-timegrid-slot { height: 80px !important; }
           .fc .fc-col-header-cell { padding: 12px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; }
@@ -146,18 +167,23 @@ export function ScheduleCalendar({
           .fc .fc-scrollgrid, .fc .fc-scrollgrid td, .fc .fc-scrollgrid th { border-color: var(--border) !important; }
           .fc .fc-timegrid-divider { display: none; }
           .fc .fc-day-today { background: rgba(108,140,255,0.03) !important; }
+          .fc .fc-list-event-dot { border-color: inherit !important; }
+          .fc .fc-list-day-cushion { background: var(--muted) !important; }
+          @media (max-width: 639px) {
+            .fc .fc-event { padding: 4px 6px !important; font-size: 13px !important; }
+          }
         `}</style>
         <FullCalendar
           ref={calendarRef}
-          plugins={[timeGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
+          plugins={[timeGridPlugin, listPlugin, interactionPlugin]}
+          initialView={isMobile ? "listWeek" : "timeGridWeek"}
           initialDate={weekStart}
           headerToolbar={false}
           slotMinTime="12:00:00"
           slotMaxTime="20:00:00"
           slotDuration="01:00:00"
           allDaySlot={false}
-          editable={true}
+          editable={!isMobile}
           eventDrop={handleDrop}
           events={events}
           height="auto"
@@ -167,7 +193,7 @@ export function ScheduleCalendar({
         />
       </div>
 
-      <div className="flex items-center gap-5 mt-4 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-3 sm:gap-5 mt-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm bg-[#6c8cff]" />
           Proposed

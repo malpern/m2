@@ -33,7 +33,7 @@ export default async function DashboardPage() {
     .get();
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground mt-1">Your week at a glance.</p>
@@ -109,7 +109,7 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
         {[
           { href: "/clients", label: "Clients", desc: "Manage your roster" },
           { href: "/schedule", label: "Schedule", desc: "Plan your week" },

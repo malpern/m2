@@ -46,22 +46,24 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
   });
 
   return (
-    <div className={`flex items-center gap-4 py-3 border-b border-border last:border-0 ${isPending ? "opacity-50" : ""}`}>
-      <div className="w-16 text-xs text-muted-foreground">
-        <div className="font-semibold text-foreground">{dayLabel}</div>
-        <div>{item.slot}</div>
+    <div className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 border-b border-border last:border-0 ${isPending ? "opacity-50" : ""}`}>
+      <div className="flex items-center gap-3 sm:contents">
+        <div className="w-16 shrink-0 text-xs text-muted-foreground">
+          <div className="font-semibold text-foreground">{dayLabel}</div>
+          <div>{item.slot}</div>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-sm">{item.clientName}</div>
+          {item.replyText && (
+            <div className="text-xs text-muted-foreground mt-0.5 truncate">
+              &ldquo;{item.replyText}&rdquo;
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="font-semibold text-sm">{item.clientName}</div>
-        {item.replyText && (
-          <div className="text-xs text-muted-foreground mt-0.5 truncate">
-            &ldquo;{item.replyText}&rdquo;
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 ml-16 sm:ml-0">
         {statusBadge(item.status)}
 
         {(item.status === "reschedule" || item.status === "ambiguous") && (
@@ -133,7 +135,7 @@ export function OutreachDashboard({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Outreach</h1>
           <p className="text-muted-foreground text-sm mt-1">

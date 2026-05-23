@@ -54,7 +54,7 @@ export default async function ClientDetailPage({
   const preferredDays: string[] = client.preferredDays ? JSON.parse(client.preferredDays) : [];
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
       <Link
         href="/clients"
         className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-6 inline-block"
@@ -62,12 +62,12 @@ export default async function ClientDetailPage({
         &larr; Back to Clients
       </Link>
 
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            <EditableText clientId={clientId} field="name" value={client.name} className="text-3xl font-bold" inputClassName="text-3xl font-bold" />
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            <EditableText clientId={clientId} field="name" value={client.name} className="text-2xl sm:text-3xl font-bold" inputClassName="text-2xl sm:text-3xl font-bold" />
           </h1>
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2">
             <EditableSelect
               clientId={clientId}
               field="category"
@@ -100,11 +100,11 @@ export default async function ClientDetailPage({
         </div>
         <div className="flex items-center gap-3">
           <DeleteButton clientId={clientId} clientName={client.name} />
-          <div className="text-right text-sm text-muted-foreground">
+          <div className="text-left sm:text-right text-sm text-muted-foreground">
             <div>
               <EditableText clientId={clientId} field="phone" value={client.phone} />
             </div>
-            <div className="flex items-center gap-1 justify-end">
+            <div className="flex items-center gap-1 sm:justify-end">
               Max <EditableNumber clientId={clientId} field="maxSessionsPerWeek" value={client.maxSessionsPerWeek} min={1} max={7} /> session{client.maxSessionsPerWeek === 1 ? "" : "s"}/week
             </div>
           </div>

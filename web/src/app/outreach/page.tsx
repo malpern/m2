@@ -53,7 +53,7 @@ export default async function OutreachPage() {
   const needsAttention = getNeedsMattAttention(items);
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
       <OutreachDashboard
         items={items}
         summary={summary}

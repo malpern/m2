@@ -315,7 +315,7 @@ export function ClientTable({
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
@@ -347,12 +347,13 @@ export function ClientTable({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoFocus
-            className="h-8 w-52 rounded-md border border-border bg-muted/50 pl-8 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring focus:bg-background transition-colors"
+            className="h-8 w-full sm:w-52 rounded-md border border-border bg-muted/50 pl-8 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring focus:bg-background transition-colors"
           />
         </div>
       </div>
 
-      <div className="rounded-lg border">
+      <div className="rounded-lg border overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+        <div className="min-w-[700px]">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -419,6 +420,7 @@ export function ClientTable({
             </SortableContext>
           </Table>
         </DndContext>
+        </div>
       </div>
     </>
   );

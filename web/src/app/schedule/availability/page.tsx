@@ -27,7 +27,7 @@ export default async function AvailabilityPage() {
     .all();
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
       <Link
         href="/schedule"
         className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-6 inline-block"

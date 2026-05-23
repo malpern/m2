@@ -64,7 +64,7 @@ export function DefaultAvailabilityGrid({ slots }: { slots: SlotData[] }) {
       <h2 className="text-lg font-bold mb-1">Default Availability</h2>
       <p className="text-sm text-muted-foreground mb-6">Your regular weekly template. Click a slot to turn it on or off.</p>
 
-      <div className="grid grid-cols-6 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
         {slotsByDay.map(({ day, slots: daySlots }) => (
           <div key={day}>
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 text-center">
@@ -127,7 +127,7 @@ export function WeeklyOverrideGrid({
       <h2 className="text-lg font-bold mb-1">Week of {weekLabel}</h2>
       <p className="text-sm text-muted-foreground mb-6">Adjust for this specific week. Changes here don't affect your default schedule. Orange ring = overridden.</p>
 
-      <div className="grid grid-cols-6 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
         {slotsByDay.map(({ day, slots }) => (
           <div key={day}>
             <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 text-center">

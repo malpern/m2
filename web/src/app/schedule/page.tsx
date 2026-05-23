@@ -40,7 +40,7 @@ export default async function SchedulePage({
     .all();
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
       <ScheduleCalendar sessions={weekSessions} weekStart={weekStart} />
     </div>
   );

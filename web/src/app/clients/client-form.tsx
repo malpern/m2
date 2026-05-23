@@ -46,7 +46,7 @@ export function ClientForm({
 
   return (
     <form action={action} className="space-y-5 max-w-lg">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
           <Input id="name" name="name" defaultValue={client?.name ?? ""} required />
@@ -57,7 +57,7 @@ export function ClientForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="category">Status</Label>
           <Select name="category" defaultValue={client?.category ?? "active"}>
@@ -82,7 +82,7 @@ export function ClientForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="behaviorScore">Effort Score (1-10)</Label>
           <Input
