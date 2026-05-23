@@ -1080,7 +1080,21 @@
 <section>
   <div class="container">
     <h2>What's Built &amp; What's Next</h2>
-    <p class="section-sub">We're building this in stages so you can start using it before everything's done. The texting system is already working.</p>
+
+    <div class="stats" style="margin-bottom:32px">
+      <div class="stat">
+        <div class="stat-num" style="color:var(--green)">4 / 6</div>
+        <div class="stat-label">phases complete</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" style="color:var(--accent)">52</div>
+        <div class="stat-label">unit tests passing</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" style="color:var(--purple)">120</div>
+        <div class="stat-label">sessions in test data</div>
+      </div>
+    </div>
 
     <div class="phases">
       <div class="phase done">
@@ -1090,7 +1104,7 @@
         </div>
         <div class="phase-body">
           <h3>Texting &amp; AI</h3>
-          <p>iMessage send/receive, AI reply classification. Tested and working.</p>
+          <p>iMessage send/receive from your phone. AI classifies replies. HTTP bridge API for the web app.</p>
         </div>
       </div>
 
@@ -1101,7 +1115,7 @@
         </div>
         <div class="phase-body">
           <h3>Website &amp; Client Roster</h3>
-          <p>Client roster with search, sort, drag-to-reorder, inline editing, detail pages. Standing slots. Dashboard with alerts.</p>
+          <p>Search, sort, drag-to-reorder, inline editing, detail pages, standing slots, add/edit/delete clients. Mobile responsive.</p>
         </div>
       </div>
 
@@ -1112,7 +1126,7 @@
         </div>
         <div class="phase-body">
           <h3>Schedule &amp; Calendar</h3>
-          <p>Interactive calendar with FullCalendar. Generate Week, drag-and-drop, .ics export. Default availability + weekly overrides.</p>
+          <p>FullCalendar with week navigation, Generate Week algorithm, drag-and-drop, .ics export. Default availability + weekly overrides. 8 weeks of session history. List view on mobile.</p>
         </div>
       </div>
 
@@ -1123,7 +1137,7 @@
         </div>
         <div class="phase-body">
           <h3>Outreach &amp; Messaging</h3>
-          <p>Outreach command center. Batch sending (3 at a time), follow-up timers, AI classification, Matt's override controls. Standing slots auto-fill.</p>
+          <p>Batch sending (3 at a time), follow-up after 1hr, move on after 3hrs. AI classification with Matt's override controls. Standing slots auto-fill. Saturday 9am workflow.</p>
         </div>
       </div>
 
@@ -1145,9 +1159,13 @@
         </div>
         <div class="phase-body">
           <h3>Dashboard &amp; Reports</h3>
-          <p>Weekly summaries, revenue tracking, .csv export. No more Sunday manual logging.</p>
+          <p>Weekly summaries, revenue tracking, .csv export.</p>
         </div>
       </div>
+    </div>
+
+    <div style="margin-top:24px;padding:16px 20px;background:var(--surface);border-radius:var(--radius);font-size:13px;color:var(--text-muted)">
+      <strong style="color:var(--text)">Also done:</strong> Full iPhone/iPad responsive design &bull; Hamburger nav on mobile &bull; 52 automated tests run on every commit &bull; Pre-commit hook blocks bad code &bull; M2 favicon &bull; GitHub Pages docs site &bull; <a href="questions.html" style="color:var(--accent)">Questions for Matt</a>
     </div>
   </div>
 </section>
