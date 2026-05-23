@@ -127,13 +127,22 @@ function NotifyDialog({
   );
 }
 
+interface GoogleEvent {
+  title: string;
+  date: string;
+  time: string;
+  endTime: string;
+}
+
 export function ScheduleCalendar({
   sessions,
   weekStart,
+  googleEvents = [],
   addSessionButton,
 }: {
   sessions: SessionEvent[];
   weekStart: string;
+  googleEvents?: GoogleEvent[];
   addSessionButton?: React.ReactNode;
 }) {
   const calendarRef = useRef<FullCalendar>(null);
@@ -156,9 +165,23 @@ export function ScheduleCalendar({
     title: s.clientName,
     start: `${s.scheduledDate}T${s.scheduledTime}`,
     end: `${s.scheduledDate}T${String(parseInt(s.scheduledTime.split(":")[0]) + 1).padStart(2, "0")}:${s.scheduledTime.split(":")[1]}`,
-    extendedProps: { status: s.status, clientId: s.clientId },
+    extendedProps: { status: s.status, clientId: s.clientId, source: "m2" },
     ...statusColor(s.status),
   }));
+
+  // Add Google Calendar events in orange
+  const gCalEvents: EventInput[] = googleEvents.map((g, i) => ({
+    id: `gcal-${i}`,
+    title: g.title,
+    start: `${g.date}T${g.time}`,
+    end: `${g.date}T${g.endTime}`,
+    backgroundColor: "#f97316",
+    borderColor: "#f97316",
+    editable: false,
+    extendedProps: { source: "google" },
+  }));
+
+  const allEvents = [...events, ...gCalEvents];
 
   const handleGenerate = () => {
     startTransition(() => {
@@ -381,7 +404,7 @@ export function ScheduleCalendar({
           editable={!isMobile}
           eventDrop={handleDrop}
           eventClick={handleEventClick}
-          events={events}
+          events={allEvents}
           height="auto"
           hiddenDays={[6]}
           dayHeaderFormat={{ weekday: "short", month: "numeric", day: "numeric" }}
@@ -410,6 +433,12 @@ export function ScheduleCalendar({
           <span className="w-3 h-3 rounded-sm bg-[#f59e0b]" />
           No Show
         </div>
+        {googleEvents.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-sm bg-[#f97316]" />
+            Google Calendar
+          </div>
+        )}
       </div>
 
       <p className="text-xs text-muted-foreground mt-2">Click a session to cancel it. Drag to move. Confirmed sessions will prompt you to notify the client.</p>
