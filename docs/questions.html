@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Questions for Matt — Matt Scheduler</title>
+<title>Quick Questions — Matt Scheduler</title>
 <style>
   :root {
     --bg: #0f1117;
@@ -15,8 +15,6 @@
     --accent: #6c8cff;
     --green: #34d399;
     --amber: #fbbf24;
-    --red: #f87171;
-    --purple: #a78bfa;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -26,230 +24,56 @@
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;
   }
-  .container { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+  .container { max-width: 640px; margin: 0 auto; padding: 0 24px; }
 
-  /* Header */
   header {
     padding: 48px 0 32px;
     border-bottom: 1px solid var(--border);
   }
-  header a {
-    color: var(--text-muted);
-    text-decoration: none;
-    font-size: 13px;
-  }
+  header a { color: var(--text-muted); text-decoration: none; font-size: 13px; }
   header a:hover { color: var(--text); }
-  header h1 {
-    font-size: 32px;
-    font-weight: 700;
-    letter-spacing: -1px;
-    margin-top: 16px;
-  }
-  header p {
-    color: var(--text-muted);
-    font-size: 15px;
-    margin-top: 8px;
-    line-height: 1.6;
-  }
+  header h1 { font-size: 28px; font-weight: 700; margin-top: 16px; }
+  header p { color: var(--text-muted); font-size: 15px; margin-top: 8px; }
 
-  /* Sections */
-  section { padding: 48px 0; border-bottom: 1px solid var(--border); }
-  section:last-of-type { border-bottom: none; }
-  h2 {
-    font-size: 22px;
-    font-weight: 700;
-    margin-bottom: 20px;
-  }
-  h3 {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 8px;
-  }
-
-  /* Question cards */
   .questions {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 24px;
+    padding: 40px 0 120px;
   }
-  .q {
-    background: var(--surface);
-    border-radius: 10px;
-    padding: 24px;
-  }
-  .q-num {
-    display: inline-flex;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 13px;
-    background: rgba(108,140,255,0.12);
-    color: var(--accent);
-    margin-bottom: 12px;
-  }
-  .q h3 { margin-bottom: 6px; }
-  .q p {
-    font-size: 14px;
-    color: var(--text-muted);
-    line-height: 1.6;
-  }
-  .q-example {
-    margin-top: 12px;
-    padding: 12px 16px;
-    background: var(--surface-2);
-    border-radius: 8px;
-    font-size: 13px;
-    color: var(--text-muted);
-  }
-  .q-example strong { color: var(--text); font-weight: 500; }
-  .q-options {
-    margin-top: 12px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .q-opt {
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 13px;
-    background: var(--surface-2);
-    color: var(--text-muted);
-  }
-
-  /* Flow diagram */
-  .flow {
-    margin: 24px 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0;
-  }
-  .flow-step {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    width: 100%;
-    max-width: 500px;
-  }
-  .flow-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    flex-shrink: 0;
-  }
-  .flow-body {
-    flex: 1;
-    padding: 14px 0;
-  }
-  .flow-body h3 { font-size: 15px; margin: 0; }
-  .flow-body p { font-size: 13px; color: var(--text-muted); margin: 2px 0 0; }
-  .flow-arrow {
-    display: flex;
-    justify-content: center;
-    padding: 4px 0;
-    color: var(--border);
-    font-size: 18px;
-  }
-  .flow-branch {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    width: 100%;
-    max-width: 500px;
-    margin-top: 4px;
-  }
-  .flow-outcome {
-    text-align: center;
-    padding: 12px 8px;
-    border-radius: 8px;
-    font-size: 12px;
+  .q { }
+  .q-label {
+    font-size: 15px;
     font-weight: 600;
+    margin-bottom: 8px;
   }
-  .flow-outcome span {
-    display: block;
-    font-size: 11px;
-    font-weight: 400;
-    margin-top: 4px;
-    opacity: 0.7;
-  }
-
-  /* Timeline */
-  .timeline {
-    display: flex;
-    align-items: flex-start;
-    gap: 0;
-    margin: 24px 0;
-    position: relative;
-  }
-  .timeline::before {
-    content: '';
-    position: absolute;
-    top: 20px;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: var(--border);
-    border-radius: 2px;
-  }
-  .tl-step {
-    flex: 1;
-    text-align: center;
-    position: relative;
-    padding-top: 32px;
-  }
-  .tl-dot {
-    position: absolute;
-    top: 12px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 3px solid var(--bg);
-  }
-  .tl-label {
-    font-size: 12px;
-    font-weight: 600;
-    margin-bottom: 4px;
-  }
-  .tl-desc {
-    font-size: 11px;
+  .q-hint {
+    font-size: 13px;
     color: var(--text-muted);
-    line-height: 1.4;
+    margin-bottom: 10px;
   }
-
-  /* Answer box */
   .answer-box {
-    margin-top: 12px;
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 12px 16px;
-    min-height: 48px;
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text);
-    background: var(--surface-2);
+    background: var(--surface);
     width: 100%;
     resize: vertical;
     font-family: inherit;
     line-height: 1.5;
     outline: none;
   }
-  .answer-box:focus {
-    border-color: var(--accent);
-  }
-  .answer-box::placeholder {
-    color: var(--text-muted);
-    font-style: italic;
+  .answer-box:focus { border-color: var(--accent); }
+  .answer-box::placeholder { color: var(--text-muted); }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
   }
 
-  /* Submit bar */
   .submit-bar {
     position: fixed;
     bottom: 0;
@@ -260,352 +84,94 @@
     padding: 16px 24px;
     display: flex;
     justify-content: center;
-    z-index: 100;
   }
   .submit-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 32px;
+    padding: 14px 40px;
     background: var(--accent);
     color: #fff;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
-    border-radius: 8px;
+    border-radius: 10px;
     border: none;
     cursor: pointer;
-    transition: background 0.15s, transform 0.15s;
+    transition: background 0.15s;
+    width: 100%;
+    max-width: 400px;
   }
-  .submit-btn:hover { background: #5570e8; transform: translateY(-1px); }
-
-  /* Bottom padding so content isn't hidden behind submit bar */
-  footer { padding-bottom: 80px; }
-
-  /* Footer */
-  footer {
-    padding: 32px 0;
-    text-align: center;
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-  footer a { color: var(--accent); text-decoration: none; }
+  .submit-btn:hover { background: #5570e8; }
 </style>
 </head>
 <body>
 
 <header>
   <div class="container">
-    <a href="index.html">&larr; Back to Matt Scheduler</a>
-    <h1>Questions for Matt</h1>
-    <p>Before we build the texting and scheduling flow, we need to understand exactly how you work. Here's what we need to know.</p>
+    <a href="index.html">&larr; Back</a>
+    <h1>5 Quick Questions</h1>
+    <p>Before we wire up the texting, we need to nail down a few things. Should take 2 minutes.</p>
   </div>
 </header>
 
-<!-- ═══════ HOW TEXTING WILL WORK ═══════ -->
-<section>
-  <div class="container">
-    <h2>How the texting flow will work</h2>
-    <p style="color:var(--text-muted);font-size:14px;margin-bottom:24px">Here's what we're planning. The questions below are about the details we need to get right.</p>
+<div class="container">
+  <div class="questions">
 
-    <div class="flow">
-      <div class="flow-step">
-        <div class="flow-icon" style="background:rgba(108,140,255,0.12)">📅</div>
-        <div class="flow-body">
-          <h3>You approve the weekly schedule</h3>
-          <p>System proposes a week based on your rules. You review it, adjust, hit approve.</p>
-        </div>
-      </div>
-      <div class="flow-arrow">&#8595;</div>
-      <div class="flow-step">
-        <div class="flow-icon" style="background:rgba(52,211,153,0.12)">💬</div>
-        <div class="flow-body">
-          <h3>Texts go out from your number</h3>
-          <p>Each client gets a message about their proposed time. Sent in priority order.</p>
-        </div>
-      </div>
-      <div class="flow-arrow">&#8595;</div>
-      <div class="flow-step">
-        <div class="flow-icon" style="background:rgba(167,139,250,0.12)">🧠</div>
-        <div class="flow-body">
-          <h3>AI reads their reply</h3>
-          <p>When they text back, AI figures out what they mean and sorts it.</p>
-        </div>
-      </div>
-      <div class="flow-arrow">&#8595;</div>
+    <div class="q">
+      <div class="q-label">1. What days and times are you available?</div>
+      <div class="q-hint">List your training slots for each day. Skip days you don't work.</div>
+      <textarea class="answer-box" placeholder="e.g. Mon-Fri: 3pm, 5pm, 6pm. Sunday: 10am, 12pm, 2pm, 4pm." rows="3"></textarea>
     </div>
 
-    <div class="flow-branch">
-      <div class="flow-outcome" style="background:rgba(52,211,153,0.12);color:var(--green)">
-        Confirmed
-        <span>Locked on calendar</span>
-      </div>
-      <div class="flow-outcome" style="background:rgba(248,113,113,0.12);color:var(--red)">
-        Declined
-        <span>Slot opens for next client</span>
-      </div>
-      <div class="flow-outcome" style="background:rgba(108,140,255,0.12);color:var(--accent)">
-        Reschedule
-        <span>New time offered</span>
-      </div>
-      <div class="flow-outcome" style="background:rgba(251,191,36,0.12);color:var(--amber)">
-        No reply
-        <span>Follow up later</span>
-      </div>
+    <div class="divider"></div>
+
+    <div class="q">
+      <div class="q-label">2. Do any clients have a standing slot every week?</div>
+      <div class="q-hint">People who just show up without you texting them. We'll lock those in automatically.</div>
+      <textarea class="answer-box" placeholder="e.g. Jake always has Monday 3pm. Sofia is Tuesday/Thursday 3pm." rows="3"></textarea>
     </div>
+
+    <div class="divider"></div>
+
+    <div class="q">
+      <div class="q-label">3. When you text clients, do you send a few at once or one at a time?</div>
+      <div class="q-hint">And when do you start — Sunday night, Monday morning?</div>
+      <textarea class="answer-box" placeholder="e.g. I usually text 3-4 at a time on Sunday night, then follow up Monday if I don't hear back." rows="3"></textarea>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="q">
+      <div class="q-label">4. How long do you wait before following up or moving on?</div>
+      <div class="q-hint">If someone doesn't reply, how long before you text again or give their slot to someone else?</div>
+      <textarea class="answer-box" placeholder="e.g. I follow up the next day. If nothing by Tuesday, I move on." rows="2"></textarea>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="q">
+      <div class="q-label">5. What do your texts usually sound like?</div>
+      <div class="q-hint">Paste or type a couple real examples so the AI can match your voice.</div>
+      <textarea class="answer-box" placeholder='e.g. "Hey Jake, you good for Thursday at 3?" or "What does your week look like?"' rows="3"></textarea>
+    </div>
+
   </div>
-</section>
-
-<!-- ═══════ YOUR SCHEDULE ═══════ -->
-<section>
-  <div class="container">
-    <h2>Your schedule</h2>
-
-    <div class="questions">
-      <div class="q">
-        <div class="q-num">1</div>
-        <h3>What days do you take clients?</h3>
-        <p>We know Saturdays are off (family time) and Sundays are full workdays. What about Mon-Fri — do you take clients every day?</p>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-
-      <div class="q">
-        <div class="q-num">2</div>
-        <h3>What are your available time slots each day?</h3>
-        <p>We've been assuming 3pm, 5pm, and 6pm. Is that right? Or does it change by day? For example, do Sundays start earlier?</p>
-        <div class="q-example">
-          <strong>Example:</strong> "Mon-Fri I do 3pm, 5pm, 6pm. Sundays I start at 10am and go all day."
-        </div>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-
-      <div class="q">
-        <div class="q-num">3</div>
-        <h3>How many clients can you see per time slot?</h3>
-        <p>Is it always one-on-one? Or do you sometimes train 2-3 athletes in the same slot?</p>
-        <div class="q-options">
-          <div class="q-opt">Always 1-on-1</div>
-          <div class="q-opt">Sometimes small groups</div>
-          <div class="q-opt">Depends on the client</div>
-        </div>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════ RECURRING CLIENTS ═══════ -->
-<section>
-  <div class="container">
-    <h2>Recurring clients</h2>
-
-    <div class="questions">
-      <div class="q">
-        <div class="q-num">4</div>
-        <h3>Do some clients have a locked slot every week?</h3>
-        <p>People who always have Monday 3pm, every single week, and you don't need to text them to confirm. They just show up.</p>
-        <div class="q-example">
-          <strong>If yes:</strong> Who are they, and what's their standing slot? We'll auto-fill those before the outreach cycle starts — no texting needed.
-        </div>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-
-      <div class="q">
-        <div class="q-num">5</div>
-        <h3>Do recurring clients still need a weekly text?</h3>
-        <p>Even if someone is "always Monday 3pm," do you still text them each week to confirm? Or is it just understood?</p>
-        <div class="q-options">
-          <div class="q-opt">They just show up, no text needed</div>
-          <div class="q-opt">I still confirm each week</div>
-          <div class="q-opt">Depends on the person</div>
-        </div>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════ TEXTING FLOW ═══════ -->
-<section>
-  <div class="container">
-    <h2>How you text clients</h2>
-
-    <div class="questions">
-      <div class="q">
-        <div class="q-num">6</div>
-        <h3>Do you text one person at a time, or several at once?</h3>
-        <p>When you start outreach for the week, do you send one text, wait for a reply, then send the next? Or do you blast out a few at once and see who replies first?</p>
-        <div class="q-example">
-          <strong>Why this matters:</strong> If you text one at a time, the system needs to wait after each send. If you batch them, we can send several texts and process replies as they come in.
-        </div>
-        <div class="q-options">
-          <div class="q-opt">One at a time, wait for reply</div>
-          <div class="q-opt">A few at once</div>
-          <div class="q-opt">All at once</div>
-        </div>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-
-      <div class="q">
-        <div class="q-num">7</div>
-        <h3>When do you start reaching out for the week?</h3>
-        <p>Do you text everyone Sunday night? Monday morning? A few days before each session?</p>
-        <div class="q-options">
-          <div class="q-opt">Sunday evening</div>
-          <div class="q-opt">Monday morning</div>
-          <div class="q-opt">A few days before each session</div>
-          <div class="q-opt">Varies</div>
-        </div>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-
-      <div class="q">
-        <div class="q-num">8</div>
-        <h3>How long do you wait before following up?</h3>
-        <p>If you text someone and they don't reply, how long before you send a follow-up? And how long before you give up and offer the slot to someone else?</p>
-        <div class="q-example">
-          <strong>Example:</strong> "I follow up after about a day. If I still don't hear back by Tuesday, I move on."
-        </div>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-
-      <div class="q">
-        <div class="q-num">9</div>
-        <h3>What do your texts actually sound like?</h3>
-        <p>We want the automated texts to sound exactly like you. Can you share a few real examples of how you typically text a client about scheduling?</p>
-        <div class="q-example">
-          <strong>Example:</strong> "Hey Jake, you good for Thursday at 3?" or "What's your schedule looking like this week?"
-        </div>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════ WHEN THINGS CHANGE ═══════ -->
-<section>
-  <div class="container">
-    <h2>When things change mid-week</h2>
-
-    <div class="questions">
-      <div class="q">
-        <div class="q-num">10</div>
-        <h3>What happens when someone cancels last minute?</h3>
-        <p>If a client cancels their Thursday session on Wednesday night, do you try to fill that slot? Or just leave it empty?</p>
-        <div class="q-options">
-          <div class="q-opt">Try to fill it</div>
-          <div class="q-opt">Usually leave it empty</div>
-          <div class="q-opt">Depends on the slot</div>
-        </div>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-
-      <div class="q">
-        <div class="q-num">11</div>
-        <h3>Do clients ever text you to add a session?</h3>
-        <p>Does a client ever reach out and say "hey can I get an extra session this week?" If so, how do you handle that?</p>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════ SEASONS ═══════ -->
-<section>
-  <div class="container">
-    <h2>Seasons and status changes</h2>
-
-    <div class="questions">
-      <div class="q">
-        <div class="q-num">12</div>
-        <h3>When does "in-season" vs "off-season" change?</h3>
-        <p>Is there a specific date when athletes shift from in-season to off-season? Does it vary by sport? We can automate this if there's a pattern.</p>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-
-      <div class="q">
-        <div class="q-num">13</div>
-        <h3>When a client goes "on break," how do you know they're back?</h3>
-        <p>Do they text you? Do you check in after a set time? We want to make sure nobody gets lost.</p>
-        <textarea class="answer-box" placeholder="Your answer..." rows="2"></textarea>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ═══════ OUR PLAN ═══════ -->
-<section>
-  <div class="container">
-    <h2>What we're thinking</h2>
-    <p style="color:var(--text-muted);font-size:14px;margin-bottom:24px">Based on what you've told us so far, here's how we'd set up the texting. Your answers above will help us adjust this.</p>
-
-    <h3 style="margin-bottom:16px">Weekly outreach timeline</h3>
-
-    <div class="timeline">
-      <div class="tl-step">
-        <div class="tl-dot" style="background:var(--accent)"></div>
-        <div class="tl-label" style="color:var(--accent)">Sunday PM</div>
-        <div class="tl-desc">System proposes the week. You review &amp; approve.</div>
-      </div>
-      <div class="tl-step">
-        <div class="tl-dot" style="background:var(--green)"></div>
-        <div class="tl-label" style="color:var(--green)">Batch 1</div>
-        <div class="tl-desc">Text all 3pm clients first. These are your hardest slots to fill.</div>
-      </div>
-      <div class="tl-step">
-        <div class="tl-dot" style="background:var(--amber)"></div>
-        <div class="tl-label" style="color:var(--amber)">Wait</div>
-        <div class="tl-desc">Give people time to reply. Follow up if no response.</div>
-      </div>
-      <div class="tl-step">
-        <div class="tl-dot" style="background:var(--green)"></div>
-        <div class="tl-label" style="color:var(--green)">Batch 2</div>
-        <div class="tl-desc">Text 5pm clients. If 5pm doesn't fill, cascade to 6pm.</div>
-      </div>
-      <div class="tl-step">
-        <div class="tl-dot" style="background:var(--purple)"></div>
-        <div class="tl-label" style="color:var(--purple)">Done</div>
-        <div class="tl-desc">Week is set. Export to Google Calendar.</div>
-      </div>
-    </div>
-
-    <div style="margin-top:32px;padding:20px 24px;background:var(--surface);border-radius:10px;font-size:14px;color:var(--text-muted);line-height:1.7">
-      <strong style="color:var(--text)">The key idea:</strong> We send texts grouped by time slot, not one at a time. All clients proposed for 3pm across the week get texted at once. This way Monday 3pm, Tuesday 3pm, Wednesday 3pm are all filling in parallel. Once 3pm is mostly locked down, we move to 5pm, then 6pm. This matches how you naturally prioritize — 3pm first, then optimize from there.
-    </div>
-  </div>
-</section>
-
-<div class="submit-bar">
-  <button class="submit-btn" onclick="sendAnswers()">
-    Send Answers to Micah &rarr;
-  </button>
 </div>
 
-<footer>
-  <div class="container">
-    <a href="index.html">Matt Scheduler</a> &mdash; M2 Performance &amp; Therapy
-  </div>
-</footer>
+<div class="submit-bar">
+  <button class="submit-btn" onclick="sendAnswers()">Send to Micah</button>
+</div>
 
 <script>
 function sendAnswers() {
-  var questions = document.querySelectorAll('.q');
-  var lines = ['Matt Scheduler - Questions & Answers\n'];
-
-  questions.forEach(function(q) {
-    var num = q.querySelector('.q-num').textContent;
-    var title = q.querySelector('h3').textContent;
-    var textarea = q.querySelector('.answer-box');
-    var answer = textarea ? textarea.value.trim() : '';
-
-    lines.push('Q' + num + ': ' + title);
-    lines.push('A: ' + (answer || '(no answer)'));
+  var qs = document.querySelectorAll('.q');
+  var lines = [];
+  qs.forEach(function(q) {
+    var label = q.querySelector('.q-label').textContent;
+    var answer = q.querySelector('.answer-box').value.trim() || '(skipped)';
+    lines.push(label);
+    lines.push(answer);
     lines.push('');
   });
-
   var body = lines.join('\n');
-  var subject = 'Matt Scheduler - My Answers';
-  var mailto = 'mailto:malpern@gmail.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
-  window.location.href = mailto;
+  window.location.href = 'mailto:malpern@gmail.com?subject=' + encodeURIComponent('Matt Scheduler - Answers') + '&body=' + encodeURIComponent(body);
 }
 </script>
 
