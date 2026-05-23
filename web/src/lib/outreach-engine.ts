@@ -27,7 +27,7 @@ export interface OutreachItem {
   repliedAt: string | null;
   replyText: string | null;
   interpretation: string | null;
-  batchNumber: number;
+  wave: number; // 1, 2, or 3
 }
 
 export function buildOutreachQueue(
@@ -46,8 +46,7 @@ export function buildOutreachQueue(
   });
 
   const items: OutreachItem[] = [];
-  let batchNum = 1;
-  let inBatch = 0;
+  let pendingCount = 0;
 
   for (const session of sorted) {
     const isStanding = isStandingSession(session);
@@ -78,12 +77,19 @@ export function buildOutreachQueue(
       }
     }
 
+    let wave = 0;
     if (!isStanding && status === "pending") {
-      inBatch++;
-      if (inBatch > config.batchSize) {
-        batchNum++;
-        inBatch = 1;
+      pendingCount++;
+      if (pendingCount <= config.wave1Size) {
+        wave = 1;
+      } else if (pendingCount <= config.wave1Size * 2) {
+        wave = 2;
+      } else {
+        wave = 3;
       }
+    } else if (!isStanding) {
+      // Already sent — figure out which wave they were in based on position
+      wave = 1;
     }
 
     items.push({
@@ -101,7 +107,7 @@ export function buildOutreachQueue(
       repliedAt,
       replyText,
       interpretation,
-      batchNumber: isStanding ? 0 : batchNum,
+      wave: isStanding ? 0 : wave,
     });
   }
 
@@ -130,28 +136,62 @@ function mapInterpretation(interpretation: string | null, outreachStatus: string
   }
 }
 
-export function getNextBatchToSend(items: OutreachItem[]): OutreachItem[] {
-  const sentBatches = new Set(
-    items.filter((i) => i.status !== "pending" && i.status !== "standing").map((i) => i.batchNumber)
-  );
-
+/**
+ * Returns the next wave of clients to text.
+ * Wave 1: send immediately (top 6-10 by priority)
+ * Wave 2: send after ~45 min regardless of replies
+ * Wave 3: send after ~2 hours (everyone else)
+ */
+export function getNextWaveToSend(
+  items: OutreachItem[],
+  config: OutreachConfig = OUTREACH_DEFAULTS,
+): { wave: number; items: OutreachItem[] } {
+  const sentItems = items.filter((i) => i.status !== "pending" && i.status !== "standing");
   const pendingItems = items.filter((i) => i.status === "pending");
-  if (pendingItems.length === 0) return [];
 
-  const nextBatch = pendingItems[0].batchNumber;
+  if (pendingItems.length === 0) return { wave: 0, items: [] };
 
-  const currentBatchSent = items.filter(
-    (i) => i.batchNumber === nextBatch - 1 && i.status === "sent"
-  );
-  const currentBatchConfirmed = items.filter(
-    (i) => i.batchNumber === nextBatch - 1 && i.status === "confirmed"
-  );
-
-  if (nextBatch > 1 && currentBatchConfirmed.length === 0 && currentBatchSent.length > 0) {
-    return [];
+  // No outreach sent yet — wave 1 is ready
+  if (sentItems.length === 0) {
+    return { wave: 1, items: pendingItems.filter((i) => i.wave === 1) };
   }
 
-  return pendingItems.filter((i) => i.batchNumber === nextBatch);
+  // Find the earliest sent time
+  const earliestSent = sentItems
+    .filter((i) => i.sentAt)
+    .map((i) => new Date(i.sentAt!).getTime())
+    .sort((a, b) => a - b)[0];
+
+  if (!earliestSent) {
+    return { wave: 1, items: pendingItems.filter((i) => i.wave === 1) };
+  }
+
+  const elapsed = Date.now() - earliestSent;
+  const wave2Ready = elapsed >= config.wave2DelayMinutes * 60 * 1000;
+  const wave3Ready = elapsed >= config.wave3DelayMinutes * 60 * 1000;
+
+  if (wave3Ready) {
+    const w3 = pendingItems.filter((i) => i.wave === 3);
+    if (w3.length > 0) return { wave: 3, items: w3 };
+    const w2 = pendingItems.filter((i) => i.wave === 2);
+    if (w2.length > 0) return { wave: 2, items: w2 };
+  }
+
+  if (wave2Ready) {
+    const w2 = pendingItems.filter((i) => i.wave === 2);
+    if (w2.length > 0) return { wave: 2, items: w2 };
+  }
+
+  // Wave 1 still pending
+  const w1 = pendingItems.filter((i) => i.wave === 1);
+  if (w1.length > 0) return { wave: 1, items: w1 };
+
+  return { wave: 0, items: [] };
+}
+
+// Keep backward compat for the outreach page
+export function getNextBatchToSend(items: OutreachItem[]): OutreachItem[] {
+  return getNextWaveToSend(items).items;
 }
 
 export function getNeedsFollowUp(

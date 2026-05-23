@@ -1,5 +1,7 @@
 export const OUTREACH_DEFAULTS = {
-  batchSize: 3,
+  wave1Size: 8,
+  wave2DelayMinutes: 45,
+  wave3DelayMinutes: 120,
   followUpAfterMinutes: 60,
   moveOnAfterMinutes: 180,
   outreachDay: "saturday" as const,

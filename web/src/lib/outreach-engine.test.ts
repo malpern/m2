@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildOutreachQueue,
   getNextBatchToSend,
+  getNextWaveToSend,
   getNeedsFollowUp,
   getNeedsMoveOn,
   getNeedsMattAttention,
@@ -31,29 +32,22 @@ function makeSession(overrides: Record<string, unknown> = {}) {
 describe("buildOutreachQueue", () => {
   it("marks standing slot sessions as standing", () => {
     const sessions = [
-      makeSession({
-        id: 1,
-        scheduledDate: "2026-05-25", // Monday
-        slot: "3pm",
-        standingSlot: "Mon 3pm",
-      }),
+      makeSession({ id: 1, scheduledDate: "2026-05-25", slot: "3pm", standingSlot: "Mon 3pm" }),
     ];
-
     const queue = buildOutreachQueue(sessions, []);
     expect(queue[0].status).toBe("standing");
     expect(queue[0].isStanding).toBe(true);
   });
 
-  it("assigns batches of 3", () => {
-    const sessions = Array.from({ length: 7 }, (_, i) =>
+  it("assigns wave 1 to first 8 clients by default", () => {
+    const sessions = Array.from({ length: 20 }, (_, i) =>
       makeSession({ id: i + 1, clientId: i + 1, clientName: `Client ${i}` })
     );
-
     const queue = buildOutreachQueue(sessions, []);
     const pending = queue.filter((q) => q.status === "pending");
-    expect(pending.filter((q) => q.batchNumber === 1)).toHaveLength(3);
-    expect(pending.filter((q) => q.batchNumber === 2)).toHaveLength(3);
-    expect(pending.filter((q) => q.batchNumber === 3)).toHaveLength(1);
+    expect(pending.filter((q) => q.wave === 1)).toHaveLength(8);
+    expect(pending.filter((q) => q.wave === 2)).toHaveLength(8);
+    expect(pending.filter((q) => q.wave === 3)).toHaveLength(4);
   });
 
   it("sorts by slot priority (3pm first)", () => {
@@ -62,74 +56,92 @@ describe("buildOutreachQueue", () => {
       makeSession({ id: 2, slot: "3pm", clientName: "Early" }),
       makeSession({ id: 3, slot: "5pm", clientName: "Mid" }),
     ];
-
     const queue = buildOutreachQueue(sessions, []);
     expect(queue[0].clientName).toBe("Early");
     expect(queue[1].clientName).toBe("Mid");
     expect(queue[2].clientName).toBe("Late");
   });
 
-  it("standing sessions get batch 0", () => {
+  it("standing sessions get wave 0", () => {
     const sessions = [
       makeSession({ id: 1, scheduledDate: "2026-05-25", slot: "3pm", standingSlot: "Mon 3pm" }),
       makeSession({ id: 2, clientId: 2, clientName: "Other" }),
     ];
-
     const queue = buildOutreachQueue(sessions, []);
-    expect(queue.find((q) => q.isStanding)?.batchNumber).toBe(0);
-    expect(queue.find((q) => !q.isStanding)?.batchNumber).toBe(1);
+    expect(queue.find((q) => q.isStanding)?.wave).toBe(0);
+    expect(queue.find((q) => !q.isStanding)?.wave).toBe(1);
   });
 });
 
-describe("getNextBatchToSend", () => {
-  it("returns first batch when nothing sent", () => {
-    const items = [
-      { batchNumber: 1, status: "pending" as const },
-      { batchNumber: 1, status: "pending" as const },
-      { batchNumber: 2, status: "pending" as const },
-    ].map((o, i) => ({
+describe("getNextWaveToSend", () => {
+  it("returns wave 1 when nothing sent", () => {
+    const items = Array.from({ length: 10 }, (_, i) => ({
       sessionId: i, clientId: i, clientName: "", clientPhone: "",
       day: "", slot: "", date: "", time: "",
-      isStanding: false, sentAt: null, repliedAt: null,
-      replyText: null, interpretation: null, ...o,
+      status: "pending" as const, isStanding: false,
+      sentAt: null, repliedAt: null, replyText: null,
+      interpretation: null, wave: i < 8 ? 1 : 2,
     }));
 
-    const next = getNextBatchToSend(items);
-    expect(next).toHaveLength(2);
-    expect(next[0].batchNumber).toBe(1);
+    const result = getNextWaveToSend(items);
+    expect(result.wave).toBe(1);
+    expect(result.items).toHaveLength(8);
   });
 
-  it("returns empty if waiting for confirmation in current batch", () => {
+  it("returns wave 2 after wave2DelayMinutes regardless of replies", () => {
+    const fiftyMinAgo = new Date(Date.now() - 50 * 60 * 1000).toISOString();
     const items = [
-      { batchNumber: 1, status: "sent" as const, sentAt: new Date().toISOString() },
-      { batchNumber: 1, status: "sent" as const, sentAt: new Date().toISOString() },
-      { batchNumber: 2, status: "pending" as const, sentAt: null },
-    ].map((o, i) => ({
-      sessionId: i, clientId: i, clientName: "", clientPhone: "",
-      day: "", slot: "", date: "", time: "",
-      isStanding: false, repliedAt: null,
-      replyText: null, interpretation: null, ...o,
-    }));
+      ...Array.from({ length: 8 }, (_, i) => ({
+        sessionId: i, clientId: i, clientName: "", clientPhone: "",
+        day: "", slot: "", date: "", time: "",
+        status: "sent" as const, isStanding: false,
+        sentAt: fiftyMinAgo, repliedAt: null, replyText: null,
+        interpretation: null, wave: 1,
+      })),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        sessionId: i + 8, clientId: i + 8, clientName: "", clientPhone: "",
+        day: "", slot: "", date: "", time: "",
+        status: "pending" as const, isStanding: false,
+        sentAt: null, repliedAt: null, replyText: null,
+        interpretation: null, wave: 2,
+      })),
+    ];
 
-    const next = getNextBatchToSend(items);
-    expect(next).toHaveLength(0);
+    const result = getNextWaveToSend(items);
+    expect(result.wave).toBe(2);
+    expect(result.items).toHaveLength(5);
   });
 
-  it("releases next batch when one confirmation received", () => {
+  it("does not release wave 2 before delay", () => {
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const items = [
-      { batchNumber: 1, status: "confirmed" as const, sentAt: "2026-05-25T09:00:00Z" },
-      { batchNumber: 1, status: "sent" as const, sentAt: "2026-05-25T09:00:00Z" },
-      { batchNumber: 2, status: "pending" as const, sentAt: null },
-    ].map((o, i) => ({
-      sessionId: i, clientId: i, clientName: "", clientPhone: "",
-      day: "", slot: "", date: "", time: "",
-      isStanding: false, repliedAt: null,
-      replyText: null, interpretation: null, ...o,
-    }));
+      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: tenMinAgo, repliedAt: null, replyText: null, interpretation: null, wave: 1 },
+      { sessionId: 1, clientId: 1, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "pending" as const, isStanding: false, sentAt: null, repliedAt: null, replyText: null, interpretation: null, wave: 2 },
+    ];
 
-    const next = getNextBatchToSend(items);
-    expect(next).toHaveLength(1);
-    expect(next[0].batchNumber).toBe(2);
+    const result = getNextWaveToSend(items);
+    expect(result.wave).toBe(0);
+    expect(result.items).toHaveLength(0);
+  });
+
+  it("returns wave 3 after wave3DelayMinutes", () => {
+    const threeHoursAgo = new Date(Date.now() - 180 * 60 * 1000).toISOString();
+    const items = [
+      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: threeHoursAgo, repliedAt: null, replyText: null, interpretation: null, wave: 1 },
+      { sessionId: 1, clientId: 1, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "pending" as const, isStanding: false, sentAt: null, repliedAt: null, replyText: null, interpretation: null, wave: 3 },
+    ];
+
+    const result = getNextWaveToSend(items);
+    expect(result.wave).toBe(3);
+    expect(result.items).toHaveLength(1);
+  });
+
+  it("returns empty when all sent", () => {
+    const items = [
+      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: new Date().toISOString(), repliedAt: null, replyText: null, interpretation: null, wave: 1 },
+    ];
+    const result = getNextWaveToSend(items);
+    expect(result.items).toHaveLength(0);
   });
 });
 
@@ -141,9 +153,8 @@ describe("follow-up and move-on", () => {
       day: "", slot: "", date: "", time: "",
       status: "sent" as const, isStanding: false,
       sentAt: hourAgo, repliedAt: null,
-      replyText: null, interpretation: null, batchNumber: 1,
+      replyText: null, interpretation: null, wave: 1,
     }];
-
     expect(getNeedsFollowUp(items)).toHaveLength(1);
   });
 
@@ -154,10 +165,34 @@ describe("follow-up and move-on", () => {
       day: "", slot: "", date: "", time: "",
       status: "sent" as const, isStanding: false,
       sentAt: threeHoursAgo, repliedAt: null,
-      replyText: null, interpretation: null, batchNumber: 1,
+      replyText: null, interpretation: null, wave: 1,
     }];
-
     expect(getNeedsMoveOn(items)).toHaveLength(1);
+    expect(getNeedsFollowUp(items)).toHaveLength(0);
+  });
+
+  it("does not flag items sent less than 1 hour ago", () => {
+    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const items = [{
+      sessionId: 1, clientId: 1, clientName: "", clientPhone: "",
+      day: "", slot: "", date: "", time: "",
+      status: "sent" as const, isStanding: false,
+      sentAt: thirtyMinAgo, repliedAt: null,
+      replyText: null, interpretation: null, wave: 1,
+    }];
+    expect(getNeedsFollowUp(items)).toHaveLength(0);
+    expect(getNeedsMoveOn(items)).toHaveLength(0);
+  });
+
+  it("does not flag non-sent items for follow-up", () => {
+    const twoHoursAgo = new Date(Date.now() - 120 * 60 * 1000).toISOString();
+    const items = [{
+      sessionId: 1, clientId: 1, clientName: "", clientPhone: "",
+      day: "", slot: "", date: "", time: "",
+      status: "confirmed" as const, isStanding: false,
+      sentAt: twoHoursAgo, repliedAt: null,
+      replyText: null, interpretation: null, wave: 1,
+    }];
     expect(getNeedsFollowUp(items)).toHaveLength(0);
   });
 });
@@ -173,15 +208,11 @@ describe("getNeedsMattAttention", () => {
       sessionId: i, clientId: i, clientName: "", clientPhone: "",
       day: "", slot: "", date: "", time: "",
       isStanding: false, sentAt: null, repliedAt: null,
-      replyText: null, interpretation: null, batchNumber: 1, ...o,
+      replyText: null, interpretation: null, wave: 1, ...o,
     }));
-
-    const flagged = getNeedsMattAttention(items);
-    expect(flagged).toHaveLength(2);
+    expect(getNeedsMattAttention(items)).toHaveLength(2);
   });
-});
 
-describe("getNeedsMattAttention", () => {
   it("does not flag confirmed or sent items", () => {
     const items = [
       { status: "confirmed" as const },
@@ -192,40 +223,9 @@ describe("getNeedsMattAttention", () => {
       sessionId: i, clientId: i, clientName: "", clientPhone: "",
       day: "", slot: "", date: "", time: "",
       isStanding: false, sentAt: null, repliedAt: null,
-      replyText: null, interpretation: null, batchNumber: 1, ...o,
+      replyText: null, interpretation: null, wave: 1, ...o,
     }));
-
-    const flagged = getNeedsMattAttention(items);
-    expect(flagged).toHaveLength(0);
-  });
-});
-
-describe("follow-up timing edge cases", () => {
-  it("does not flag items sent less than 1 hour ago", () => {
-    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-    const items = [{
-      sessionId: 1, clientId: 1, clientName: "", clientPhone: "",
-      day: "", slot: "", date: "", time: "",
-      status: "sent" as const, isStanding: false,
-      sentAt: thirtyMinAgo, repliedAt: null,
-      replyText: null, interpretation: null, batchNumber: 1,
-    }];
-
-    expect(getNeedsFollowUp(items)).toHaveLength(0);
-    expect(getNeedsMoveOn(items)).toHaveLength(0);
-  });
-
-  it("does not flag non-sent items for follow-up", () => {
-    const twoHoursAgo = new Date(Date.now() - 120 * 60 * 1000).toISOString();
-    const items = [{
-      sessionId: 1, clientId: 1, clientName: "", clientPhone: "",
-      day: "", slot: "", date: "", time: "",
-      status: "confirmed" as const, isStanding: false,
-      sentAt: twoHoursAgo, repliedAt: null,
-      replyText: null, interpretation: null, batchNumber: 1,
-    }];
-
-    expect(getNeedsFollowUp(items)).toHaveLength(0);
+    expect(getNeedsMattAttention(items)).toHaveLength(0);
   });
 });
 
@@ -243,7 +243,7 @@ describe("getOutreachSummary", () => {
       sessionId: i, clientId: i, clientName: "", clientPhone: "",
       day: "", slot: "", date: "", time: "",
       isStanding: false, sentAt: null, repliedAt: null,
-      replyText: null, interpretation: null, batchNumber: 1, ...o,
+      replyText: null, interpretation: null, wave: 1, ...o,
     }));
 
     const summary = getOutreachSummary(items);
