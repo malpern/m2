@@ -1,0 +1,97 @@
+import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+
+export const clients = sqliteTable("clients", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  phone: text("phone").notNull(),
+  category: text("category", {
+    enum: ["active", "inactive", "in_season", "on_break", "vacation"],
+  })
+    .notNull()
+    .default("active"),
+  gradeLevel: text("grade_level", {
+    enum: ["freshman", "sophomore", "junior", "senior", "post_grad", "adult"],
+  }),
+  collegeBound: integer("college_bound", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  behaviorScore: integer("behavior_score").notNull().default(5),
+  preferredDays: text("preferred_days"),
+  preferredTime: text("preferred_time"),
+  maxSessionsPerWeek: integer("max_sessions_per_week").notNull().default(1),
+  sortOrder: integer("sort_order"),
+  notes: text("notes"),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const packages = sqliteTable("packages", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
+  acuityPackageId: text("acuity_package_id"),
+  totalSessions: integer("total_sessions").notNull(),
+  sessionsUsed: integer("sessions_used").notNull().default(0),
+  purchaseDate: text("purchase_date"),
+  status: text("status", {
+    enum: ["active", "exhausted", "unpaid"],
+  })
+    .notNull()
+    .default("active"),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const sessions = sqliteTable("sessions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
+  packageId: integer("package_id").references(() => packages.id),
+  scheduledDate: text("scheduled_date").notNull(),
+  scheduledTime: text("scheduled_time").notNull(),
+  slot: text("slot", {
+    enum: ["3pm", "4pm", "5pm", "6pm", "7pm"],
+  }).notNull(),
+  status: text("status", {
+    enum: ["proposed", "confirmed", "completed", "cancelled", "no_show"],
+  })
+    .notNull()
+    .default("proposed"),
+  gcalEventId: text("gcal_event_id"),
+  loggedToSheets: integer("logged_to_sheets", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  reconciled: integer("reconciled", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const outreach = sqliteTable("outreach", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
+  sessionId: integer("session_id").references(() => sessions.id),
+  weekOf: text("week_of").notNull(),
+  direction: text("direction", { enum: ["sent", "received"] }).notNull(),
+  messageText: text("message_text").notNull(),
+  interpretation: text("interpretation", {
+    enum: ["confirmed", "declined", "ambiguous", "reschedule_request"],
+  }),
+  status: text("status", {
+    enum: ["pending", "awaiting_reply", "confirmed", "needs_matt", "expired"],
+  })
+    .notNull()
+    .default("pending"),
+  sentAt: text("sent_at"),
+  repliedAt: text("replied_at"),
+});
+
+export type Client = typeof clients.$inferSelect;
+export type NewClient = typeof clients.$inferInsert;
+export type Package = typeof packages.$inferSelect;
+export type Session = typeof sessions.$inferSelect;
+export type Outreach = typeof outreach.$inferSelect;
