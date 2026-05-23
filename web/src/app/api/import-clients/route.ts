@@ -8,12 +8,62 @@ const SPREADSHEET_ID = "109w4fOCcwmudr5Os2Rk20mdcxbVhGZB6BNMaM8q0GCo";
 const SESSIONS_2026_TAB = "Sales & Sessions Completed 2026";
 const CLIENT_INFO_TAB = "Client Information";
 
+// Non-client calendar entries: personal events, family activities, business ops.
+// Matched case-insensitively against normalized names.
+const BLOCKED_NAMES = new Set([
+  "Melody Gymnastics",
+  "Melody Swim",
+  "Syd Bridal Shower",
+  "Grammy Can't Pick Up",
+  "Car Show Sfhs",
+  "Oscar Senior Night",
+  "Marcus Soccer",
+  "Marcus Haircut",
+  "Matt Haircut",
+  "Date Night",
+  "Mother's Day @ Woodhaven",
+  "M2 Cleaning",
+  "Semi Group",
+  "Semi-group",
+  "Mc",
+  "James La Crosse",
+].map((n) => n.toLowerCase()));
+
+// Calendar names that map to a different canonical Sheets name.
+const CALENDAR_ALIASES: Record<string, string> = {
+  "Mm-colin Hyrne": "Colin Hyrne",
+  "Elena Itskovich": "Elena Itskovi",
+  "Sunbin And Andrew": "Andrew & Sunbin",
+  "Andrew And Sunbin": "Andrew & Sunbin",
+  "Dhruv And Krish": "Dhruv Gupta",
+  "Chuck And Eileen Ma": "Chuck Ma",
+  "Maariyah Alizai": "Maariyah Alazai",
+};
+
 function normalizeName(raw: string): string {
   return raw
     .trim()
     .split(/\s+/)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
+}
+
+function isBlockedName(name: string): boolean {
+  const lower = name.toLowerCase();
+  if (BLOCKED_NAMES.has(lower)) return true;
+  // Pattern-based filters for recurring junk categories
+  if (/\b(haircut|gymnastics|swim|soccer|lacrosse|bridal|wedding)\b/i.test(name)) return true;
+  if (/\b(cleaning|date night|senior night|pick up)\b/i.test(name)) return true;
+  if (/^(semi[- ]?group|mc)$/i.test(name)) return true;
+  if (/semiprivate training|ypt performance/i.test(name)) return true;
+  return false;
+}
+
+function resolveCalendarAlias(name: string): string {
+  for (const [alias, canonical] of Object.entries(CALENDAR_ALIASES)) {
+    if (normalizeName(alias) === name) return canonical;
+  }
+  return name;
 }
 
 function parseDollars(raw: string): number | null {
@@ -32,7 +82,9 @@ function extractClientName(calendarSummary: string): string | null {
   const cleaned = calendarSummary.replace(/\s*\(.*?\)\s*/g, "").trim();
   if (!cleaned || cleaned.split(/\s+/).length > 4) return null;
   if (/^(lunch|meeting|call|block|off|busy|hold)/i.test(cleaned)) return null;
-  return normalizeName(cleaned);
+  const normalized = normalizeName(cleaned);
+  if (isBlockedName(normalized)) return null;
+  return resolveCalendarAlias(normalized);
 }
 
 type SheetClient = {
@@ -168,10 +220,9 @@ export async function GET() {
 
     const merged: ImportPreviewClient[] = [];
     const allNames = new Set([...sheetClients.keys(), ...calendarNames]);
-    const skipPatterns = /semiprivate|youth semiprivate|ypt performance/i;
 
     for (const name of allNames) {
-      if (skipPatterns.test(name)) continue;
+      if (isBlockedName(name)) continue;
 
       const sheetData = sheetClients.get(name);
       const info = clientInfo.get(name);
