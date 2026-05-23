@@ -165,7 +165,7 @@ export function ReportsDashboard({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <Card>
           <CardContent className="pt-5 pb-4">
-            <div className="text-sm text-muted-foreground">Completion Rate</div>
+            <div className="text-sm text-muted-foreground">Show-up Rate</div>
             <div className="text-3xl font-bold mt-1">{stats.completionRate}%</div>
             <div className="h-2 rounded-full bg-muted overflow-hidden mt-3">
               <div className="h-full rounded-full bg-emerald-500" style={{ width: `${stats.completionRate}%` }} />

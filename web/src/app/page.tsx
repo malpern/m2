@@ -1,9 +1,10 @@
 import { db } from "@/db";
-import { clients, packages, sessions } from "@/db/schema";
-import { eq, sql, and, gte } from "drizzle-orm";
+import { clients, packages, sessions, outreach, defaultAvailability, weeklyOverrides } from "@/db/schema";
+import { eq, sql, and, gte, lte } from "drizzle-orm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
+import { WeeklyPlanner } from "@/components/weekly-planner";
 import Link from "next/link";
 import { getMonday } from "@/lib/scheduler";
 
@@ -58,16 +59,59 @@ export default async function DashboardPage() {
   const confirmed = thisWeekSessions.filter((s) => s.status === "confirmed").length;
   const proposed = thisWeekSessions.filter((s) => s.status === "proposed").length;
 
+  // Next week planner state
+  const nextMonday = new Date(monday);
+  nextMonday.setDate(nextMonday.getDate() + 7);
+  const nextWeekStart = nextMonday.toISOString().split("T")[0];
+  const nextSunday = new Date(nextMonday);
+  nextSunday.setDate(nextSunday.getDate() + 6);
+  const nextWeekEnd = nextSunday.toISOString().split("T")[0];
+
+  const nextWeekSessions = db
+    .select({ id: sessions.id, status: sessions.status })
+    .from(sessions)
+    .where(and(gte(sessions.scheduledDate, nextWeekStart), lte(sessions.scheduledDate, nextWeekEnd)))
+    .all();
+
+  const nextWeekOutreach = db
+    .select()
+    .from(outreach)
+    .where(eq(outreach.weekOf, nextWeekStart))
+    .all();
+
+  const hasAvailability = db.select().from(defaultAvailability).all().some((a) => a.enabled);
+
+  const totalActiveClients = db
+    .select({ count: sql<number>`count(*)` })
+    .from(clients)
+    .where(sql`${clients.category} IN ('active', 'in_season')`)
+    .get();
+
+  const nextWeekLabel = nextMonday.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+
+  const plannerState = {
+    hasAvailability,
+    hasProposedSessions: nextWeekSessions.length > 0,
+    totalClients: totalActiveClients?.count ?? 0,
+    confirmedCount: nextWeekSessions.filter((s) => s.status === "confirmed").length,
+    proposedCount: nextWeekSessions.filter((s) => s.status === "proposed").length,
+    sentCount: nextWeekOutreach.filter((o) => o.direction === "sent").length,
+    needsAttentionCount: nextWeekOutreach.filter((o) => o.status === "needs_matt").length,
+    weekLabel: nextWeekLabel,
+  };
+
   const today = new Date();
   const greeting = today.getHours() < 12 ? "Good morning" : today.getHours() < 17 ? "Good afternoon" : "Good evening";
   const dayLabel = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-8">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{greeting}, Matt</h1>
         <p className="text-muted-foreground text-sm mt-1">{dayLabel}</p>
       </div>
+
+      <WeeklyPlanner state={plannerState} />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         <Link href="/clients">
