@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 export function LoginForm() {
   const [password, setPassword] = useState("");
@@ -35,18 +34,18 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Input
+      <input
         type="password"
         placeholder="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         autoFocus
-        className="text-center"
+        className="w-full h-11 rounded-lg border border-border/50 bg-background/50 backdrop-blur-sm px-4 text-center text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/50 transition-all"
       />
       {error && (
         <p className="text-sm text-red-400 text-center">Wrong password</p>
       )}
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button type="submit" className="w-full h-11 rounded-lg text-sm font-semibold" disabled={loading}>
         {loading ? "Signing in..." : "Sign in"}
       </Button>
     </form>
