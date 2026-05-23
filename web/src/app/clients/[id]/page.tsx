@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { StatusChanger } from "./status-changer";
+import { DeleteButton } from "./delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +89,7 @@ export default async function ClientDetailPage({
           <Link href={`/clients/${clientId}/edit`}>
             <Button variant="outline" size="sm">Edit</Button>
           </Link>
+          <DeleteButton clientId={clientId} clientName={client.name} />
           <div className="text-right text-sm text-muted-foreground">
             <div>{client.phone}</div>
             <div>Max {client.maxSessionsPerWeek} session{client.maxSessionsPerWeek === 1 ? "" : "s"}/week</div>

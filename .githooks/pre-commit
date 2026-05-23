@@ -1,0 +1,8 @@
+#!/bin/sh
+
+echo "Running tests..."
+cd web && npm test
+if [ $? -ne 0 ]; then
+  echo "Tests failed. Commit aborted."
+  exit 1
+fi
