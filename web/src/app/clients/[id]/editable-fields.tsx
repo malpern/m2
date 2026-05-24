@@ -224,11 +224,11 @@ function EditableDays({
             }`}
           >
             <span>{day.slice(0, 3)}</span>
-            {frequencies && (
-              <div className="w-full h-1 rounded-full bg-muted-foreground/10 overflow-hidden">
+            {frequencies && freq > 0 && (
+              <div className="w-full h-1.5 rounded-full bg-muted-foreground/15 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-accent/50"
-                  style={{ width: `${Math.round(freq * 100)}%` }}
+                  className="h-full rounded-full bg-blue-400"
+                  style={{ width: `${Math.max(8, Math.round(freq * 100))}%` }}
                 />
               </div>
             )}
@@ -288,13 +288,13 @@ function EditableTime({
   frequencies?: Record<string, number>;
 }) {
   const [isPending, startTransition] = useTransition();
-  const current = value?.toLowerCase() ?? "";
+  const currentNorm = value?.toLowerCase().replace(/[^0-9apm]/g, "").replace(/^(\d+).*?(am|pm)$/, "$1$2") ?? "";
   const slots = availableSlots && availableSlots.length > 0
     ? DEFAULT_TIME_SLOTS.filter((s) => availableSlots.includes(s))
     : DEFAULT_TIME_SLOTS;
 
   const toggle = (slot: string) => {
-    const newValue = current === slot ? "" : slot;
+    const newValue = currentNorm === slot ? "" : slot;
     startTransition(() => {
       updateClientField(clientId, "preferredTime", newValue);
     });
@@ -309,17 +309,17 @@ function EditableTime({
             key={slot}
             onClick={() => toggle(slot)}
             className={`flex flex-col items-center gap-0.5 px-2 pt-0.5 pb-1 rounded text-xs font-medium transition-colors ${
-              current === slot
+              currentNorm === slot
                 ? "bg-accent/20 text-accent"
                 : "bg-muted text-muted-foreground hover:bg-muted/80"
             }`}
           >
             <span>{slot}</span>
-            {frequencies && (
-              <div className="w-full h-1 rounded-full bg-muted-foreground/10 overflow-hidden">
+            {frequencies && freq > 0 && (
+              <div className="w-full h-1.5 rounded-full bg-muted-foreground/15 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-accent/50"
-                  style={{ width: `${Math.round(freq * 100)}%` }}
+                  className="h-full rounded-full bg-blue-400"
+                  style={{ width: `${Math.max(8, Math.round(freq * 100))}%` }}
                 />
               </div>
             )}
