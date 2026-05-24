@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DeleteButton } from "./delete-button";
 import { MessageHistory } from "./message-history";
+import { SessionCalendar } from "./session-calendar";
 import {
   EditableText,
   EditableNumber,
@@ -385,114 +386,20 @@ export default async function ClientDetailPage({
 
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Session History</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Recent Sessions</CardTitle>
+              {allClientSessions.length > 0 && (
+                <Link
+                  href={`/clients/${clientId}/history`}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  View all {allClientSessions.length} sessions &rarr;
+                </Link>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            {allClientSessions.length > 0 ? (() => {
-              const sessionDates = new Map<string, { time: string; status: string }[]>();
-              for (const s of allClientSessions) {
-                if (!sessionDates.has(s.scheduledDate)) sessionDates.set(s.scheduledDate, []);
-                sessionDates.get(s.scheduledDate)!.push({ time: s.scheduledTime, status: s.status });
-              }
-
-              const sorted = [...allClientSessions].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
-              const firstDate = sorted[0].scheduledDate;
-              const lastDate = sorted[sorted.length - 1].scheduledDate;
-              const startMonth = new Date(firstDate + "T12:00:00");
-              startMonth.setDate(1);
-              const endMonth = new Date(lastDate + "T12:00:00");
-              endMonth.setDate(1);
-
-              const gaps: { after: string; days: number }[] = [];
-              for (let i = 1; i < sorted.length; i++) {
-                const prev = new Date(sorted[i - 1].scheduledDate + "T12:00:00");
-                const curr = new Date(sorted[i].scheduledDate + "T12:00:00");
-                const diffDays = Math.round((curr.getTime() - prev.getTime()) / 86400000);
-                if (diffDays >= 14) {
-                  gaps.push({ after: sorted[i - 1].scheduledDate, days: diffDays });
-                }
-              }
-              const gapAfterDates = new Set(gaps.map((g) => g.after));
-              const gapLookup = new Map(gaps.map((g) => [g.after, g.days]));
-
-              const months: { year: number; month: number }[] = [];
-              const cursor = new Date(startMonth);
-              while (cursor <= endMonth) {
-                months.push({ year: cursor.getFullYear(), month: cursor.getMonth() });
-                cursor.setMonth(cursor.getMonth() + 1);
-              }
-
-              const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-              return (
-                <div className="space-y-6">
-                  {months.map(({ year, month }) => {
-                    const monthStart = new Date(year, month, 1);
-                    const monthName = monthStart.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-                    const daysInMonth = new Date(year, month + 1, 0).getDate();
-                    let startDay = monthStart.getDay();
-                    startDay = startDay === 0 ? 6 : startDay - 1;
-
-                    const cells: (number | null)[] = [];
-                    for (let i = 0; i < startDay; i++) cells.push(null);
-                    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
-                    while (cells.length % 7 !== 0) cells.push(null);
-
-                    return (
-                      <div key={`${year}-${month}`}>
-                        <div className="text-xs font-medium text-muted-foreground mb-2">{monthName}</div>
-                        <div className="grid grid-cols-7 gap-px">
-                          {WEEKDAYS.map((wd) => (
-                            <div key={wd} className="text-[10px] text-muted-foreground/50 text-center pb-1">{wd}</div>
-                          ))}
-                          {cells.map((day, i) => {
-                            if (day === null) return <div key={i} />;
-                            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-                            const daySessions = sessionDates.get(dateStr);
-                            const hasGap = gapAfterDates.has(dateStr);
-                            const gapDays = gapLookup.get(dateStr);
-                            return (
-                              <div
-                                key={i}
-                                className={`relative h-8 rounded text-center text-[10px] flex flex-col items-center justify-center ${
-                                  daySessions
-                                    ? "bg-blue-500/20 text-blue-300"
-                                    : "text-muted-foreground/30"
-                                }`}
-                                title={daySessions ? daySessions.map((s) => `${timeLabel(s.time)} (${s.status})`).join(", ") : ""}
-                              >
-                                {day}
-                                {daySessions && (
-                                  <div className="flex gap-px justify-center">
-                                    {daySessions.map((s, j) => (
-                                      <div
-                                        key={j}
-                                        className={`h-1 w-1 rounded-full ${
-                                          s.status === "completed" ? "bg-emerald-400"
-                                          : s.status === "cancelled" ? "bg-red-400"
-                                          : "bg-blue-400"
-                                        }`}
-                                      />
-                                    ))}
-                                  </div>
-                                )}
-                                {hasGap && (
-                                  <div className="absolute -bottom-3 left-0 right-0 flex items-center justify-center z-10">
-                                    <span className="text-[8px] text-amber-400 bg-background px-1 rounded">{gapDays}d break</span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  }).reverse()}
-                </div>
-              );
-            })() : (
-              <div className="text-sm text-muted-foreground py-4">No sessions recorded yet.</div>
-            )}
+            <SessionCalendar sessions={allClientSessions} limitDays={30} />
           </CardContent>
         </Card>
 
