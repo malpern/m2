@@ -186,11 +186,12 @@ export default function ImportClientsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="hidden sm:grid grid-cols-[auto_1fr_70px_80px_90px_120px] gap-x-4 px-2 pb-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider border-b">
+              <div className="hidden sm:grid grid-cols-[auto_1fr_70px_80px_80px_90px_120px] gap-x-4 px-2 pb-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider border-b">
                 <div className="w-4" />
                 <div>Name</div>
                 <div className="text-right">Rate</div>
                 <div className="text-right">Sessions</div>
+                <div className="text-right">Last Seen</div>
                 <div className="text-right">Package</div>
                 <div className="text-right">Source</div>
               </div>
@@ -198,7 +199,7 @@ export default function ImportClientsPage() {
                 {data.preview.map((client) => (
                   <label
                     key={client.name}
-                    className="grid grid-cols-1 sm:grid-cols-[auto_1fr_70px_80px_90px_120px] gap-x-4 items-center py-2 px-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                    className="grid grid-cols-1 sm:grid-cols-[auto_1fr_70px_80px_80px_90px_120px] gap-x-4 items-center py-2 px-2 rounded-md hover:bg-muted/50 cursor-pointer"
                   >
                     <Checkbox
                       checked={selected.has(client.name)}
@@ -219,6 +220,9 @@ export default function ImportClientsPage() {
                     </div>
                     <div className="text-right text-sm tabular-nums text-muted-foreground">
                       {client.sessions2026 || "—"}
+                    </div>
+                    <div className="text-right text-xs tabular-nums text-muted-foreground">
+                      {client.lastDate ? new Date(client.lastDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
                     </div>
                     <div className="text-right text-xs text-muted-foreground">
                       {client.lastPackage || "—"}
