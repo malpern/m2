@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { clients, outreach, type NewClient } from "@/db/schema";
+import { clients, packages, sessions, outreach, type NewClient } from "@/db/schema";
 import { sendSMS } from "@/lib/twilio";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -139,6 +139,9 @@ export async function sendDirectMessage(clientId: number, message: string) {
 }
 
 export async function deleteClient(id: number) {
+  await db.delete(outreach).where(eq(outreach.clientId, id)).run();
+  await db.delete(sessions).where(eq(sessions.clientId, id)).run();
+  await db.delete(packages).where(eq(packages.clientId, id)).run();
   await db.delete(clients).where(eq(clients.id, id)).run();
   revalidatePath("/clients");
   redirect("/clients");
