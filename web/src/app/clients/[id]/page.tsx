@@ -118,7 +118,9 @@ export default async function ClientDetailPage({
   const maxDayTimeCount = Math.max(...dayTimeCounts.values(), 1);
   const scheduleGrid: Record<string, Record<string, number>> = {};
   for (const [key, count] of dayTimeCounts) {
-    const [day, time] = key.split(":");
+    const sep = key.indexOf(":");
+    const day = key.slice(0, sep);
+    const time = key.slice(sep + 1);
     if (!scheduleGrid[day]) scheduleGrid[day] = {};
     scheduleGrid[day][time] = count;
   }
