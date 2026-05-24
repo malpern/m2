@@ -421,7 +421,7 @@
         As clients reply, the system classifies each response using AI (Claude Sonnet). Most are handled automatically:
         <div class="step-detail">
           <strong>"Yes" / "Sounds good"</strong> → Auto-confirmed. Session turns green. ✅<br>
-          <strong>"Can't do Friday, how about Monday?"</strong> → System checks if Monday is open. If yes, auto-confirms and replies. If not, offers other open times. 🔄<br>
+          <strong>"Can't do Friday, how about Monday?"</strong> → System checks if Monday is open. If yes, proposes it: "I have Monday at 3pm — does that work?" Client must confirm before it's booked. 🔄<br>
           <strong>"That doesn't work, what else?"</strong> → System finds open slots, ranks by this client's historical pattern, and texts back the top 3 alternatives. 📋<br>
           <strong>"Not this week" / "Skip me"</strong> → Only case that actually cancels. System replies "No problem, we'll get you next week." ❌<br>
           <strong>"Maybe" / unclear</strong> → Flagged for Matt in Mission Control. ❓<br><br>
@@ -745,7 +745,7 @@
     </div>
     <div class="flow-item">
       <div class="flow-event">Specific Alt</div>
-      <div class="flow-desc">"How about Monday?" → System checks if that slot is open. If yes, auto-confirms and replies. If not, offers what's available.</div>
+      <div class="flow-desc">"How about Monday?" → System checks if that slot is open. If yes, <strong>proposes</strong> it: "I have Monday at 3pm open — does that work?" Client must confirm before it's booked. If not open, offers other available times.</div>
     </div>
     <div class="flow-item">
       <div class="flow-event">Wants Options</div>
@@ -1003,7 +1003,7 @@
         <span class="step-who who-system">Auto</span>
       </div>
       <div class="step-body">
-        System classifies as <strong>declined_with_alternative</strong>, extracts "Monday." Checks if Monday has an open slot — it does. Auto-confirms and replies immediately. No action from Matt. His Mission Control card moves straight to "Confirmed."
+        System classifies as <strong>declined_with_alternative</strong>, extracts "Monday." Checks if Monday has an open slot — it does. Moves the session to Monday as <strong>proposed</strong> and asks the client to confirm. Only confirmed after they say yes.
       </div>
 
       <div style="max-width: 340px; margin: 16px auto 0; background: var(--surface); border-radius: 14px; padding: 14px;">
@@ -1013,10 +1013,15 @@
         <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: right; margin-top: 4px;">Sat 10:05 AM</div>
         <div style="height: 8px;"></div>
         <div style="background: #0071e3; color: white; padding: 10px 14px; border-radius: 14px 14px 4px 14px; font-size: 0.88rem; line-height: 1.45; max-width: 85%;">
-          Monday at 3pm — you're confirmed! See you then.
+          I have Monday at 3pm open — does that work?
         </div>
         <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px;">Sat 10:05 AM</div>
-        <div style="font-size: 0.72rem; color: #22c55e; font-weight: 600; text-align: center; margin-top: 8px;">✓ Auto-rescheduled and confirmed</div>
+        <div style="height: 8px;"></div>
+        <div style="background: #e8e8ed; color: var(--text); padding: 10px 14px; border-radius: 14px 14px 14px 4px; font-size: 0.88rem; margin-left: auto; max-width: 70%; text-align: right;">
+          Yeah that works
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: right; margin-top: 4px;">Sat 10:12 AM</div>
+        <div style="font-size: 0.72rem; color: #22c55e; font-weight: 600; text-align: center; margin-top: 8px;">✓ Confirmed after client accepted proposal</div>
       </div>
     </div>
 

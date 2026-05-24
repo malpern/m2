@@ -165,11 +165,12 @@ export async function POST(request: NextRequest) {
             scheduledDate: matched.date,
             scheduledTime: matched.time,
             slot: matched.slot,
-            status: "confirmed",
+            status: "proposed",
           }).where(eq(sessions.id, lastSent.sessionId)).run();
 
           const dayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
-          const reply = `${dayLabel} at ${matched.slot} works! You're confirmed.`;
+          const msg = `I have ${dayLabel} at ${matched.slot} open — does that work?`;
+          const reply = tagOfferedSlots(msg, [matched]);
           await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
           return twiml();
         }
