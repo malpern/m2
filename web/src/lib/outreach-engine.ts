@@ -127,7 +127,11 @@ function isStandingSession(
 function mapInterpretation(interpretation: string | null, outreachStatus: string): OutreachStatus {
   switch (interpretation) {
     case "confirmed": return "confirmed";
+    case "selecting_offered_slot": return "confirmed";
     case "declined": return "declined";
+    case "declined_skip_week": return "declined";
+    case "declined_wants_options": return "reschedule";
+    case "declined_with_alternative": return "reschedule";
     case "reschedule_request": return "reschedule";
     case "ambiguous": return "ambiguous";
     default:

@@ -1,8 +1,10 @@
 import { db } from "@/db";
-import { outreach, clients } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { outreach, clients, sessions } from "@/db/schema";
+import { eq, and, ne } from "drizzle-orm";
 import { NextRequest } from "next/server";
-import { classifyReply } from "@/lib/classify-reply";
+import { classifyReply, type ReplyInterpretation } from "@/lib/classify-reply";
+import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, isSlotStillOpen } from "@/lib/suggest-alternatives";
+import { sendSMS } from "@/lib/twilio";
 import twilio from "twilio";
 
 function escapeXml(text: string): string {
@@ -74,23 +76,138 @@ export async function POST(request: NextRequest) {
       .sort((a, b) => (b.sentAt ?? "").localeCompare(a.sentAt ?? ""))[0];
 
     const outreachMessage = lastSent?.messageText ?? "";
-    const { interpretation } = await classifyReply(outreachMessage, body);
+    const result = await classifyReply(outreachMessage, body);
+    const interpretation = result.interpretation;
+
+    type OutreachStatus = "pending" | "awaiting_reply" | "confirmed" | "needs_matt" | "expired";
+    const statusMap: Record<string, OutreachStatus> = {
+      confirmed: "confirmed",
+      selecting_offered_slot: "confirmed",
+      declined_skip_week: "expired",
+      declined_wants_options: "needs_matt",
+      declined_with_alternative: "needs_matt",
+      reschedule_request: "needs_matt",
+      ambiguous: "needs_matt",
+    };
 
     await db.insert(outreach).values({
       clientId: client.id,
       sessionId: lastSent?.sessionId ?? null,
       weekOf: new Date().toISOString().split("T")[0],
-      direction: "received",
+      direction: "received" as const,
       messageText: body,
       interpretation,
-      status: interpretation === "confirmed" ? "confirmed"
-        : interpretation === "declined" ? "expired"
-        : "needs_matt",
+      status: statusMap[interpretation] ?? ("needs_matt" as OutreachStatus),
       repliedAt: new Date().toISOString(),
     }).run();
+
+    const firstName = client.name.split(" ")[0];
+    const weekOf = new Date().toISOString().split("T")[0];
+
+    if (interpretation === "confirmed" && lastSent?.sessionId) {
+      await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, lastSent.sessionId)).run();
+      return twiml();
+    }
+
+    if (interpretation === "selecting_offered_slot" && lastSent?.sessionId) {
+      const session = await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get();
+      if (session) {
+        const open = await getOpenSlots(weekOf, client.id);
+        const ranked = await rankSlotsForClient(client.id, open);
+
+        let matched = ranked.find((s) =>
+          (result.extractedDay && s.day.startsWith(result.extractedDay.toLowerCase().slice(0, 3))) &&
+          (!result.extractedTime || s.slot === result.extractedTime.toLowerCase())
+        );
+        if (!matched && result.extractedTime) {
+          matched = ranked.find((s) => s.slot === result.extractedTime!.toLowerCase());
+        }
+        if (!matched && result.extractedDay) {
+          matched = ranked.find((s) => s.day.startsWith(result.extractedDay!.toLowerCase().slice(0, 3)));
+        }
+
+        if (matched && await isSlotStillOpen(matched.date, matched.time)) {
+          await db.update(sessions).set({
+            scheduledDate: matched.date,
+            scheduledTime: matched.time,
+            slot: matched.slot,
+            status: "confirmed",
+          }).where(eq(sessions.id, lastSent.sessionId)).run();
+
+          const dayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
+          const reply = `${dayLabel} at ${matched.slot} — you're confirmed! See you then.`;
+          await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+          return twiml();
+        } else if (matched) {
+          const stillOpen = await getOpenSlots(weekOf, client.id);
+          const reRanked = await rankSlotsForClient(client.id, stillOpen);
+          const reply = `Sorry, that slot just got booked! ${formatAlternativesMessage(firstName, reRanked)}`;
+          await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+          return twiml();
+        }
+      }
+    }
+
+    if ((interpretation === "declined_wants_options" ||
+         interpretation === "declined_with_alternative" ||
+         interpretation === "reschedule_request") && lastSent?.sessionId) {
+
+      if (result.extractedDay || result.extractedTime) {
+        const open = await getOpenSlots(weekOf, client.id);
+        const matched = open.find((s) =>
+          (!result.extractedDay || s.day.startsWith(result.extractedDay.toLowerCase().slice(0, 3))) &&
+          (!result.extractedTime || s.slot === result.extractedTime.toLowerCase())
+        );
+
+        if (matched && await isSlotStillOpen(matched.date, matched.time)) {
+          await db.update(sessions).set({
+            scheduledDate: matched.date,
+            scheduledTime: matched.time,
+            slot: matched.slot,
+            status: "confirmed",
+          }).where(eq(sessions.id, lastSent.sessionId)).run();
+
+          const dayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
+          const reply = `${dayLabel} at ${matched.slot} works! You're confirmed.`;
+          await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+          return twiml();
+        }
+      }
+
+      const open = await getOpenSlots(weekOf, client.id);
+      const ranked = await rankSlotsForClient(client.id, open);
+      const reply = formatAlternativesMessage(firstName, ranked);
+      await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+      return twiml();
+    }
+
+    if (interpretation === "declined_skip_week" && lastSent?.sessionId) {
+      await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, lastSent.sessionId)).run();
+      const reply = `No problem, ${firstName}. We'll get you in next week!`;
+      await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+      return twiml();
+    }
   }
 
   return twiml();
+}
+
+async function logAndSend(clientId: number, sessionId: number | null, weekOf: string, phone: string, message: string) {
+  await db.insert(outreach).values({
+    clientId,
+    sessionId,
+    weekOf,
+    direction: "sent",
+    messageText: message,
+    status: "awaiting_reply",
+    sentAt: new Date().toISOString(),
+  }).run();
+
+  try {
+    await sendSMS(phone, message);
+  } catch (e) {
+    console.error(`Failed to send SMS to ${phone}:`, e);
+  }
 }
 
 async function findClient(phone: string) {
