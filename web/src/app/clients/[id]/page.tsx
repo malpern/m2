@@ -101,33 +101,20 @@ export default async function ClientDetailPage({
     return h * 60 + (parseInt(m[2] ?? "0"));
   }
 
-  // Compute global slot usage (which days/times have 2+ uses by anyone)
-  const allSessions = await db.select({ date: sessions.scheduledDate, time: sessions.scheduledTime }).from(sessions).all();
-  const globalDayCounts = new Map<string, number>();
-  const globalTimeCounts = new Map<string, number>();
+  const CORE_HOURS = ["11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm", "6pm"];
   const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-  for (const s of allSessions) {
-    const d = new Date(s.date + "T12:00:00");
-    const day = DAY_NAMES[d.getDay()];
-    globalDayCounts.set(day, (globalDayCounts.get(day) ?? 0) + 1);
-    const slot = timeLabel(s.time);
-    globalTimeCounts.set(slot, (globalTimeCounts.get(slot) ?? 0) + 1);
-  }
-  const activeDays = [...globalDayCounts.entries()].filter(([, c]) => c >= 2).map(([d]) => d);
-  const activeTimeSlots = [...globalTimeCounts.entries()]
-    .filter(([, c]) => c >= 2)
-    .map(([t]) => t)
-    .sort((a, b) => timeSortKey(a) - timeSortKey(b));
+  const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
   // Compute per-client day×time pair frequencies
   const dayTimeCounts = new Map<string, number>();
+  const clientTimeSlots = new Set<string>();
   for (const s of allClientSessions) {
     const d = new Date(s.scheduledDate + "T12:00:00");
     const day = DAY_NAMES[d.getDay()];
     const slot = timeLabel(s.scheduledTime);
     dayTimeCounts.set(`${day}:${slot}`, (dayTimeCounts.get(`${day}:${slot}`) ?? 0) + 1);
+    clientTimeSlots.add(slot);
   }
-  const clientTotal = allClientSessions.length || 1;
   const maxDayTimeCount = Math.max(...dayTimeCounts.values(), 1);
   const scheduleGrid: Record<string, Record<string, number>> = {};
   for (const [key, count] of dayTimeCounts) {
@@ -135,6 +122,12 @@ export default async function ClientDetailPage({
     if (!scheduleGrid[day]) scheduleGrid[day] = {};
     scheduleGrid[day][time] = count;
   }
+
+  // Core hours + any edge-case times this client has actually used
+  const coreSet = new Set(CORE_HOURS);
+  const edgeTimes = [...clientTimeSlots].filter((t) => !coreSet.has(t));
+  const allTimeSlots = [...CORE_HOURS, ...edgeTimes].sort((a, b) => timeSortKey(a) - timeSortKey(b));
+  const activeDays = DAY_ORDER;
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
@@ -229,7 +222,7 @@ export default async function ClientDetailPage({
       </div>
 
 
-      {activeTimeSlots.length > 0 && activeDays.length > 0 && (
+      {allClientSessions.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="text-base">Schedule Pattern</CardTitle>
@@ -240,12 +233,7 @@ export default async function ClientDetailPage({
                 <thead>
                   <tr>
                     <th className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-left pb-2 pr-2 w-16" />
-                    {activeDays.filter((d) => DAY_NAMES.slice(1, 7).concat(DAY_NAMES.slice(0, 1)).includes(d))
-                      .sort((a, b) => {
-                        const order = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
-                        return order.indexOf(a) - order.indexOf(b);
-                      })
-                      .map((day) => (
+                    {activeDays.map((day) => (
                       <th key={day} className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center pb-2 px-1">
                         {day.slice(0, 3)}
                       </th>
@@ -253,15 +241,12 @@ export default async function ClientDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {activeTimeSlots.map((time) => {
-                    const sortedDays = activeDays.sort((a, b) => {
-                      const order = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
-                      return order.indexOf(a) - order.indexOf(b);
-                    });
+                  {allTimeSlots.map((time) => {
+                    const isEdge = !coreSet.has(time);
                     return (
                       <tr key={time}>
-                        <td className="text-xs text-muted-foreground pr-2 py-0.5 text-right tabular-nums">{time}</td>
-                        {sortedDays.map((day) => {
+                        <td className={`text-xs pr-2 py-0.5 text-right tabular-nums ${isEdge ? "text-muted-foreground/50 italic" : "text-muted-foreground"}`}>{time}</td>
+                        {activeDays.map((day) => {
                           const count = scheduleGrid[day]?.[time] ?? 0;
                           const intensity = count / maxDayTimeCount;
                           return (
@@ -284,7 +269,7 @@ export default async function ClientDetailPage({
                 </tbody>
               </table>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-3">Based on {allClientSessions.length} historical sessions. Brighter = more frequent.</p>
+            <p className="text-[10px] text-muted-foreground mt-3">Based on {allClientSessions.length} sessions. Brighter = more frequent.</p>
           </CardContent>
         </Card>
       )}
