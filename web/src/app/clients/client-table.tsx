@@ -120,12 +120,17 @@ const GRADE_OPTIONS = [
 ];
 
 function InlineGradeSelect({ clientId, value }: { clientId: number; value: string }) {
+  const [local, setLocal] = useState(value);
   const [isPending, startTransition] = useTransition();
+  const label = GRADE_OPTIONS.find((o) => o.value === local)?.label ?? "—";
   return (
     <select
-      value={value}
-      onChange={(e) => startTransition(() => updateClientField(clientId, "gradeLevel", e.target.value))}
-      className={`bg-transparent border-0 outline-none cursor-pointer text-xs capitalize appearance-none pr-4 transition-colors ${isPending ? "opacity-50" : ""} ${value ? "text-foreground" : "text-muted-foreground/50"}`}
+      value={local}
+      onChange={(e) => {
+        setLocal(e.target.value);
+        startTransition(() => updateClientField(clientId, "gradeLevel", e.target.value));
+      }}
+      className={`bg-transparent border-0 outline-none cursor-pointer text-xs appearance-none pr-4 transition-colors ${isPending ? "opacity-50" : ""} ${local ? "text-blue-400 font-medium" : "text-muted-foreground/50"}`}
       style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 8 8' fill='%234b5563' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 2.5L4 5.5L7 2.5' stroke='%234b5563' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right center" }}
     >
       {GRADE_OPTIONS.map((o) => (
@@ -136,21 +141,23 @@ function InlineGradeSelect({ clientId, value }: { clientId: number; value: strin
 }
 
 function InlineCollegeToggle({ clientId, value }: { clientId: number; value: boolean }) {
+  const [local, setLocal] = useState(value);
   const [isPending, startTransition] = useTransition();
   return (
-    <label className={`cursor-pointer flex items-center ${isPending ? "opacity-50" : ""}`}>
-      <input
-        type="checkbox"
-        checked={value}
-        onChange={() => startTransition(() => updateClientField(clientId, "collegeBound", !value))}
-        className="sr-only"
-      />
-      {value ? (
+    <button
+      onClick={() => {
+        const next = !local;
+        setLocal(next);
+        startTransition(() => updateClientField(clientId, "collegeBound", next));
+      }}
+      className={`cursor-pointer transition-colors ${isPending ? "opacity-50" : ""}`}
+    >
+      {local ? (
         <Badge variant="default" className="bg-purple-500/15 text-purple-400 border-0 hover:bg-purple-500/25">Yes</Badge>
       ) : (
         <span className="text-muted-foreground/30 text-xs">—</span>
       )}
-    </label>
+    </button>
   );
 }
 
