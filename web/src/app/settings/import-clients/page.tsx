@@ -222,7 +222,7 @@ export default function ImportClientsPage() {
                       {client.sessions2026 || "—"}
                     </div>
                     <div className="text-right text-xs tabular-nums text-muted-foreground">
-                      {client.lastDate ? new Date(client.lastDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                      {client.lastDate || "—"}
                     </div>
                     <div className="text-right text-xs text-muted-foreground">
                       {client.lastPackage || "—"}
