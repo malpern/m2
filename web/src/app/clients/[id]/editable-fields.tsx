@@ -213,24 +213,23 @@ function EditableDays({
     <div className={`flex gap-1.5 flex-wrap ${isPending ? "opacity-50" : ""}`}>
       {days.map((day) => {
         const freq = frequencies?.[day] ?? 0;
+        const opacity = freq > 0 ? Math.max(0.25, freq) : 0;
         return (
           <button
             key={day}
             onClick={() => toggle(day)}
-            className={`flex flex-col items-center gap-0.5 px-2 pt-0.5 pb-1 rounded text-xs font-medium capitalize transition-colors ${
+            className={`relative px-2 py-0.5 rounded text-xs font-medium capitalize transition-colors ${
               value.includes(day)
                 ? "bg-accent/20 text-accent"
                 : "bg-muted text-muted-foreground hover:bg-muted/80"
             }`}
           >
-            <span>{day.slice(0, 3)}</span>
-            {frequencies && freq > 0 && (
-              <div className="w-full h-1.5 rounded-full bg-muted-foreground/15 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-blue-400"
-                  style={{ width: `${Math.max(8, Math.round(freq * 100))}%` }}
-                />
-              </div>
+            {day.slice(0, 3)}
+            {freq > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 block h-2 w-2 rounded-full bg-blue-400"
+                style={{ opacity }}
+              />
             )}
           </button>
         );
@@ -301,27 +300,26 @@ function EditableTime({
   };
 
   return (
-    <div className={`flex gap-1.5 flex-wrap ${isPending ? "opacity-50" : ""}`}>
+    <div className={`grid grid-cols-6 gap-1.5 ${isPending ? "opacity-50" : ""}`}>
       {slots.map((slot) => {
         const freq = frequencies?.[slot] ?? 0;
+        const opacity = freq > 0 ? Math.max(0.25, freq) : 0;
         return (
           <button
             key={slot}
             onClick={() => toggle(slot)}
-            className={`flex flex-col items-center gap-0.5 px-2 pt-0.5 pb-1 rounded text-xs font-medium transition-colors ${
+            className={`relative px-2 py-0.5 rounded text-xs font-medium transition-colors text-center ${
               current === slot
                 ? "bg-accent/20 text-accent"
                 : "bg-muted text-muted-foreground hover:bg-muted/80"
             }`}
           >
-            <span>{slot}</span>
-            {frequencies && freq > 0 && (
-              <div className="w-full h-1.5 rounded-full bg-muted-foreground/15 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-blue-400"
-                  style={{ width: `${Math.max(8, Math.round(freq * 100))}%` }}
-                />
-              </div>
+            {slot}
+            {freq > 0 && (
+              <span
+                className="absolute -top-0.5 -right-0.5 block h-2 w-2 rounded-full bg-blue-400"
+                style={{ opacity }}
+              />
             )}
           </button>
         );
