@@ -29,7 +29,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import { updateClientOrder, clearAllSortOrders } from "./actions";
+import { updateClientOrder, clearAllSortOrders, updateClientField } from "./actions";
 import { EmptyState } from "@/components/empty-state";
 import type { Client } from "@/db/schema";
 
@@ -97,6 +97,58 @@ function sessionsLeftBadge(remaining: number) {
     return <Badge variant="default" className="bg-amber-500/15 text-amber-400 border-0 hover:bg-amber-500/15">{remaining}</Badge>;
   }
   return <Badge variant="default" className="bg-emerald-500/15 text-emerald-400 border-0 hover:bg-emerald-500/15">{remaining}</Badge>;
+}
+
+function formatSchedule(daysJson: string | null, time: string | null): string {
+  const days: string[] = daysJson ? JSON.parse(daysJson) : [];
+  const dayAbbrs = days.map((d) => d.charAt(0).toUpperCase() + d.slice(1, 3));
+  const timeStr = time || "";
+  if (dayAbbrs.length > 0 && timeStr) return `${dayAbbrs.join("/")} ${timeStr}`;
+  if (dayAbbrs.length > 0) return dayAbbrs.join("/");
+  if (timeStr) return timeStr;
+  return "—";
+}
+
+const GRADE_OPTIONS = [
+  { value: "", label: "Set..." },
+  { value: "freshman", label: "Fresh" },
+  { value: "sophomore", label: "Soph" },
+  { value: "junior", label: "Junior" },
+  { value: "senior", label: "Senior" },
+  { value: "post_grad", label: "Post-Grad" },
+  { value: "adult", label: "Adult" },
+];
+
+function InlineGradeSelect({ clientId, value }: { clientId: number; value: string }) {
+  const [isPending, startTransition] = useTransition();
+  return (
+    <select
+      value={value}
+      onChange={(e) => startTransition(() => updateClientField(clientId, "gradeLevel", e.target.value))}
+      className={`bg-transparent border-0 outline-none cursor-pointer text-xs capitalize appearance-none pr-3 ${isPending ? "opacity-50" : ""} ${!value ? "text-muted-foreground italic" : ""}`}
+      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 8 8' fill='%236b7280' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 2.5L4 5.5L7 2.5' stroke='%236b7280' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right center" }}
+    >
+      {GRADE_OPTIONS.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </select>
+  );
+}
+
+function InlineCollegeToggle({ clientId, value }: { clientId: number; value: boolean }) {
+  const [isPending, startTransition] = useTransition();
+  return (
+    <button
+      onClick={() => startTransition(() => updateClientField(clientId, "collegeBound", !value))}
+      className={`cursor-pointer transition-colors ${isPending ? "opacity-50" : ""}`}
+    >
+      {value ? (
+        <Badge variant="default" className="bg-purple-500/15 text-purple-400 border-0 hover:bg-purple-500/25">Yes</Badge>
+      ) : (
+        <span className="text-muted-foreground hover:text-foreground text-xs">—</span>
+      )}
+    </button>
+  );
 }
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
@@ -223,15 +275,12 @@ function SortableRow({
       <TableCell className="tabular-nums">
         {client.sessionRate ? `$${(client.sessionRate / 100).toFixed(0)}` : "—"}
       </TableCell>
-      <TableCell className="capitalize text-muted-foreground">{client.sessionType ?? "—"}</TableCell>
       <TableCell>{categoryBadge(client.category)}</TableCell>
-      <TableCell className="capitalize">{client.gradeLevel ?? "—"}</TableCell>
       <TableCell>
-        {client.collegeBound ? (
-          <Badge variant="default" className="bg-purple-500/15 text-purple-400 border-0 hover:bg-purple-500/15">Yes</Badge>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
+        <InlineGradeSelect clientId={client.id} value={client.gradeLevel ?? ""} />
+      </TableCell>
+      <TableCell>
+        <InlineCollegeToggle clientId={client.id} value={client.collegeBound} />
       </TableCell>
       <TableCell><ScoreBar score={client.behaviorScore} /></TableCell>
       <TableCell>
@@ -239,7 +288,9 @@ function SortableRow({
           ? sessionsLeftBadge(client.sessionsRemaining)
           : <span className="text-muted-foreground">—</span>}
       </TableCell>
-      <TableCell className="text-muted-foreground">{client.preferredTime ?? "Flexible"}</TableCell>
+      <TableCell className="text-muted-foreground text-xs">
+        {formatSchedule(client.preferredDays, client.preferredTime)}
+      </TableCell>
     </TableRow>
   );
 }
@@ -410,9 +461,6 @@ export function ClientTable({
                 <TableHead className={thClass} onClick={() => handleSort("rate")}>
                   Rate <SortIcon active={sortKey === "rate"} dir={sortDir} />
                 </TableHead>
-                <TableHead className={thClass} onClick={() => handleSort("type")}>
-                  Type <SortIcon active={sortKey === "type"} dir={sortDir} />
-                </TableHead>
                 <TableHead className={thClass} onClick={() => handleSort("category")}>
                   Status <SortIcon active={sortKey === "category"} dir={sortDir} />
                 </TableHead>
@@ -429,7 +477,7 @@ export function ClientTable({
                   Sessions Left <SortIcon active={sortKey === "sessions"} dir={sortDir} />
                 </TableHead>
                 <TableHead className={thClass} onClick={() => handleSort("time")}>
-                  Preferred Time <SortIcon active={sortKey === "time"} dir={sortDir} />
+                  Schedule <SortIcon active={sortKey === "time"} dir={sortDir} />
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -455,7 +503,7 @@ export function ClientTable({
                 ))}
                 {totalShown === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                       No clients match &ldquo;{search}&rdquo;
                     </TableCell>
                   </TableRow>
