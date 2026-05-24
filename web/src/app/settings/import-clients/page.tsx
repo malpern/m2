@@ -25,6 +25,7 @@ export default function ImportClientsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ imported: number } | null>(null);
 
@@ -59,14 +60,14 @@ export default function ImportClientsPage() {
 
   async function handleImport() {
     if (!data) return;
-    if (
-      !confirm(
-        `This will replace all ${data.existingCount} existing clients with ${selected.size} real clients. Continue?`
-      )
-    )
+    if (!confirming) {
+      setConfirming(true);
       return;
+    }
 
+    setConfirming(false);
     setImporting(true);
+    setError(null);
     try {
       const selectedClients = data.preview.filter((c) =>
         selected.has(c.name)
@@ -241,26 +242,53 @@ export default function ImportClientsPage() {
             </CardContent>
           </Card>
 
-          <div className="flex gap-3 mt-6">
-            <Button
-              onClick={handleImport}
-              disabled={selected.size === 0 || importing}
-            >
-              {importing
-                ? "Importing..."
-                : `Import ${selected.size} Clients`}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.push("/settings")}
-            >
-              Cancel
-            </Button>
-          </div>
+          {importing && (
+            <div className="flex items-center gap-3 mt-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
+              <span className="text-sm font-medium text-blue-400">
+                Importing {selected.size} clients... This may take a moment.
+              </span>
+            </div>
+          )}
+
+          {!importing && (
+            <div className="flex items-center gap-3 mt-6">
+              {confirming ? (
+                <>
+                  <Button
+                    variant="destructive"
+                    onClick={handleImport}
+                  >
+                    Yes, replace {data.existingCount} clients with {selected.size}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setConfirming(false)}
+                  >
+                    No, go back
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={handleImport}
+                    disabled={selected.size === 0}
+                  >
+                    Import {selected.size} Clients
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/settings")}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
 
           <p className="text-xs text-muted-foreground mt-3">
-            To revert, re-seed the database with test data from the command
-            line.
+            This replaces all existing clients with the selected imports.
           </p>
         </>
       )}
