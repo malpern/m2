@@ -199,7 +199,7 @@ async function getCalendarHistory(): Promise<Map<string, CalendarClientData>> {
   const start = new Date(now);
   start.setMonth(start.getMonth() - 12);
 
-  const allEvents: { summary: string; startDt: Date; endDt: Date }[] = [];
+  const allEvents: { summary: string; startRaw: string; endRaw: string | null; durationMin: number }[] = [];
   const cursor = new Date(start);
   while (cursor < now) {
     const chunkEnd = new Date(cursor);
@@ -212,9 +212,14 @@ async function getCalendarHistory(): Promise<Map<string, CalendarClientData>> {
 
     for (const ev of events) {
       if (!ev.summary || !ev.start?.dateTime) continue;
-      const startDt = new Date(ev.start.dateTime);
-      const endDt = ev.end?.dateTime ? new Date(ev.end.dateTime) : new Date(startDt.getTime() + 3600000);
-      allEvents.push({ summary: ev.summary, startDt, endDt });
+      const startMs = new Date(ev.start.dateTime).getTime();
+      const endMs = ev.end?.dateTime ? new Date(ev.end.dateTime).getTime() : startMs + 3600000;
+      allEvents.push({
+        summary: ev.summary,
+        startRaw: ev.start.dateTime,
+        endRaw: ev.end?.dateTime ?? null,
+        durationMin: Math.round((endMs - startMs) / 60000),
+      });
     }
 
     cursor.setDate(cursor.getDate() + 14);
@@ -222,15 +227,22 @@ async function getCalendarHistory(): Promise<Map<string, CalendarClientData>> {
 
   const clientMap = new Map<string, CalendarClientData>();
 
-  for (const { summary, startDt, endDt } of allEvents) {
+  for (const { summary, startRaw, durationMin } of allEvents) {
     const name = extractClientName(summary);
     if (!name) continue;
 
+    // Extract local date/time directly from ISO string to avoid UTC conversion
+    const localDate = startRaw.slice(0, 10);
+    const localTime = startRaw.slice(11, 16);
+    const [year, month, day] = localDate.split("-").map(Number);
+    const localDt = new Date(year, month - 1, day);
+    const dayOfWeek = DAY_NAMES[localDt.getDay()];
+
     const session: CalendarSession = {
-      date: startDt.toISOString().split("T")[0],
-      time: `${String(startDt.getHours()).padStart(2, "0")}:${String(startDt.getMinutes()).padStart(2, "0")}`,
-      dayOfWeek: DAY_NAMES[startDt.getDay()],
-      durationMin: Math.round((endDt.getTime() - startDt.getTime()) / 60000),
+      date: localDate,
+      time: localTime,
+      dayOfWeek,
+      durationMin,
     };
 
     if (!clientMap.has(name)) {

@@ -57,14 +57,14 @@ export default async function SchedulePage({
       googleEvents = events
         .filter((e) => e.start?.dateTime)
         .map((e) => {
-          const start = new Date(e.start!.dateTime!);
-          const end = e.end?.dateTime ? new Date(e.end.dateTime) : new Date(start.getTime() + 3600000);
           const title = e.summary ?? "Untitled";
+          const startRaw = e.start!.dateTime!;
+          const endRaw = e.end?.dateTime;
           return {
             title,
-            date: start.toISOString().split("T")[0],
-            time: `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`,
-            endTime: `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`,
+            date: startRaw.slice(0, 10),
+            time: startRaw.slice(11, 16),
+            endTime: endRaw ? endRaw.slice(11, 16) : `${String(parseInt(startRaw.slice(11, 13)) + 1).padStart(2, "0")}:${startRaw.slice(14, 16)}`,
             isTraining: clientNames.has(title.toLowerCase()),
           };
         });

@@ -145,7 +145,7 @@ function InlineCollegeToggle({ clientId, value }: { clientId: number; value: boo
       {value ? (
         <Badge variant="default" className="bg-purple-500/15 text-purple-400 border-0 hover:bg-purple-500/25">Yes</Badge>
       ) : (
-        <span className="text-muted-foreground hover:text-foreground text-xs">—</span>
+        <span className="text-xs text-muted-foreground/50 hover:text-muted-foreground border border-dashed border-muted-foreground/30 hover:border-muted-foreground/60 rounded px-2 py-0.5 transition-colors">Set</span>
       )}
     </button>
   );
