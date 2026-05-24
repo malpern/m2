@@ -210,27 +210,24 @@ function EditableDays({
   };
 
   const maxFreq = frequencies ? Math.max(...Object.values(frequencies), 0) : 0;
-  const hasPattern = maxFreq > 0.2;
 
   return (
     <div className={`flex gap-1.5 flex-wrap ${isPending ? "opacity-50" : ""}`}>
       {days.map((day) => {
         const freq = frequencies?.[day] ?? 0;
         const isSelected = value.includes(day);
-        const intensity = hasPattern && freq > 0 ? freq / maxFreq : 0;
+        const intensity = maxFreq > 0 ? freq / maxFreq : 0;
         return (
           <button
             key={day}
             onClick={() => toggle(day)}
             className={`px-2 py-0.5 rounded text-xs font-medium capitalize transition-colors ${
-              isSelected
-                ? "bg-accent/20 text-accent"
-                : "hover:bg-muted/80"
-            }`}
-            style={!isSelected && intensity > 0 ? {
-              backgroundColor: `rgba(96, 165, 250, ${intensity * 0.25})`,
-              color: `rgba(96, 165, 250, ${0.5 + intensity * 0.5})`,
-            } : !isSelected ? { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" } : undefined}
+              isSelected ? "bg-accent/20 text-accent" : ""
+            } hover:opacity-80`}
+            style={!isSelected ? {
+              backgroundColor: `rgba(96, 165, 250, ${0.05 + intensity * 0.3})`,
+              color: `rgba(96, 165, 250, ${0.4 + intensity * 0.6})`,
+            } : undefined}
           >
             {day.slice(0, 3)}
           </button>
@@ -302,27 +299,24 @@ function EditableTime({
   };
 
   const maxFreq = frequencies ? Math.max(...Object.values(frequencies), 0) : 0;
-  const hasPattern = maxFreq > 0.15;
 
   return (
     <div className={`grid grid-cols-6 gap-1.5 ${isPending ? "opacity-50" : ""}`}>
       {slots.map((slot) => {
         const freq = frequencies?.[slot] ?? 0;
         const isSelected = current === slot;
-        const intensity = hasPattern && freq > 0 ? freq / maxFreq : 0;
+        const intensity = maxFreq > 0 ? freq / maxFreq : 0;
         return (
           <button
             key={slot}
             onClick={() => toggle(slot)}
             className={`px-2 py-0.5 rounded text-xs font-medium transition-colors text-center ${
-              isSelected
-                ? "bg-accent/20 text-accent"
-                : "hover:bg-muted/80"
-            }`}
-            style={!isSelected && intensity > 0 ? {
-              backgroundColor: `rgba(96, 165, 250, ${intensity * 0.25})`,
-              color: `rgba(96, 165, 250, ${0.5 + intensity * 0.5})`,
-            } : !isSelected ? { backgroundColor: "hsl(var(--muted))", color: "hsl(var(--muted-foreground))" } : undefined}
+              isSelected ? "bg-accent/20 text-accent" : ""
+            } hover:opacity-80`}
+            style={!isSelected ? {
+              backgroundColor: `rgba(96, 165, 250, ${0.05 + intensity * 0.3})`,
+              color: `rgba(96, 165, 250, ${0.4 + intensity * 0.6})`,
+            } : undefined}
           >
             {slot}
           </button>
