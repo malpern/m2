@@ -303,7 +303,8 @@
         <div class="step-detail">
           <strong>Pass 1 — Standing Slots:</strong> Clients with recurring weekly sessions (e.g., "Mon 3pm, Wed 3pm") are auto-placed first. These are locked — no outreach needed.<br><br>
           <strong>Pass 2 — First Session:</strong> Every remaining active client gets one session, assigned in priority order. The system tries their preferred day and time first, then cascades to open slots (3pm → 5pm → 6pm).<br><br>
-          <strong>Pass 3 — College-bound Extras:</strong> College-bound athletes with <code>maxSessionsPerWeek ≥ 2</code> get a second session on a different day.
+          <strong>Pass 3 — College-bound Extras:</strong> College-bound athletes with <code>maxSessionsPerWeek ≥ 2</code> get a second session on a different day.<br><br>
+          <strong>How time slots are chosen:</strong> Currently the system uses the static <code>preferredDays</code> and <code>preferredTime</code> stored on each client's profile. These were auto-detected from historical calendar patterns during import. The system does not yet look at what the client actually booked last week — this is a planned improvement.
         </div>
       </div>
     </div>
@@ -588,6 +589,45 @@
     <div class="status-card">
       <div class="status-name"><span class="status-dot" style="background:#10b981"></span>Session Movement SMS</div>
       <div class="status-desc">When moving or cancelling a confirmed session, a pre-drafted text is shown. Matt can edit before sending.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Client Intelligence</div>
+  <h2>What You See on Each Client's Page</h2>
+  <div class="section-desc">Every client detail page shows scheduling intelligence derived from their booking history.</div>
+
+  <div class="rules">
+    <div class="rule-item">
+      <div class="rule-num">1</div>
+      <div class="rule-content">
+        <div class="rule-title">Last Week</div>
+        <div class="rule-desc">Shows exactly what this client booked last week — day, time, and what percentage of their all-time sessions use that slot. Times used less than 10% of the time are flagged as <strong>"Unusual"</strong> in amber, meaning last week was an outlier and not their normal pattern. This helps Matt decide whether to propose the same time again or revert to their typical slot.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">2</div>
+      <div class="rule-content">
+        <div class="rule-title">Schedule Pattern Heatmap</div>
+        <div class="rule-desc">A day × time grid showing every slot the client has used. Core hours (11am–6pm) always show; off-hour times only appear if this client has used them. Color intensity reflects both frequency and recency — sessions in the last 30 days count at full weight, older ones fade with a 60-day half-life.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">3</div>
+      <div class="rule-content">
+        <div class="rule-title">Session History Calendar</div>
+        <div class="rule-desc">A monthly calendar view showing the last 30 days of sessions. Session days are highlighted with colored dots (green = completed, red = cancelled). Gaps of 14+ days between sessions are flagged as breaks with an amber indicator. Click "View all" to expand the full history.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">4</div>
+      <div class="rule-content">
+        <div class="rule-title">Inline Editing</div>
+        <div class="rule-desc">Session rate, type, effort score, standing slot, max sessions per week, and notes are all editable in place — click any value to change it. On the client list, grade and college-bound status are also inline-editable.</div>
+      </div>
     </div>
   </div>
 </section>
