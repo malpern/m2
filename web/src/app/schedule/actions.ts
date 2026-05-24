@@ -1,12 +1,14 @@
 "use server";
 
 import { db } from "@/db";
-import { clients, sessions, outreach, prioritySettings } from "@/db/schema";
+import { clients, sessions, outreach, prioritySettings, defaultAvailability, weeklyOverrides } from "@/db/schema";
 import { sendSMS } from "@/lib/twilio";
-import { eq, and, gte, lte } from "drizzle-orm";
-import { generateWeek, getMonday } from "@/lib/scheduler";
+import { eq, and, gte, lte, ne } from "drizzle-orm";
+import { generateWeek, getMonday, type LastWeekSession, type AvailabilitySlot, type DayOfWeek, type TimeSlot } from "@/lib/scheduler";
 import { DEFAULT_WEIGHTS } from "@/lib/priority";
 import { revalidatePath } from "next/cache";
+
+const ALL_DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 
 export async function generateSchedule(weekStartISO: string) {
   const weekStart = new Date(weekStartISO);
@@ -17,7 +19,66 @@ export async function generateSchedule(weekStartISO: string) {
     ? { collegeBoundWeight: savedWeights.collegeBoundWeight, gradeLevelWeight: savedWeights.gradeLevelWeight, effortWeight: savedWeights.effortWeight }
     : DEFAULT_WEIGHTS;
 
-  const proposed = generateWeek(allClients, weekStart, weights);
+  // Get last week's sessions for continuity
+  const prevMonday = new Date(weekStart);
+  prevMonday.setDate(prevMonday.getDate() - 7);
+  const prevSunday = new Date(prevMonday);
+  prevSunday.setDate(prevSunday.getDate() + 6);
+  const prevStart = prevMonday.toISOString().split("T")[0];
+  const prevEnd = prevSunday.toISOString().split("T")[0];
+
+  const prevSessions = await db.select({ clientId: sessions.clientId, date: sessions.scheduledDate, slot: sessions.slot })
+    .from(sessions)
+    .where(and(
+      gte(sessions.scheduledDate, prevStart),
+      lte(sessions.scheduledDate, prevEnd),
+      ne(sessions.status, "cancelled"),
+    ))
+    .all();
+
+  const lastWeekSessions: LastWeekSession[] = prevSessions.map((s) => {
+    const d = new Date(s.date + "T12:00:00");
+    const dayIdx = d.getDay();
+    return {
+      clientId: s.clientId,
+      day: ALL_DAY_NAMES[dayIdx] as DayOfWeek,
+      slot: s.slot as TimeSlot,
+    };
+  });
+
+  // Get availability (defaults + weekly overrides)
+  const defaults = await db.select().from(defaultAvailability).all();
+  const overrides = await db.select().from(weeklyOverrides)
+    .where(eq(weeklyOverrides.weekOf, weekStartISO))
+    .all();
+
+  const availMap = new Map<string, boolean>();
+  for (const d of defaults) {
+    availMap.set(`${d.day}:${d.slot}`, d.enabled);
+  }
+  for (const o of overrides) {
+    availMap.set(`${o.day}:${o.slot}`, o.enabled);
+  }
+
+  const availability: AvailabilitySlot[] = [];
+  for (const [k, enabled] of availMap) {
+    const [day, slot] = k.split(":");
+    availability.push({ day: day as DayOfWeek, slot: slot as TimeSlot, enabled });
+  }
+
+  // Auto-complete past confirmed sessions
+  const today = new Date().toISOString().split("T")[0];
+  const pastConfirmed = await db.select({ id: sessions.id })
+    .from(sessions)
+    .where(and(eq(sessions.status, "confirmed"), lte(sessions.scheduledDate, today)))
+    .all();
+  if (pastConfirmed.length > 0) {
+    for (const s of pastConfirmed) {
+      await db.update(sessions).set({ status: "completed" }).where(eq(sessions.id, s.id)).run();
+    }
+  }
+
+  const proposed = generateWeek(allClients, weekStart, weights, lastWeekSessions, availability);
 
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);

@@ -81,6 +81,9 @@ function parseStandingSlot(standing: string): { day: DayOfWeek; slot: TimeSlot }
   return results;
 }
 
+export type LastWeekSession = { clientId: number; day: DayOfWeek; slot: TimeSlot };
+export type AvailabilitySlot = { day: DayOfWeek; slot: TimeSlot; enabled: boolean };
+
 function preferredSlot(client: Client): TimeSlot {
   const time = client.preferredTime?.toLowerCase() ?? "";
   if (time.includes("3")) return "3pm";
@@ -91,10 +94,17 @@ function preferredSlot(client: Client): TimeSlot {
   return "5pm";
 }
 
+function getLastWeekSlot(clientId: number, lastWeek: LastWeekSession[]): { day: DayOfWeek; slot: TimeSlot } | null {
+  const match = lastWeek.find((s) => s.clientId === clientId);
+  return match ? { day: match.day, slot: match.slot } : null;
+}
+
 export function generateWeek(
   allClients: Client[],
   weekStart: Date,
   weights?: PriorityWeights,
+  lastWeekSessions?: LastWeekSession[],
+  availability?: AvailabilitySlot[],
 ): ProposedSession[] {
   const schedulable = allClients.filter(isSchedulable);
   const ranked = weights
@@ -107,6 +117,17 @@ export function generateWeek(
   const filled = new Map<string, number>();
   const key = (day: DayOfWeek, slot: TimeSlot) => `${day}:${slot}`;
 
+  // Build unavailable set from availability grid
+  const unavailable = new Set<string>();
+  if (availability) {
+    for (const a of availability) {
+      if (!a.enabled) unavailable.add(key(a.day, a.slot));
+    }
+  }
+
+  const isAvailable = (day: DayOfWeek, slot: TimeSlot) =>
+    !unavailable.has(key(day, slot)) && !filled.has(key(day, slot));
+
   // Track sessions assigned per client this week
   const sessionsAssigned = new Map<number, number>();
 
@@ -115,7 +136,7 @@ export function generateWeek(
     if (!client.standingSlot) continue;
     const entries = parseStandingSlot(client.standingSlot);
     for (const { day, slot } of entries) {
-      if (day in weekDates && !filled.has(key(day, slot))) {
+      if (day in weekDates && isAvailable(day, slot)) {
         proposed.push({
           clientId: client.id,
           clientName: client.name,
@@ -135,14 +156,34 @@ export function generateWeek(
     const currentSessions = sessionsAssigned.get(client.id) ?? 0;
     if (currentSessions >= client.maxSessionsPerWeek) continue;
 
+    let placed = false;
+
+    // Try last week's slot first (continuity)
+    if (lastWeekSessions) {
+      const lastWeek = getLastWeekSlot(client.id, lastWeekSessions);
+      if (lastWeek && isAvailable(lastWeek.day, lastWeek.slot)) {
+        proposed.push({
+          clientId: client.id,
+          clientName: client.name,
+          day: lastWeek.day,
+          slot: lastWeek.slot,
+          date: weekDates[lastWeek.day],
+          time: SLOT_TIMES[lastWeek.slot],
+        });
+        filled.set(key(lastWeek.day, lastWeek.slot), client.id);
+        sessionsAssigned.set(client.id, 1);
+        placed = true;
+      }
+    }
+
+    if (placed) continue;
+
     const days = parsePreferredDays(client);
     const slot = preferredSlot(client);
 
-    let placed = false;
-
     // Try preferred days + preferred slot
     for (const day of days) {
-      if (!filled.has(key(day, slot))) {
+      if (isAvailable(day, slot)) {
         proposed.push({
           clientId: client.id,
           clientName: client.name,
@@ -163,7 +204,7 @@ export function generateWeek(
     // Try preferred days with slot cascade (3pm -> 5pm -> 6pm)
     for (const day of days) {
       for (const altSlot of SLOT_FILL_ORDER) {
-        if (!filled.has(key(day, altSlot))) {
+        if (isAvailable(day, altSlot)) {
           proposed.push({
             clientId: client.id,
             clientName: client.name,
@@ -183,10 +224,10 @@ export function generateWeek(
 
     if (placed) continue;
 
-    // Try any day, any slot
+    // Try any available day, any slot
     for (const day of DAYS_OF_WEEK) {
       for (const altSlot of SLOT_FILL_ORDER) {
-        if (!filled.has(key(day, altSlot))) {
+        if (isAvailable(day, altSlot)) {
           proposed.push({
             clientId: client.id,
             clientName: client.name,
@@ -220,7 +261,7 @@ export function generateWeek(
       if (assignedDays.includes(day)) continue;
       const trySlots = [slot, ...SLOT_FILL_ORDER.filter((s) => s !== slot)];
       for (const s of trySlots) {
-        if (!filled.has(key(day, s))) {
+        if (isAvailable(day, s)) {
           proposed.push({
             clientId: client.id,
             clientName: client.name,
