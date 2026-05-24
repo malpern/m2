@@ -186,12 +186,19 @@ function EditableToggle({
 function EditableDays({
   clientId,
   value,
+  availableDays,
+  frequencies,
 }: {
   clientId: number;
   value: string[];
+  availableDays?: string[];
+  frequencies?: Record<string, number>;
 }) {
   const [isPending, startTransition] = useTransition();
-  const allDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+  const defaultDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+  const days = availableDays && availableDays.length > 0
+    ? defaultDays.filter((d) => availableDays.includes(d))
+    : defaultDays;
 
   const toggle = (day: string) => {
     const updated = value.includes(day)
@@ -204,19 +211,30 @@ function EditableDays({
 
   return (
     <div className={`flex gap-1.5 flex-wrap ${isPending ? "opacity-50" : ""}`}>
-      {allDays.map((day) => (
-        <button
-          key={day}
-          onClick={() => toggle(day)}
-          className={`px-2 py-0.5 rounded text-xs font-medium capitalize transition-colors ${
-            value.includes(day)
-              ? "bg-accent/20 text-accent"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
-          }`}
-        >
-          {day.slice(0, 3)}
-        </button>
-      ))}
+      {days.map((day) => {
+        const freq = frequencies?.[day] ?? 0;
+        return (
+          <button
+            key={day}
+            onClick={() => toggle(day)}
+            className={`flex flex-col items-center gap-0.5 px-2 pt-0.5 pb-1 rounded text-xs font-medium capitalize transition-colors ${
+              value.includes(day)
+                ? "bg-accent/20 text-accent"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            <span>{day.slice(0, 3)}</span>
+            {frequencies && (
+              <div className="w-full h-1 rounded-full bg-muted-foreground/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-accent/50"
+                  style={{ width: `${Math.round(freq * 100)}%` }}
+                />
+              </div>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -253,7 +271,7 @@ function EditableScoreBar({
   );
 }
 
-const TIME_SLOTS = [
+const DEFAULT_TIME_SLOTS = [
   "8am", "9am", "10am", "11am", "12pm",
   "1pm", "2pm", "3pm", "4pm", "5pm", "6pm", "7pm",
 ];
@@ -261,12 +279,19 @@ const TIME_SLOTS = [
 function EditableTime({
   clientId,
   value,
+  availableSlots,
+  frequencies,
 }: {
   clientId: number;
   value: string;
+  availableSlots?: string[];
+  frequencies?: Record<string, number>;
 }) {
   const [isPending, startTransition] = useTransition();
   const current = value?.toLowerCase() ?? "";
+  const slots = availableSlots && availableSlots.length > 0
+    ? DEFAULT_TIME_SLOTS.filter((s) => availableSlots.includes(s))
+    : DEFAULT_TIME_SLOTS;
 
   const toggle = (slot: string) => {
     const newValue = current === slot ? "" : slot;
@@ -277,19 +302,30 @@ function EditableTime({
 
   return (
     <div className={`flex gap-1.5 flex-wrap ${isPending ? "opacity-50" : ""}`}>
-      {TIME_SLOTS.map((slot) => (
-        <button
-          key={slot}
-          onClick={() => toggle(slot)}
-          className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
-            current === slot
-              ? "bg-accent/20 text-accent"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
-          }`}
-        >
-          {slot}
-        </button>
-      ))}
+      {slots.map((slot) => {
+        const freq = frequencies?.[slot] ?? 0;
+        return (
+          <button
+            key={slot}
+            onClick={() => toggle(slot)}
+            className={`flex flex-col items-center gap-0.5 px-2 pt-0.5 pb-1 rounded text-xs font-medium transition-colors ${
+              current === slot
+                ? "bg-accent/20 text-accent"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            <span>{slot}</span>
+            {frequencies && (
+              <div className="w-full h-1 rounded-full bg-muted-foreground/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-accent/50"
+                  style={{ width: `${Math.round(freq * 100)}%` }}
+                />
+              </div>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

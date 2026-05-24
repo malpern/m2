@@ -106,6 +106,43 @@ export default async function ClientDetailPage({
   const activePackage = clientPackages.find((p) => p.status === "active" || p.status === "unpaid");
   const preferredDays: string[] = client.preferredDays ? JSON.parse(client.preferredDays) : [];
 
+  // Compute global slot usage (which days/times have 2+ uses by anyone)
+  const allSessions = await db.select({ date: sessions.scheduledDate, time: sessions.scheduledTime }).from(sessions).all();
+  const globalDayCounts = new Map<string, number>();
+  const globalTimeCounts = new Map<string, number>();
+  const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  for (const s of allSessions) {
+    const d = new Date(s.date + "T12:00:00");
+    const day = DAY_NAMES[d.getDay()];
+    globalDayCounts.set(day, (globalDayCounts.get(day) ?? 0) + 1);
+    const hour = parseInt(s.time.split(":")[0]);
+    const h = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    const suffix = hour >= 12 ? "pm" : "am";
+    const timeSlot = `${h}${suffix}`;
+    globalTimeCounts.set(timeSlot, (globalTimeCounts.get(timeSlot) ?? 0) + 1);
+  }
+  const activeDays = [...globalDayCounts.entries()].filter(([, c]) => c >= 2).map(([d]) => d);
+  const activeTimeSlots = [...globalTimeCounts.entries()].filter(([, c]) => c >= 2).map(([t]) => t);
+
+  // Compute per-client day/time frequencies
+  const clientDayCounts = new Map<string, number>();
+  const clientTimeCounts = new Map<string, number>();
+  for (const s of allClientSessions) {
+    const d = new Date(s.scheduledDate + "T12:00:00");
+    const day = DAY_NAMES[d.getDay()];
+    clientDayCounts.set(day, (clientDayCounts.get(day) ?? 0) + 1);
+    const hour = parseInt(s.scheduledTime.split(":")[0]);
+    const h = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    const suffix = hour >= 12 ? "pm" : "am";
+    const timeSlot = `${h}${suffix}`;
+    clientTimeCounts.set(timeSlot, (clientTimeCounts.get(timeSlot) ?? 0) + 1);
+  }
+  const clientTotal = allClientSessions.length || 1;
+  const dayFrequencies: Record<string, number> = {};
+  for (const [day, count] of clientDayCounts) dayFrequencies[day] = count / clientTotal;
+  const timeFrequencies: Record<string, number> = {};
+  for (const [time, count] of clientTimeCounts) timeFrequencies[time] = count / clientTotal;
+
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
       <Link
@@ -243,11 +280,11 @@ export default async function ClientDetailPage({
             <Separator />
             <div>
               <div className="text-sm text-muted-foreground mb-1">Preferred Days</div>
-              <EditableDays clientId={clientId} value={preferredDays} />
+              <EditableDays clientId={clientId} value={preferredDays} availableDays={activeDays} frequencies={dayFrequencies} />
             </div>
             <div>
               <div className="text-sm text-muted-foreground mb-1">Preferred Time</div>
-              <EditableTime clientId={clientId} value={client.preferredTime ?? ""} />
+              <EditableTime clientId={clientId} value={client.preferredTime ?? ""} availableSlots={activeTimeSlots} frequencies={timeFrequencies} />
             </div>
             <Separator />
             <div>
