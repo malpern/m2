@@ -53,7 +53,7 @@ function isBlockedName(name: string): boolean {
   if (BLOCKED_NAMES.has(lower)) return true;
   // Pattern-based filters for recurring junk categories
   if (/\b(haircut|gymnastics|swim|soccer|lacrosse|bridal|wedding)\b/i.test(name)) return true;
-  if (/\b(cleaning|date night|senior night|pick up)\b/i.test(name)) return true;
+  if (/\b(cleaning|date night|senior night|pick up|mother.?s day|father.?s day)\b/i.test(name)) return true;
   if (/^(semi[- ]?group|mc)$/i.test(name)) return true;
   if (/semiprivate training|ypt performance/i.test(name)) return true;
   return false;
