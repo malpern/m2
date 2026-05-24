@@ -5,7 +5,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 
 async function generateTitle(text: string): Promise<string> {
-  if (!process.env.ANTHROPIC_API_KEY) return text.slice(0, 60);
+  const trimmed = text.trim();
+  if (trimmed.split(/\s+/).length <= 8) return trimmed;
+  if (!process.env.ANTHROPIC_API_KEY) return trimmed.slice(0, 60);
   try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     const response = await client.messages.create({
@@ -13,13 +15,13 @@ async function generateTitle(text: string): Promise<string> {
       max_tokens: 40,
       messages: [{
         role: "user",
-        content: `Generate a concise GitHub issue title (max 8 words) for this feedback about a scheduling app. Return only the title.\n\nFeedback: "${text}"`,
+        content: `Shorten this feedback to a GitHub issue title (max 8 words). Keep Matt's original words — just trim, don't reinterpret. Return only the title.\n\nFeedback: "${trimmed}"`,
       }],
     });
-    const raw = response.content[0].type === "text" ? response.content[0].text : text;
+    const raw = response.content[0].type === "text" ? response.content[0].text : trimmed;
     return raw.trim().replace(/^["']|["']$/g, "");
   } catch {
-    return text.slice(0, 60);
+    return trimmed.slice(0, 60);
   }
 }
 
