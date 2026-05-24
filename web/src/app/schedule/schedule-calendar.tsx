@@ -311,6 +311,13 @@ export function ScheduleCalendar({
     }
   }, [isMobile]);
 
+  useEffect(() => {
+    const api = calendarRef.current?.getApi();
+    if (api) {
+      api.gotoDate(weekStart);
+    }
+  }, [weekStart]);
+
   return (
     <div>
       {pendingChange && (
