@@ -105,24 +105,30 @@ export default async function ClientDetailPage({
   const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
-  // Compute per-client day×time pair frequencies
-  const dayTimeCounts = new Map<string, number>();
+  // Compute per-client day×time frequencies weighted by recency
+  const now = Date.now();
+  const HALF_LIFE_DAYS = 90;
+  const dayTimeScores = new Map<string, number>();
   const clientTimeSlots = new Set<string>();
   for (const s of allClientSessions) {
     const d = new Date(s.scheduledDate + "T12:00:00");
     const day = DAY_NAMES[d.getDay()];
     const slot = timeLabel(s.scheduledTime);
-    dayTimeCounts.set(`${day}:${slot}`, (dayTimeCounts.get(`${day}:${slot}`) ?? 0) + 1);
+    const ageMs = now - d.getTime();
+    const ageDays = ageMs / 86400000;
+    const weight = Math.pow(0.5, ageDays / HALF_LIFE_DAYS);
+    const key = `${day}:${slot}`;
+    dayTimeScores.set(key, (dayTimeScores.get(key) ?? 0) + weight);
     clientTimeSlots.add(slot);
   }
-  const maxDayTimeCount = Math.max(...dayTimeCounts.values(), 1);
+  const maxDayTimeScore = Math.max(...dayTimeScores.values(), 0.01);
   const scheduleGrid: Record<string, Record<string, number>> = {};
-  for (const [key, count] of dayTimeCounts) {
+  for (const [key, score] of dayTimeScores) {
     const sep = key.indexOf(":");
     const day = key.slice(0, sep);
     const time = key.slice(sep + 1);
     if (!scheduleGrid[day]) scheduleGrid[day] = {};
-    scheduleGrid[day][time] = count;
+    scheduleGrid[day][time] = score;
   }
 
   // Core hours + any edge-case times this client has actually used
@@ -250,7 +256,7 @@ export default async function ClientDetailPage({
                         <td className={`text-xs pr-2 py-0.5 text-right tabular-nums ${isEdge ? "text-muted-foreground/50 italic" : "text-muted-foreground"}`}>{time}</td>
                         {activeDays.map((day) => {
                           const count = scheduleGrid[day]?.[time] ?? 0;
-                          const intensity = count / maxDayTimeCount;
+                          const intensity = count / maxDayTimeScore;
                           return (
                             <td key={day} className="px-1 py-0.5 text-center">
                               <div
