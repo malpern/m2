@@ -56,6 +56,24 @@ export default async function LiveOutreachPage() {
     repliedAt: o.repliedAt,
   }));
 
+  // Find reserved slots (offered to someone, awaiting reply)
+  const reservedKeys = new Set<string>();
+  const moveOnMs = 180 * 60 * 1000;
+  const now = Date.now();
+  for (const o of weekOutreach) {
+    if (o.direction !== "sent" || !o.messageText.includes("[offered:")) continue;
+    const sentTime = o.sentAt ? new Date(o.sentAt).getTime() : 0;
+    if ((now - sentTime) > moveOnMs) continue;
+    const hasReply = weekOutreach.some(
+      (r) => r.clientId === o.clientId && r.direction === "received" && (r.repliedAt ?? "") > (o.sentAt ?? "")
+    );
+    if (hasReply) continue;
+    const match = o.messageText.match(/\[offered:([^\]]+)\]/);
+    if (match) {
+      for (const pair of match[1].split(",")) reservedKeys.add(pair.trim());
+    }
+  }
+
   // Open slots for the mini calendar
   const bookedSlots = weekSessions
     .filter((s) => s.status !== "cancelled")
@@ -72,6 +90,7 @@ export default async function LiveOutreachPage() {
     const slots = SLOTS.map((slot) => ({
       slot,
       booked: bookedSlots.some((b) => b.date === date && b.slot === slot),
+      reserved: reservedKeys.has(`${date}|${slot}`),
     }));
     days.push({ date, dayName, slots });
   }

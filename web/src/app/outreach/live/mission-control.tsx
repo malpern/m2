@@ -19,7 +19,7 @@ type Message = {
 type WeekDay = {
   date: string;
   dayName: string;
-  slots: { slot: string; booked: boolean }[];
+  slots: { slot: string; booked: boolean; reserved: boolean }[];
 };
 
 type Summary = {
@@ -115,7 +115,7 @@ function ClientCard({
                 {m.direction === "sent" ? "→" : "←"}
               </span>
               <p className="text-[11px] text-muted-foreground leading-tight line-clamp-2">
-                {m.messageText}
+                {m.messageText.replace(/\n\[offered:[^\]]+\]/, "")}
               </p>
             </div>
           ))}
@@ -137,6 +137,14 @@ function ClientCard({
 
       {item.status === "sent" && clientMsgs.length > 0 && !item.replyText && (
         <div className="text-[10px] text-muted-foreground/50">Awaiting reply...</div>
+      )}
+
+      {clientMsgs.some((m) => m.direction === "sent" && m.messageText.includes("[offered:")) &&
+       !clientMsgs.some((m) => m.direction === "received" && (m.repliedAt ?? "") > (clientMsgs.filter((x) => x.messageText.includes("[offered:")).pop()?.sentAt ?? "")) && (
+        <div className="text-[10px] text-amber-400/70 flex items-center gap-1 mt-1">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+          Alternatives offered — slots reserved
+        </div>
       )}
 
       {needsAction && (
@@ -162,7 +170,7 @@ function ClientCard({
 function MiniCalendar({ days }: { days: WeekDay[] }) {
   return (
     <div className="rounded-lg border border-border bg-background p-3">
-      <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Open Slots</div>
+      <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Slot Availability</div>
       <div className="grid grid-cols-6 gap-1">
         {days.map((day) => (
           <div key={day.date} className="text-center">
@@ -173,14 +181,22 @@ function MiniCalendar({ days }: { days: WeekDay[] }) {
                 className={`text-[8px] py-0.5 rounded mb-0.5 ${
                   s.booked
                     ? "bg-blue-500/20 text-blue-300/50"
-                    : "bg-emerald-500/15 text-emerald-400"
+                    : s.reserved
+                      ? "bg-amber-500/15 text-amber-400/70"
+                      : "bg-emerald-500/15 text-emerald-400"
                 }`}
+                title={s.booked ? "Booked" : s.reserved ? "Reserved — offered to another client" : "Open"}
               >
                 {s.slot}
               </div>
             ))}
           </div>
         ))}
+      </div>
+      <div className="flex gap-3 mt-2 text-[8px] text-muted-foreground/60">
+        <span><span className="inline-block w-2 h-2 rounded-sm bg-emerald-500/15 mr-1 align-middle" />Open</span>
+        <span><span className="inline-block w-2 h-2 rounded-sm bg-amber-500/15 mr-1 align-middle" />Held</span>
+        <span><span className="inline-block w-2 h-2 rounded-sm bg-blue-500/20 mr-1 align-middle" />Booked</span>
       </div>
     </div>
   );
