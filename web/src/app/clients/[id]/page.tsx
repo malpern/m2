@@ -80,25 +80,6 @@ export default async function ClientDetailPage({
   const totalCancelled = allClientSessions.filter((s) => s.status === "cancelled").length;
   const totalNoShow = allClientSessions.filter((s) => s.status === "no_show").length;
 
-  // Build weekly session counts for histogram (last 12 weeks)
-  const weeklyData: { week: string; count: number }[] = [];
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i * 7);
-    const day = d.getDay();
-    const mon = new Date(d);
-    mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
-    const weekStart = mon.toISOString().split("T")[0];
-    const sun = new Date(mon);
-    sun.setDate(mon.getDate() + 6);
-    const weekEnd = sun.toISOString().split("T")[0];
-    const count = allClientSessions.filter(
-      (s) => s.scheduledDate >= weekStart && s.scheduledDate <= weekEnd && s.status === "completed"
-    ).length;
-    weeklyData.push({ week: mon.toLocaleDateString("en-US", { month: "short", day: "numeric" }), count });
-  }
-  const maxCount = Math.max(...weeklyData.map((w) => w.count), 1);
-
   const memberSince = client.createdAt
     ? new Date(client.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "Unknown";
@@ -248,24 +229,6 @@ export default async function ClientDetailPage({
         </Card>
       </div>
 
-      <Card className="mb-6">
-        <CardContent className="pt-4 pb-3">
-          <div className="flex items-end gap-[3px] h-10">
-            {weeklyData.map((w, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-sm bg-blue-500/70 hover:bg-blue-500 transition-colors"
-                style={{ height: `${w.count === 0 ? 2 : Math.max(6, (w.count / maxCount) * 40)}px` }}
-                title={`${w.week}: ${w.count}`}
-              />
-            ))}
-          </div>
-          <div className="flex justify-between mt-1.5">
-            <span className="text-[10px] text-muted-foreground">{weeklyData[0]?.week}</span>
-            <span className="text-[10px] text-muted-foreground">This week</span>
-          </div>
-        </CardContent>
-      </Card>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card>
