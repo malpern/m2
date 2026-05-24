@@ -110,9 +110,9 @@ function formatSchedule(daysJson: string | null, time: string | null): string {
 }
 
 const GRADE_OPTIONS = [
-  { value: "", label: "Set..." },
-  { value: "freshman", label: "Fresh" },
-  { value: "sophomore", label: "Soph" },
+  { value: "", label: "—" },
+  { value: "freshman", label: "Freshman" },
+  { value: "sophomore", label: "Sophomore" },
   { value: "junior", label: "Junior" },
   { value: "senior", label: "Senior" },
   { value: "post_grad", label: "Post-Grad" },
@@ -125,8 +125,8 @@ function InlineGradeSelect({ clientId, value }: { clientId: number; value: strin
     <select
       value={value}
       onChange={(e) => startTransition(() => updateClientField(clientId, "gradeLevel", e.target.value))}
-      className={`bg-transparent border-0 outline-none cursor-pointer text-xs capitalize appearance-none pr-3 ${isPending ? "opacity-50" : ""} ${!value ? "text-muted-foreground italic" : ""}`}
-      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 8 8' fill='%236b7280' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 2.5L4 5.5L7 2.5' stroke='%236b7280' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right center" }}
+      className={`cursor-pointer text-xs font-medium rounded-full px-2.5 py-1 outline-none appearance-none pr-5 transition-colors ${isPending ? "opacity-50" : ""} ${value ? "bg-blue-500/15 text-blue-400 hover:bg-blue-500/25" : "bg-muted/60 text-muted-foreground hover:bg-muted"}`}
+      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' fill='%236b7280' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 2.5L4 5.5L7 2.5' stroke='%236b7280' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 6px center" }}
     >
       {GRADE_OPTIONS.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
@@ -140,13 +140,9 @@ function InlineCollegeToggle({ clientId, value }: { clientId: number; value: boo
   return (
     <button
       onClick={() => startTransition(() => updateClientField(clientId, "collegeBound", !value))}
-      className={`cursor-pointer transition-colors ${isPending ? "opacity-50" : ""}`}
+      className={`cursor-pointer text-xs font-medium rounded-full px-2.5 py-1 transition-colors ${isPending ? "opacity-50" : ""} ${value ? "bg-purple-500/15 text-purple-400 hover:bg-purple-500/25" : "bg-muted/60 text-muted-foreground hover:bg-muted"}`}
     >
-      {value ? (
-        <Badge variant="default" className="bg-purple-500/15 text-purple-400 border-0 hover:bg-purple-500/25">Yes</Badge>
-      ) : (
-        <span className="text-xs text-muted-foreground/50 hover:text-muted-foreground border border-dashed border-muted-foreground/30 hover:border-muted-foreground/60 rounded px-2 py-0.5 transition-colors">Set</span>
-      )}
+      {value ? "Yes" : "—"}
     </button>
   );
 }
