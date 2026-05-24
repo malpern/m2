@@ -36,7 +36,7 @@ type Summary = {
 const COLUMNS: { key: string; label: string; color: string }[] = [
   { key: "queued", label: "Queued", color: "border-muted-foreground/20" },
   { key: "texted", label: "Texted", color: "border-blue-500/30" },
-  { key: "talking", label: "In Progress", color: "border-amber-500/30" },
+  { key: "talking", label: "Negotiating", color: "border-amber-500/30" },
   { key: "confirmed", label: "Confirmed", color: "border-emerald-500/30" },
   { key: "done", label: "Resolved", color: "border-muted-foreground/20" },
 ];
