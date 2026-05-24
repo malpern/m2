@@ -102,7 +102,7 @@ export default async function ClientDetailPage({
     ? new Date(client.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "Unknown";
 
-  const activePackage = clientPackages.find((p) => p.status === "active");
+  const activePackage = clientPackages.find((p) => p.status === "active" || p.status === "unpaid");
   const preferredDays: string[] = client.preferredDays ? JSON.parse(client.preferredDays) : [];
 
   return (
@@ -150,14 +150,24 @@ export default async function ClientDetailPage({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <DeleteButton clientId={clientId} clientName={client.name} />
-          <a
-            href={`tel:${client.phone}`}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {formatPhoneNumber(client.phone)}
-          </a>
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-3">
+            <DeleteButton clientId={clientId} clientName={client.name} />
+            <a
+              href={`tel:${client.phone}`}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {formatPhoneNumber(client.phone)}
+            </a>
+          </div>
+          {client.email && (
+            <a href={`mailto:${client.email}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              {client.email}
+            </a>
+          )}
+          {client.parentGuardian && (
+            <span className="text-sm text-muted-foreground">Parent: {client.parentGuardian}</span>
+          )}
         </div>
       </div>
 
@@ -212,6 +222,19 @@ export default async function ClientDetailPage({
             <CardTitle className="text-base">Profile</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex gap-6">
+              <div className="flex-1">
+                <div className="text-sm text-muted-foreground mb-1">Session Rate</div>
+                <div className="text-sm font-medium">
+                  {client.sessionRate ? `$${(client.sessionRate / 100).toFixed(0)}/session` : "—"}
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="text-sm text-muted-foreground mb-1">Session Type</div>
+                <div className="text-sm font-medium capitalize">{client.sessionType ?? "—"}</div>
+              </div>
+            </div>
+            <Separator />
             <div>
               <div className="text-sm text-muted-foreground mb-1">Effort Score</div>
               <EditableScoreBar clientId={clientId} score={client.behaviorScore} />
@@ -266,7 +289,12 @@ export default async function ClientDetailPage({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Package</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Package</CardTitle>
+              {activePackage?.status === "unpaid" && (
+                <Badge className="bg-red-600 text-white border-0 hover:bg-red-600">UNPAID</Badge>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {activePackage ? (
@@ -281,6 +309,9 @@ export default async function ClientDetailPage({
                   <div className="text-right text-sm text-muted-foreground">
                     <div>{activePackage.sessionsUsed} used</div>
                     <div>{activePackage.totalSessions} total</div>
+                    {activePackage.pricePerSession && (
+                      <div className="text-foreground font-medium">${(activePackage.pricePerSession / 100).toFixed(0)}/session</div>
+                    )}
                   </div>
                 </div>
                 <div className="h-3 rounded-full bg-muted overflow-hidden">

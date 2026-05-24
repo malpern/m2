@@ -280,13 +280,17 @@ export async function POST(request: Request) {
     await db.delete(packages).run();
     await db.delete(clients).run();
 
+    const fourMonthsAgo = new Date();
+    fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4);
+    const cutoff = fourMonthsAgo.toISOString().split("T")[0];
+
     const inserted = await db
       .insert(clients)
       .values(
         selectedClients.map((c, i) => ({
           name: c.name,
           phone: "+15550000000",
-          category: "active" as const,
+          category: (c.lastDate && c.lastDate >= cutoff ? "active" : "inactive") as "active" | "inactive",
           googleSheetsName: c.name,
           sessionRate: c.rate,
           sessionType: c.sessionType,

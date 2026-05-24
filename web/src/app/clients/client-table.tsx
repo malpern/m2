@@ -38,6 +38,8 @@ type ClientWithPackage = Client & { sessionsRemaining: number | null };
 type SortKey =
   | "rank"
   | "name"
+  | "rate"
+  | "type"
   | "category"
   | "grade"
   | "college"
@@ -123,6 +125,10 @@ function sortClients(
         return mult * ((originalOrder.get(a.id) ?? 0) - (originalOrder.get(b.id) ?? 0));
       case "name":
         return mult * a.name.localeCompare(b.name);
+      case "rate":
+        return mult * ((a.sessionRate ?? 0) - (b.sessionRate ?? 0));
+      case "type":
+        return mult * (a.sessionType ?? "").localeCompare(b.sessionType ?? "");
       case "category":
         return mult * a.category.localeCompare(b.category);
       case "grade":
@@ -214,6 +220,10 @@ function SortableRow({
           {client.name}
         </Link>
       </TableCell>
+      <TableCell className="tabular-nums">
+        {client.sessionRate ? `$${(client.sessionRate / 100).toFixed(0)}` : "—"}
+      </TableCell>
+      <TableCell className="capitalize text-muted-foreground">{client.sessionType ?? "—"}</TableCell>
       <TableCell>{categoryBadge(client.category)}</TableCell>
       <TableCell className="capitalize">{client.gradeLevel ?? "—"}</TableCell>
       <TableCell>
@@ -397,6 +407,12 @@ export function ClientTable({
                 <TableHead className={thClass} onClick={() => handleSort("name")}>
                   Athlete <SortIcon active={sortKey === "name"} dir={sortDir} />
                 </TableHead>
+                <TableHead className={thClass} onClick={() => handleSort("rate")}>
+                  Rate <SortIcon active={sortKey === "rate"} dir={sortDir} />
+                </TableHead>
+                <TableHead className={thClass} onClick={() => handleSort("type")}>
+                  Type <SortIcon active={sortKey === "type"} dir={sortDir} />
+                </TableHead>
                 <TableHead className={thClass} onClick={() => handleSort("category")}>
                   Status <SortIcon active={sortKey === "category"} dir={sortDir} />
                 </TableHead>
@@ -439,7 +455,7 @@ export function ClientTable({
                 ))}
                 {totalShown === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                       No clients match &ldquo;{search}&rdquo;
                     </TableCell>
                   </TableRow>
