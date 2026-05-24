@@ -13,8 +13,6 @@ import {
   EditableNumber,
   EditableSelect,
   EditableToggle,
-  EditableDays,
-  EditableTime,
   EditableScoreBar,
 } from "./editable-fields";
 
@@ -121,21 +119,22 @@ export default async function ClientDetailPage({
     .map(([t]) => t)
     .sort((a, b) => timeSortKey(a) - timeSortKey(b));
 
-  // Compute per-client day/time frequencies
-  const clientDayCounts = new Map<string, number>();
-  const clientTimeCounts = new Map<string, number>();
+  // Compute per-client day×time pair frequencies
+  const dayTimeCounts = new Map<string, number>();
   for (const s of allClientSessions) {
     const d = new Date(s.scheduledDate + "T12:00:00");
     const day = DAY_NAMES[d.getDay()];
-    clientDayCounts.set(day, (clientDayCounts.get(day) ?? 0) + 1);
     const slot = timeLabel(s.scheduledTime);
-    clientTimeCounts.set(slot, (clientTimeCounts.get(slot) ?? 0) + 1);
+    dayTimeCounts.set(`${day}:${slot}`, (dayTimeCounts.get(`${day}:${slot}`) ?? 0) + 1);
   }
   const clientTotal = allClientSessions.length || 1;
-  const dayFrequencies: Record<string, number> = {};
-  for (const [day, count] of clientDayCounts) dayFrequencies[day] = count / clientTotal;
-  const timeFrequencies: Record<string, number> = {};
-  for (const [time, count] of clientTimeCounts) timeFrequencies[time] = count / clientTotal;
+  const maxDayTimeCount = Math.max(...dayTimeCounts.values(), 1);
+  const scheduleGrid: Record<string, Record<string, number>> = {};
+  for (const [key, count] of dayTimeCounts) {
+    const [day, time] = key.split(":");
+    if (!scheduleGrid[day]) scheduleGrid[day] = {};
+    scheduleGrid[day][time] = count;
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
@@ -230,6 +229,66 @@ export default async function ClientDetailPage({
       </div>
 
 
+      {activeTimeSlots.length > 0 && activeDays.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-base">Schedule Pattern</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-left pb-2 pr-2 w-16" />
+                    {activeDays.filter((d) => DAY_NAMES.slice(1, 7).concat(DAY_NAMES.slice(0, 1)).includes(d))
+                      .sort((a, b) => {
+                        const order = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+                        return order.indexOf(a) - order.indexOf(b);
+                      })
+                      .map((day) => (
+                      <th key={day} className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider text-center pb-2 px-1">
+                        {day.slice(0, 3)}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeTimeSlots.map((time) => {
+                    const sortedDays = activeDays.sort((a, b) => {
+                      const order = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+                      return order.indexOf(a) - order.indexOf(b);
+                    });
+                    return (
+                      <tr key={time}>
+                        <td className="text-xs text-muted-foreground pr-2 py-0.5 text-right tabular-nums">{time}</td>
+                        {sortedDays.map((day) => {
+                          const count = scheduleGrid[day]?.[time] ?? 0;
+                          const intensity = count / maxDayTimeCount;
+                          return (
+                            <td key={day} className="px-1 py-0.5 text-center">
+                              <div
+                                className="mx-auto h-6 rounded transition-colors"
+                                style={{
+                                  backgroundColor: count > 0
+                                    ? `rgba(96, 165, 250, ${0.1 + intensity * 0.6})`
+                                    : "rgba(255,255,255,0.02)",
+                                }}
+                                title={count > 0 ? `${day.slice(0,3)} ${time}: ${count} sessions` : ""}
+                              />
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-3">Based on {allClientSessions.length} historical sessions. Brighter = more frequent.</p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -254,14 +313,6 @@ export default async function ClientDetailPage({
               <EditableScoreBar clientId={clientId} score={client.behaviorScore} />
             </div>
             <Separator />
-            <div>
-              <div className="text-sm text-muted-foreground mb-1">Preferred Days</div>
-              <EditableDays clientId={clientId} value={preferredDays} availableDays={activeDays} frequencies={dayFrequencies} />
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground mb-1">Preferred Time</div>
-              <EditableTime clientId={clientId} value={client.preferredTime ?? ""} availableSlots={activeTimeSlots} frequencies={timeFrequencies} />
-            </div>
             <Separator />
             <div>
               <div className="text-sm text-muted-foreground mb-1">Standing Slot</div>
