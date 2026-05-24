@@ -19,6 +19,13 @@ function formatRate(cents: number | null): string {
   return `$${(cents / 100).toFixed(0)}`;
 }
 
+function formatTime(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const hour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  const suffix = h >= 12 ? "pm" : "am";
+  return m === 0 ? `${hour}${suffix}` : `${hour}:${String(m).padStart(2, "0")}${suffix}`;
+}
+
 export default function ImportClientsPage() {
   const router = useRouter();
   const [data, setData] = useState<PreviewData | null>(null);
@@ -26,6 +33,7 @@ export default function ImportClientsPage() {
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ imported: number; totalSessions?: number } | null>(null);
 
@@ -197,54 +205,90 @@ export default function ImportClientsPage() {
               </div>
               <div className="space-y-0.5 mt-1">
                 {data.preview.map((client) => (
-                  <label
-                    key={client.name}
-                    className="grid grid-cols-1 sm:grid-cols-[auto_1fr_70px_80px_80px_90px_120px] gap-x-4 items-center py-2 px-2 rounded-md hover:bg-muted/50 cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={selected.has(client.name)}
-                      onCheckedChange={() => toggle(client.name)}
-                    />
-                    <div>
-                      <span className="font-medium text-sm">
-                        {client.name}
-                      </span>
-                      {client.parentGuardian && (
-                        <span className="text-[11px] text-muted-foreground ml-1.5">
-                          ({client.parentGuardian})
+                  <div key={client.name}>
+                    <label
+                      className="grid grid-cols-1 sm:grid-cols-[auto_1fr_70px_80px_80px_90px_120px] gap-x-4 items-center py-2 px-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={selected.has(client.name)}
+                        onCheckedChange={() => toggle(client.name)}
+                      />
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">
+                          {client.name}
                         </span>
-                      )}
-                    </div>
-                    <div className="text-right text-sm tabular-nums">
-                      {formatRate(client.rate)}
-                    </div>
-                    <div className="text-right text-sm tabular-nums text-muted-foreground">
-                      {client.sessions2026 || "—"}
-                    </div>
-                    <div className="text-right text-xs tabular-nums text-muted-foreground">
-                      {client.lastDate || "—"}
-                    </div>
-                    <div className="text-right text-xs text-muted-foreground">
-                      {client.lastPackage || "—"}
-                    </div>
-                    <div className="flex gap-1 justify-end">
-                      {client.inSheets && (
-                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-medium">
-                          Sheets
-                        </span>
-                      )}
-                      {client.inCalendar && (
-                        <span className="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded font-medium">
-                          Cal
-                        </span>
-                      )}
-                      {client.hasDue && (
-                        <span className="text-[10px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold">
-                          DUE
-                        </span>
-                      )}
-                    </div>
-                  </label>
+                        {client.parentGuardian && (
+                          <span className="text-[11px] text-muted-foreground">
+                            ({client.parentGuardian})
+                          </span>
+                        )}
+                        {client.history.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setExpanded((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(client.name)) next.delete(client.name);
+                                else next.add(client.name);
+                                return next;
+                              });
+                            }}
+                            className="text-[10px] text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded bg-muted"
+                          >
+                            {expanded.has(client.name) ? "hide" : `${client.history.length} appts`}
+                          </button>
+                        )}
+                      </div>
+                      <div className="text-right text-sm tabular-nums">
+                        {formatRate(client.rate)}
+                      </div>
+                      <div className="text-right text-sm tabular-nums text-muted-foreground">
+                        {client.sessions2026 || "—"}
+                      </div>
+                      <div className="text-right text-xs tabular-nums text-muted-foreground">
+                        {client.lastDate || "—"}
+                      </div>
+                      <div className="text-right text-xs text-muted-foreground">
+                        {client.lastPackage || "—"}
+                      </div>
+                      <div className="flex gap-1 justify-end">
+                        {client.inSheets && (
+                          <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-medium">
+                            Sheets
+                          </span>
+                        )}
+                        {client.inCalendar && (
+                          <span className="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded font-medium">
+                            Cal
+                          </span>
+                        )}
+                        {client.hasDue && (
+                          <span className="text-[10px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold">
+                            DUE
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                    {expanded.has(client.name) && client.history.length > 0 && (
+                      <div className="ml-10 mb-2 px-3 py-2 rounded bg-muted/30 border border-border/50">
+                        <div className="grid grid-cols-3 gap-x-4 text-[10px] font-medium text-muted-foreground uppercase tracking-wider pb-1 border-b border-border/30 mb-1">
+                          <div>Date</div>
+                          <div>Day</div>
+                          <div>Time</div>
+                        </div>
+                        <div className="max-h-60 overflow-y-auto space-y-0.5">
+                          {client.history.map((s, i) => (
+                            <div key={i} className="grid grid-cols-3 gap-x-4 text-xs text-muted-foreground py-0.5">
+                              <div className="tabular-nums">{s.date}</div>
+                              <div className="capitalize">{s.dayOfWeek.slice(0, 3)}</div>
+                              <div className="tabular-nums">{formatTime(s.time)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
             </CardContent>

@@ -284,6 +284,7 @@ export type ImportPreviewClient = {
   email: string | null;
   preferredDays: string[];
   preferredTime: string;
+  history: { date: string; dayOfWeek: string; time: string }[];
 };
 
 export async function GET() {
@@ -321,6 +322,9 @@ export async function GET() {
         email: info?.email ?? null,
         preferredDays: calData?.preferredDays ?? [],
         preferredTime: calData?.preferredTime ?? "",
+        history: (calData?.sessions ?? [])
+          .map((s) => ({ date: s.date, dayOfWeek: s.dayOfWeek, time: s.time }))
+          .sort((a, b) => b.date.localeCompare(a.date)),
       });
     }
 
