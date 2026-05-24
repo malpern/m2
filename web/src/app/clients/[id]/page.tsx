@@ -82,7 +82,7 @@ export default async function ClientDetailPage({
     ? new Date(client.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
     : "Unknown";
 
-  const activePackage = clientPackages.find((p) => p.status === "active" || p.status === "unpaid");
+  const activePackage = clientPackages.find((p) => p.status === "active" || p.status === "unpaid" || p.status === "exhausted");
   const preferredDays: string[] = client.preferredDays ? JSON.parse(client.preferredDays) : [];
 
   function timeLabel(hhmm: string): string {
@@ -413,12 +413,7 @@ export default async function ClientDetailPage({
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Package</CardTitle>
-              {activePackage?.status === "unpaid" && (
-                <Badge className="bg-red-600 text-white border-0 hover:bg-red-600">UNPAID</Badge>
-              )}
-            </div>
+            <CardTitle className="text-base">Package</CardTitle>
           </CardHeader>
           <CardContent>
             {activePackage ? (

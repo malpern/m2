@@ -263,11 +263,6 @@ export default function ImportClientsPage() {
                             Cal
                           </span>
                         )}
-                        {client.hasDue && (
-                          <span className="text-[10px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold">
-                            DUE
-                          </span>
-                        )}
                       </div>
                     </label>
                     {expanded.has(client.name) && client.history.length > 0 && (

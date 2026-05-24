@@ -422,7 +422,7 @@ export async function POST(request: Request) {
           totalSessions: pkgSize,
           sessionsUsed: Math.min(sessionsUsed, pkgSize),
           pricePerSession: preview.rate,
-          status: preview.hasDue ? "unpaid" as const : "active" as const,
+          status: "active" as const,
         })
         .run();
 
