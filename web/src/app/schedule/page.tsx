@@ -47,22 +47,25 @@ export default async function SchedulePage({
     .where(eq(clients.category, "active"))
     .all();
 
-  // Fetch Google Calendar events
-  let googleEvents: { title: string; date: string; time: string; endTime: string }[] = [];
+  // Fetch Google Calendar events and classify as training vs personal
+  let googleEvents: { title: string; date: string; time: string; endTime: string; isTraining: boolean }[] = [];
   try {
     const { connected } = await isConnected();
     if (connected) {
+      const clientNames = new Set(allClients.map((c) => c.name.toLowerCase()));
       const events = await listEvents("f4lathletics@gmail.com", weekStart, weekEnd);
       googleEvents = events
         .filter((e) => e.start?.dateTime)
         .map((e) => {
           const start = new Date(e.start!.dateTime!);
           const end = e.end?.dateTime ? new Date(e.end.dateTime) : new Date(start.getTime() + 3600000);
+          const title = e.summary ?? "Untitled";
           return {
-            title: e.summary ?? "Untitled",
+            title,
             date: start.toISOString().split("T")[0],
             time: `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`,
             endTime: `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`,
+            isTraining: clientNames.has(title.toLowerCase()),
           };
         });
     }

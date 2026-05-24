@@ -132,6 +132,7 @@ interface GoogleEvent {
   date: string;
   time: string;
   endTime: string;
+  isTraining?: boolean;
 }
 
 export function ScheduleCalendar({
@@ -169,17 +170,19 @@ export function ScheduleCalendar({
     ...statusColor(s.status),
   }));
 
-  // Add Google Calendar events in orange
-  const gCalEvents: EventInput[] = googleEvents.map((g, i) => ({
-    id: `gcal-${i}`,
-    title: g.title,
-    start: `${g.date}T${g.time}`,
-    end: `${g.date}T${g.endTime}`,
-    backgroundColor: "#f97316",
-    borderColor: "#f97316",
-    editable: false,
-    extendedProps: { source: "google" },
-  }));
+  const gCalEvents: EventInput[] = googleEvents.map((g, i) => {
+    const color = g.isTraining ? "#f97316" : "#94a3b8";
+    return {
+      id: `gcal-${i}`,
+      title: g.title,
+      start: `${g.date}T${g.time}`,
+      end: `${g.date}T${g.endTime}`,
+      backgroundColor: color,
+      borderColor: color,
+      editable: false,
+      extendedProps: { source: "google", isTraining: g.isTraining },
+    };
+  });
 
   const allEvents = [...events, ...gCalEvents];
 
@@ -434,10 +437,16 @@ export function ScheduleCalendar({
           No Show
         </div>
         {googleEvents.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-sm bg-[#f97316]" />
-            Google Calendar
-          </div>
+          <>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-[#f97316]" />
+              Training (Cal)
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-sm bg-[#94a3b8]" />
+              Personal (Cal)
+            </div>
+          </>
         )}
       </div>
 
