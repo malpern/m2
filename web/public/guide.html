@@ -658,6 +658,215 @@
   </div>
 </section>
 
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Case Study</div>
+  <h2>Test Run: Micah Alpern</h2>
+  <div class="section-desc">A complete walkthrough of the Saturday morning workflow with one real client. This is the first thing we'll test live.</div>
+
+  <!-- Client profile card -->
+  <div class="callout" style="margin-bottom: 0;">
+    <div class="callout-icon">👤</div>
+    <div class="callout-text">
+      <strong>Micah Alpern</strong> — Active client, $125/session, individual training.<br>
+      Package: 4 sessions purchased, 1 used, <strong>3 remaining</strong> (status: unpaid).<br>
+      61 total historical sessions. 1 session per week max.
+    </div>
+  </div>
+
+  <!-- Pattern card -->
+  <div style="background: var(--surface); border: 1px solid var(--border-light); border-radius: 0 0 var(--radius) var(--radius); padding: 20px 24px; margin-bottom: 36px;">
+    <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px;">Scheduling Pattern</div>
+    <div style="display: flex; gap: 32px; flex-wrap: wrap;">
+      <div>
+        <div style="font-size: 0.82rem; color: var(--text-tertiary); margin-bottom: 4px;">Primary Slot</div>
+        <div style="font-size: 1.1rem; font-weight: 600;">Fri 1:15pm</div>
+        <div style="font-size: 0.78rem; color: var(--text-tertiary);">67% of all sessions (41 of 61)</div>
+      </div>
+      <div>
+        <div style="font-size: 0.82rem; color: var(--text-tertiary); margin-bottom: 4px;">Secondary Day</div>
+        <div style="font-size: 1.1rem; font-weight: 600;">Monday</div>
+        <div style="font-size: 0.78rem; color: var(--text-tertiary);">34% of sessions (21 of 61)</div>
+      </div>
+      <div>
+        <div style="font-size: 0.82rem; color: var(--text-tertiary); margin-bottom: 4px;">Last 4 Sessions</div>
+        <div style="font-size: 1.1rem; font-weight: 600;">All Fri 1:15pm</div>
+        <div style="font-size: 0.78rem; color: var(--text-tertiary);">Consistent pattern</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Step 1: Generate Week</h3>
+  <p>Matt clicks "Generate Week" for the week of June 1, 2026. The algorithm runs:</p>
+
+  <div class="flow-list">
+    <div class="flow-item">
+      <div class="flow-event">Pass 1</div>
+      <div class="flow-desc">Standing slots filled first. Micah has no standing slot, so he's skipped here.</div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-event">Pass 2</div>
+      <div class="flow-desc">Micah's turn (based on priority rank). System checks his preferred days <code>["friday","monday","wednesday"]</code> and preferred time. <strong>Fri is tried first → 1:15pm slot is open → placed at Fri 1:15pm.</strong></div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-event">Pass 3</div>
+      <div class="flow-desc">College-bound extras. Micah is not college-bound, so he stays at 1 session.</div>
+    </div>
+  </div>
+
+  <!-- Visual: Calendar with proposed session -->
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 580 180" xmlns="http://www.w3.org/2000/svg" style="max-width:520px; width:100%;">
+      <!-- Day headers -->
+      <text x="60" y="20" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#86868b" font-weight="600">MON 6/1</text>
+      <text x="165" y="20" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#86868b" font-weight="600">TUE 6/2</text>
+      <text x="270" y="20" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#86868b" font-weight="600">WED 6/3</text>
+      <text x="375" y="20" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#86868b" font-weight="600">THU 6/4</text>
+      <text x="480" y="20" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#86868b" font-weight="600">FRI 6/5</text>
+      <line x1="10" y1="28" x2="560" y2="28" stroke="#e8e8ed" stroke-width="1"/>
+
+      <!-- Time labels -->
+      <text x="8" y="55" font-family="-apple-system, sans-serif" font-size="8" fill="#a0a1a7" text-anchor="end">12pm</text>
+      <text x="8" y="85" font-family="-apple-system, sans-serif" font-size="8" fill="#a0a1a7" text-anchor="end">1pm</text>
+      <text x="8" y="115" font-family="-apple-system, sans-serif" font-size="8" fill="#a0a1a7" text-anchor="end">2pm</text>
+      <text x="8" y="145" font-family="-apple-system, sans-serif" font-size="8" fill="#a0a1a7" text-anchor="end">3pm</text>
+
+      <!-- Grid lines -->
+      <line x1="15" y1="48" x2="560" y2="48" stroke="#f0f0f2" stroke-width="0.5"/>
+      <line x1="15" y1="78" x2="560" y2="78" stroke="#f0f0f2" stroke-width="0.5"/>
+      <line x1="15" y1="108" x2="560" y2="108" stroke="#f0f0f2" stroke-width="0.5"/>
+      <line x1="15" y1="138" x2="560" y2="138" stroke="#f0f0f2" stroke-width="0.5"/>
+
+      <!-- Micah's proposed session: Fri 1:15pm -->
+      <rect x="438" y="82" width="84" height="24" rx="6" fill="#dbeafe" stroke="#93c5fd" stroke-width="1.2"/>
+      <text x="480" y="96" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#2563eb" font-weight="600">Micah A.</text>
+
+      <!-- Other clients (examples) -->
+      <rect x="18" y="52" width="84" height="24" rx="6" fill="#dbeafe" stroke="#93c5fd" stroke-width="1.2" opacity="0.5"/>
+      <text x="60" y="66" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" fill="#2563eb" opacity="0.5">Other client</text>
+      <rect x="123" y="112" width="84" height="24" rx="6" fill="#dbeafe" stroke="#93c5fd" stroke-width="1.2" opacity="0.5"/>
+      <text x="165" y="126" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" fill="#2563eb" opacity="0.5">Other client</text>
+      <rect x="228" y="82" width="84" height="24" rx="6" fill="#dbeafe" stroke="#93c5fd" stroke-width="1.2" opacity="0.5"/>
+      <text x="270" y="96" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" fill="#2563eb" opacity="0.5">Other client</text>
+
+      <!-- Label -->
+      <text x="480" y="170" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" fill="#2563eb" font-weight="500">← Proposed: Fri 1:15pm</text>
+    </svg>
+  </div>
+
+  <h3>Step 2: Review</h3>
+  <p>Matt sees Micah proposed at Fri 1:15pm — his usual slot. No adjustment needed. If the slot were taken, Matt could drag Micah to Monday (his secondary day).</p>
+
+  <h3>Step 3: Send Outreach</h3>
+  <p>Matt clicks "Send Next Batch." Based on Micah's priority rank, he's in one of the three waves. The system sends:</p>
+
+  <!-- SMS mockup -->
+  <div style="max-width: 340px; margin: 24px auto; background: var(--surface); border-radius: 18px; padding: 20px; border: 1px solid var(--border-light);">
+    <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: center; margin-bottom: 12px;">SMS to Micah Alpern</div>
+    <div style="background: #0071e3; color: white; padding: 10px 14px; border-radius: 14px 14px 4px 14px; font-size: 0.88rem; line-height: 1.45; max-width: 85%;">
+      Hey Micah, are you free Friday at 1:15pm for a session?
+    </div>
+    <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px;">Sat 9:10 AM</div>
+  </div>
+
+  <h3>Step 4: Micah Replies</h3>
+  <p>Three scenarios — one happy path, two that need handling:</p>
+
+  <div class="steps">
+    <div class="step" style="border-left: 3px solid #22c55e;">
+      <div class="step-header">
+        <div class="step-title">Scenario A: "Yeah sounds good"</div>
+        <span class="step-who who-system">Auto</span>
+      </div>
+      <div class="step-body">
+        System classifies as <strong>confirmed</strong>. Session turns green on the calendar. No action needed from Matt. Package stays at 3 remaining (decremented when session is completed).
+      </div>
+
+      <!-- Reply mockup -->
+      <div style="max-width: 340px; margin: 16px auto 0; background: var(--surface); border-radius: 14px; padding: 14px;">
+        <div style="background: #e8e8ed; color: var(--text); padding: 10px 14px; border-radius: 14px 14px 14px 4px; font-size: 0.88rem; margin-left: auto; max-width: 70%; text-align: right;">
+          Yeah sounds good 👍
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: right; margin-top: 4px;">Sat 9:25 AM</div>
+        <div style="font-size: 0.72rem; color: #22c55e; font-weight: 600; text-align: center; margin-top: 8px;">✓ Auto-confirmed</div>
+      </div>
+    </div>
+
+    <div class="step" style="border-left: 3px solid #f59e0b;">
+      <div class="step-header">
+        <div class="step-title">Scenario B: "Can't do Friday, what about Monday?"</div>
+        <span class="step-who who-matt">Matt</span>
+      </div>
+      <div class="step-body">
+        System classifies as <strong>reschedule request</strong>. Appears in "Needs Your Decision" on the Outreach page. Matt checks Monday's calendar — if 1:15pm is open, he drags Micah's session to Mon and confirms. The system sends a follow-up:
+      </div>
+
+      <div style="max-width: 340px; margin: 16px auto 0; background: var(--surface); border-radius: 14px; padding: 14px;">
+        <div style="background: #e8e8ed; color: var(--text); padding: 10px 14px; border-radius: 14px 14px 14px 4px; font-size: 0.88rem; margin-left: auto; max-width: 80%; text-align: right;">
+          Can't do Friday, what about Monday?
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: right; margin-top: 4px;">Sat 10:05 AM</div>
+        <div style="height: 8px;"></div>
+        <div style="background: #0071e3; color: white; padding: 10px 14px; border-radius: 14px 14px 4px 14px; font-size: 0.88rem; line-height: 1.45; max-width: 85%;">
+          Monday 1:15pm works! You're confirmed.
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px;">Sat 10:08 AM</div>
+        <div style="font-size: 0.72rem; color: #f59e0b; font-weight: 600; text-align: center; margin-top: 8px;">↻ Rescheduled by Matt</div>
+      </div>
+    </div>
+
+    <div class="step" style="border-left: 3px solid #ef4444;">
+      <div class="step-header">
+        <div class="step-title">Scenario C: "Not this week"</div>
+        <span class="step-who who-system">Auto</span>
+      </div>
+      <div class="step-body">
+        System first offers alternatives — other open times this week. Only if Micah confirms he's skipping entirely does the session cancel. The system should respond with available slots before giving up.
+      </div>
+
+      <div style="max-width: 340px; margin: 16px auto 0; background: var(--surface); border-radius: 14px; padding: 14px;">
+        <div style="background: #e8e8ed; color: var(--text); padding: 10px 14px; border-radius: 14px 14px 14px 4px; font-size: 0.88rem; margin-left: auto; max-width: 70%; text-align: right;">
+          Not this week
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: right; margin-top: 4px;">Sat 11:30 AM</div>
+        <div style="height: 8px;"></div>
+        <div style="background: #0071e3; color: white; padding: 10px 14px; border-radius: 14px 14px 4px 14px; font-size: 0.88rem; line-height: 1.45; max-width: 90%;">
+          No worries! I also have Mon 1:15pm or Wed 3pm open if either works. Otherwise we'll catch you next week.
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px;">Sat 11:31 AM</div>
+        <div style="height: 8px;"></div>
+        <div style="background: #e8e8ed; color: var(--text); padding: 10px 14px; border-radius: 14px 14px 14px 4px; font-size: 0.88rem; margin-left: auto; max-width: 70%; text-align: right;">
+          Nah I'm good, next week
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: right; margin-top: 4px;">Sat 11:45 AM</div>
+        <div style="font-size: 0.72rem; color: #ef4444; font-weight: 600; text-align: center; margin-top: 8px;">✕ Cancelled — skipping this week</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Step 5: After the Session</h3>
+  <p>Assuming Scenario A — Micah trains Friday at 1:15pm. Matt marks the session as <strong>completed</strong>. The package updates: 2 sessions remaining.</p>
+
+  <div class="flow-list">
+    <div class="flow-item">
+      <div class="flow-event">Before</div>
+      <div class="flow-desc">Package: 4 total, 1 used, <strong>3 remaining</strong> (unpaid)</div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-event">After</div>
+      <div class="flow-desc">Package: 4 total, 2 used, <strong>2 remaining</strong> (unpaid — DUE badge visible)</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-icon">🧪</div>
+    <div class="callout-text">
+      <strong>Test plan:</strong> Run this exact flow with Micah's real phone number. Verify: (1) Generate places him at Fri 1:15pm, (2) SMS arrives, (3) reply is classified correctly, (4) session status updates on the calendar, (5) package count decrements on completion. The SMS thread above is the expected conversation.
+    </div>
+  </div>
+</section>
+
 </div>
 
 <footer>
