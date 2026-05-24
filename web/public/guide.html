@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M2 Scheduler — Saturday Morning Workflow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f5f5f7;
+    --surface-2: #ebebed;
+    --border: #d2d2d7;
+    --border-light: #e8e8ed;
+    --text: #1d1d1f;
+    --text-secondary: #6e6e73;
+    --text-tertiary: #86868b;
+    --accent: #1d1d1f;
+    --blue: #0071e3;
+    --green: #28a745;
+    --amber: #d97706;
+    --red: #dc3545;
+    --code-bg: #f5f5f7;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.58;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container { max-width: 740px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── Hero ── */
+  .hero { padding: 96px 0 64px; text-align: center; }
+  .hero-eyebrow {
+    font-size: 0.8rem; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 12px;
+  }
+  .hero h1 {
+    font-size: clamp(2.4rem, 5.5vw, 3.2rem); font-weight: 700;
+    letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 16px;
+  }
+  .hero p {
+    font-size: 1.15rem; color: var(--text-secondary); max-width: 520px;
+    margin: 0 auto; line-height: 1.5;
+  }
+
+  /* ── Sections ── */
+  section { padding: 64px 0; }
+  .divider { height: 1px; background: var(--border-light); }
+  .section-label {
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 8px;
+  }
+  h2 {
+    font-size: clamp(1.6rem, 3.5vw, 2rem); font-weight: 700;
+    letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 10px;
+  }
+  .section-desc {
+    font-size: 1rem; color: var(--text-secondary); max-width: 520px;
+    margin-bottom: 36px; line-height: 1.55;
+  }
+  h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 6px; }
+  p { color: var(--text-secondary); margin-bottom: 14px; }
+
+  /* ── Pillars ── */
+  .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border-light); border: 1px solid var(--border-light); border-radius: var(--radius); overflow: hidden; margin: 36px 0; }
+  .pillar { background: var(--bg); padding: 32px 24px; text-align: center; }
+  .pillar-icon { font-size: 2rem; margin-bottom: 14px; }
+  .pillar h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 4px; }
+  .pillar p { font-size: 0.85rem; color: var(--text-tertiary); margin: 0; line-height: 1.45; }
+
+  /* ── Flow list ── */
+  .flow-list { margin: 32px 0; border: 1px solid var(--border-light); border-radius: var(--radius); overflow: hidden; }
+  .flow-item {
+    display: grid; grid-template-columns: 140px 1fr; gap: 0;
+    font-size: 0.9rem; border-bottom: 1px solid var(--border-light);
+  }
+  .flow-item:last-child { border-bottom: none; }
+  .flow-item > div { padding: 14px 20px; }
+  .flow-event { font-weight: 600; color: var(--text); background: var(--surface); }
+  .flow-desc { color: var(--text-secondary); }
+  .flow-desc code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.82em; color: var(--blue);
+  }
+
+  /* ── Step cards ── */
+  .steps { display: flex; flex-direction: column; gap: 16px; margin: 32px 0; }
+  .step {
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: 28px;
+    position: relative;
+  }
+  .step-header { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+  .step-num {
+    width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 700; background: var(--surface); color: var(--text-tertiary);
+  }
+  .step-title { font-size: 1rem; font-weight: 600; }
+  .step-who {
+    font-size: 0.65rem; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+    letter-spacing: 0.03em; text-transform: uppercase; margin-left: auto;
+  }
+  .who-matt { background: #e3f2fd; color: #1565c0; }
+  .who-system { background: #f3e5f5; color: #7b1fa2; }
+  .who-client { background: #e8f5e9; color: #2e7d32; }
+  .step-body { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; }
+  .step-body strong { color: var(--text); }
+  .step-detail {
+    margin-top: 12px; padding: 14px 18px; background: var(--surface);
+    border-radius: 8px; font-size: 0.85rem; color: var(--text-secondary); line-height: 1.55;
+  }
+  .step-detail code {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.85em; color: var(--text);
+  }
+
+  /* ── Status badges ── */
+  .status-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 32px 0; }
+  .status-card {
+    padding: 18px 20px; border-radius: var(--radius);
+    border: 1px solid var(--border-light);
+  }
+  .status-dot {
+    display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    margin-right: 8px; vertical-align: middle;
+  }
+  .status-name { font-weight: 600; font-size: 0.9rem; margin-bottom: 4px; }
+  .status-desc { font-size: 0.82rem; color: var(--text-tertiary); line-height: 1.45; }
+
+  /* ── Invariant / callout ── */
+  .callout {
+    background: var(--surface); border: 1px solid var(--border-light);
+    border-radius: var(--radius); padding: 20px 24px; margin: 32px 0;
+    display: flex; gap: 14px; align-items: start;
+  }
+  .callout-icon {
+    width: 32px; height: 32px; border-radius: 8px; background: var(--bg);
+    border: 1px solid var(--border-light);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    font-size: 1.1rem;
+  }
+  .callout-text { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.55; }
+  .callout-text strong { color: var(--text); }
+
+  /* ── Diagram ── */
+  .diagram-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: 48px 24px;
+    margin: 36px 0;
+    display: flex; justify-content: center;
+  }
+
+  /* ── Rules ── */
+  .rules { margin: 32px 0; border: 1px solid var(--border-light); border-radius: var(--radius); overflow: hidden; }
+  .rule-item {
+    padding: 18px 20px; display: flex; gap: 14px; align-items: start;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .rule-item:last-child { border-bottom: none; }
+  .rule-num {
+    width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; background: var(--surface); color: var(--text-tertiary);
+  }
+  .rule-content { flex: 1; }
+  .rule-title { font-weight: 600; font-size: 0.9rem; color: var(--text); margin-bottom: 2px; }
+  .rule-desc { font-size: 0.85rem; color: var(--text-tertiary); line-height: 1.5; }
+
+  /* ── Timeline ── */
+  .timeline { margin: 32px 0; border: 1px solid var(--border-light); border-radius: var(--radius); overflow: hidden; }
+  .timeline-item {
+    display: grid; grid-template-columns: 90px 1fr; gap: 0;
+    font-size: 0.9rem; border-bottom: 1px solid var(--border-light);
+  }
+  .timeline-item:last-child { border-bottom: none; }
+  .timeline-item > div { padding: 14px 20px; }
+  .timeline-time { font-weight: 600; color: var(--text); background: var(--surface); font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; }
+  .timeline-event { color: var(--text-secondary); }
+  .timeline-event strong { color: var(--text); }
+
+  footer {
+    padding: 40px 0; text-align: center;
+    font-size: 0.78rem; color: var(--text-tertiary); border-top: 1px solid var(--border-light);
+  }
+
+  @media (max-width: 640px) {
+    .pillars { grid-template-columns: 1fr; }
+    .status-grid { grid-template-columns: 1fr; }
+    .flow-item, .timeline-item { grid-template-columns: 1fr; }
+    .flow-event, .timeline-time { border-bottom: 1px solid var(--border-light); }
+    .hero { padding: 64px 0 48px; }
+    section { padding: 48px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">M2 Scheduler</div>
+    <h1>Saturday Morning Workflow</h1>
+    <p>How Matt fills next week's schedule in three waves, one Saturday at a time.</p>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div class="container">
+
+<section>
+  <div class="section-label">Overview</div>
+  <h2>Generate. Reach Out. Confirm.</h2>
+  <div class="section-desc">Every Saturday morning, Matt books next week's training sessions. The system proposes a schedule, sends texts in waves, and helps Matt handle the replies.</div>
+
+  <div class="pillars">
+    <div class="pillar">
+      <div class="pillar-icon">📋</div>
+      <h4>Generate</h4>
+      <p>Algorithm proposes sessions based on priority, preferences, and availability.</p>
+    </div>
+    <div class="pillar">
+      <div class="pillar-icon">📱</div>
+      <h4>Reach Out</h4>
+      <p>SMS sent in three timed waves. Standing slots skip outreach entirely.</p>
+    </div>
+    <div class="pillar">
+      <div class="pillar-icon">✅</div>
+      <h4>Confirm</h4>
+      <p>Replies are classified. Matt handles edge cases. Sessions lock in.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Before Saturday</div>
+  <h2>Prep Work (Thursday–Friday)</h2>
+  <div class="section-desc">Two optional steps Matt can do before Saturday morning to make the process smoother.</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">A</div>
+        <div class="step-title">Check Availability</div>
+        <span class="step-who who-matt">Matt</span>
+      </div>
+      <div class="step-body">
+        Go to <strong>Schedule → Availability</strong>. The grid shows Mon–Fri + Sun, with time slots 3pm–7pm. Toggle any slots where you're unavailable next week.
+        <div class="step-detail">
+          <strong>Default availability</strong> persists week to week. Use <strong>weekly overrides</strong> (amber ring) for one-time changes like a dentist appointment on Wednesday.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">B</div>
+        <div class="step-title">Adjust Priority Rankings</div>
+        <span class="step-who who-matt">Matt</span>
+      </div>
+      <div class="step-body">
+        Go to <strong>Schedule → Priority</strong>. Three weighted factors determine who gets first pick of time slots:
+        <div class="step-detail">
+          <strong>College Commitment</strong> (weight 5) — College-bound athletes score highest<br>
+          <strong>Grade Level</strong> (weight 3) — Seniors above freshmen<br>
+          <strong>Effort & Attitude</strong> (weight 2) — Behavior score from 1–10<br><br>
+          You can also <strong>drag to manually reorder</strong>. Pinned clients always keep their rank regardless of score.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">The Main Event</div>
+  <h2>Saturday Morning</h2>
+  <div class="section-desc">The five steps Matt follows every Saturday, typically starting around 9am.</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div class="step-title">Generate the Week</div>
+        <span class="step-who who-system">System</span>
+      </div>
+      <div class="step-body">
+        Click <strong>"Generate Week"</strong> on the Schedule page. The system runs a three-pass algorithm:
+        <div class="step-detail">
+          <strong>Pass 1 — Standing Slots:</strong> Clients with recurring weekly sessions (e.g., "Mon 3pm, Wed 3pm") are auto-placed first. These are locked — no outreach needed.<br><br>
+          <strong>Pass 2 — First Session:</strong> Every remaining active client gets one session, assigned in priority order. The system tries their preferred day and time first, then cascades to open slots (3pm → 5pm → 6pm).<br><br>
+          <strong>Pass 3 — College-bound Extras:</strong> College-bound athletes with <code>maxSessionsPerWeek ≥ 2</code> get a second session on a different day.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div class="step-title">Review & Adjust</div>
+        <span class="step-who who-matt">Matt</span>
+      </div>
+      <div class="step-body">
+        All generated sessions appear as <strong>blue "Proposed"</strong> blocks on the calendar. Matt can:
+        <div class="step-detail">
+          <strong>Drag to move</strong> — Relocate a session to a different day/time<br>
+          <strong>Click to cancel</strong> — Remove a session that doesn't work<br>
+          <strong>Add Session</strong> — Manually add a one-off session<br><br>
+          This is the last chance to adjust before texts go out. Proposed sessions won't appear on Google Calendar until confirmed.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <div class="step-title">Send Wave 1</div>
+        <span class="step-who who-matt">Matt</span>
+      </div>
+      <div class="step-body">
+        Go to the <strong>Outreach</strong> page and click <strong>"Send Next Batch"</strong>. The first 8 highest-priority clients receive a text:
+        <div class="step-detail">
+          <em>"Hey [firstName], are you free [Day] at [Slot] for a session?"</em><br><br>
+          The system sends via SMS (Twilio). Each message is logged with a timestamp. The outreach dashboard updates to show "Awaiting Reply" for each client.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">4</div>
+        <div class="step-title">Waves 2 & 3 Send Automatically</div>
+        <span class="step-who who-system">System</span>
+      </div>
+      <div class="step-body">
+        The remaining clients are texted in two more waves, timed automatically:
+        <div class="step-detail">
+          <strong>Wave 2</strong> — 45 minutes after Wave 1 (next 8 clients)<br>
+          <strong>Wave 3</strong> — 2 hours after Wave 1 (everyone else)<br>
+          <strong>Follow-up</strong> — 1 hour after sending, non-responders get a nudge<br>
+          <strong>Expire</strong> — 3 hours after sending, unconfirmed slots are released
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">5</div>
+        <div class="step-title">Handle Replies</div>
+        <span class="step-who who-matt">Matt</span>
+      </div>
+      <div class="step-body">
+        As clients reply, the system classifies each response. Most are automatic, but some need Matt:
+        <div class="step-detail">
+          <strong>"Yes" / "Sounds good"</strong> → Auto-confirmed. Session turns green. ✅<br>
+          <strong>"No" / "Can't make it"</strong> → Auto-declined. Session cancelled. ❌<br>
+          <strong>"Can I do Thursday instead?"</strong> → Flagged as <strong>Reschedule</strong>. Matt decides. 🔄<br>
+          <strong>"Maybe" / unclear</strong> → Flagged as <strong>Ambiguous</strong>. Matt decides. ❓<br><br>
+          The "Needs Your Decision" section on the Outreach page shows reschedule and ambiguous items with Confirm/Decline buttons.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-icon">⏱</div>
+    <div class="callout-text">
+      <strong>Typical timeline:</strong> Matt clicks Generate Week, reviews the calendar, sends Wave 1 around 9am. By noon, most clients have replied and the week is mostly locked in. Stragglers get follow-ups automatically.
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Saturday Timeline</div>
+  <h2>Hour by Hour</h2>
+  <div class="section-desc">What happens when, assuming Matt starts at 9am.</div>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-time">9:00 AM</div>
+      <div class="timeline-event"><strong>Generate Week</strong> — algorithm fills the calendar. Review proposed sessions.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-time">9:10 AM</div>
+      <div class="timeline-event"><strong>Send Wave 1</strong> — top 8 priority clients get texts. Standing slots are already confirmed.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-time">9:55 AM</div>
+      <div class="timeline-event"><strong>Wave 2 auto-sends</strong> — next 8 clients. Early replies from Wave 1 start arriving.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-time">10:10 AM</div>
+      <div class="timeline-event"><strong>Follow-ups</strong> — Wave 1 non-responders get a nudge text.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-time">11:10 AM</div>
+      <div class="timeline-event"><strong>Wave 3 auto-sends</strong> — remaining clients. Matt handles reschedule/ambiguous replies.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-time">12:10 PM</div>
+      <div class="timeline-event"><strong>Wave 1 expires</strong> — unconfirmed Wave 1 slots are released. Matt wraps up stragglers.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-time">~1:00 PM</div>
+      <div class="timeline-event"><strong>Done</strong> — week is mostly booked. Any remaining gaps can be filled manually.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Session Lifecycle</div>
+  <h2>How a Session Moves Through the System</h2>
+  <div class="section-desc">From algorithm proposal to completed training.</div>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 580 200" xmlns="http://www.w3.org/2000/svg" style="max-width:520px; width:100%;">
+      <defs>
+        <marker id="arr" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><path d="M0 0 L7 2.5 L0 5z" fill="#86868b"/></marker>
+      </defs>
+
+      <!-- Proposed -->
+      <rect x="10" y="60" width="100" height="44" rx="8" fill="#dbeafe" stroke="#93c5fd" stroke-width="1.2"/>
+      <text x="60" y="78" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#6e6e73" font-weight="600">PROPOSED</text>
+      <text x="60" y="93" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" fill="#93a3b8">Generated by algo</text>
+
+      <line x1="110" y1="82" x2="148" y2="82" stroke="#86868b" stroke-width="1.2" marker-end="url(#arr)"/>
+      <text x="129" y="75" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="7" fill="#86868b">SMS sent</text>
+
+      <!-- Awaiting -->
+      <rect x="152" y="60" width="100" height="44" rx="8" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.2"/>
+      <text x="202" y="78" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#6e6e73" font-weight="600">AWAITING</text>
+      <text x="202" y="93" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" fill="#93a3b8">Waiting for reply</text>
+
+      <!-- Confirmed -->
+      <line x1="252" y1="72" x2="298" y2="52" stroke="#86868b" stroke-width="1.2" marker-end="url(#arr)"/>
+      <text x="275" y="55" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="7" fill="#28a745">"Yes"</text>
+      <rect x="302" y="30" width="100" height="44" rx="8" fill="#d1fae5" stroke="#6ee7b7" stroke-width="1.2"/>
+      <text x="352" y="48" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#6e6e73" font-weight="600">CONFIRMED</text>
+      <text x="352" y="63" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" fill="#93a3b8">Locked in</text>
+
+      <!-- Completed -->
+      <line x1="402" y1="52" x2="448" y2="52" stroke="#86868b" stroke-width="1.2" marker-end="url(#arr)"/>
+      <text x="425" y="45" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="7" fill="#86868b">Session done</text>
+      <rect x="452" y="30" width="100" height="44" rx="8" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="1.2"/>
+      <text x="502" y="48" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#6e6e73" font-weight="600">COMPLETED</text>
+      <text x="502" y="63" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" fill="#93a3b8">Package updated</text>
+
+      <!-- Declined -->
+      <line x1="252" y1="92" x2="298" y2="112" stroke="#86868b" stroke-width="1.2" marker-end="url(#arr)"/>
+      <text x="275" y="110" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="7" fill="#dc3545">"No"</text>
+      <rect x="302" y="90" width="100" height="44" rx="8" fill="#fee2e2" stroke="#fca5a5" stroke-width="1.2"/>
+      <text x="352" y="108" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#6e6e73" font-weight="600">CANCELLED</text>
+      <text x="352" y="123" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" fill="#93a3b8">Slot released</text>
+
+      <!-- Ambiguous -->
+      <line x1="252" y1="82" x2="298" y2="160" stroke="#86868b" stroke-width="1" stroke-dasharray="4 3"/>
+      <text x="262" y="135" font-family="-apple-system, sans-serif" font-size="7" fill="#d97706">"Maybe?"</text>
+      <rect x="302" y="148" width="100" height="36" rx="8" fill="#fff7ed" stroke="#fdba74" stroke-width="1"/>
+      <text x="352" y="170" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8.5" fill="#d97706" font-weight="600">NEEDS MATT</text>
+    </svg>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Priority Algorithm</div>
+  <h2>Who Gets First Pick</h2>
+  <div class="section-desc">When two clients want the same time slot, the priority score determines who wins.</div>
+
+  <div class="rules">
+    <div class="rule-item">
+      <div class="rule-num">1</div>
+      <div class="rule-content">
+        <div class="rule-title">College-Bound Athletes</div>
+        <div class="rule-desc">Worth 50 points by default (10 × weight of 5). The single biggest factor. They also get a second session per week if max allows it.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">2</div>
+      <div class="rule-content">
+        <div class="rule-title">Grade Level</div>
+        <div class="rule-desc">Seniors score highest (4 × 2 × weight 3 = 24 pts). Freshmen get 6 pts. Adults get 0. Designed to prioritize athletes with imminent college deadlines.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">3</div>
+      <div class="rule-content">
+        <div class="rule-title">Effort & Attitude</div>
+        <div class="rule-desc">Matt's 1–10 behavior score, multiplied by weight 2. A client scoring 10/10 gets 20 pts. Rewards athletes who show up and work hard.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">4</div>
+      <div class="rule-content">
+        <div class="rule-title">Manual Override</div>
+        <div class="rule-desc">Drag-to-reorder on the Priority page bypasses the algorithm entirely. Pinned clients always keep their rank. Use this for VIPs or special circumstances.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Standing Slots</div>
+  <h2>Recurring Sessions That Skip Outreach</h2>
+  <div class="section-desc">Some clients train the same day and time every week. These are auto-filled with no text needed.</div>
+
+  <div class="callout">
+    <div class="callout-icon">📌</div>
+    <div class="callout-text">
+      A <strong>standing slot</strong> like <code>Mon 3pm, Wed 3pm</code> means the client always trains Monday and Wednesday at 3pm. The scheduler fills these first (Pass 1), before any other clients are considered. No SMS is sent — it's already confirmed.<br><br>
+      Set standing slots on each client's detail page. Format: <code>Mon 3pm</code>, <code>Tue 5pm; Thu 3pm</code>, or <code>Monday 15:00</code>.
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Wave System</div>
+  <h2>Why Three Waves?</h2>
+  <div class="section-desc">Sending all texts at once would create chaos. Waves let Matt process replies before the next batch goes out.</div>
+
+  <div class="flow-list">
+    <div class="flow-item">
+      <div class="flow-event">Wave 1</div>
+      <div class="flow-desc"><strong>8 clients</strong> — highest priority. Sent when Matt clicks "Send Next Batch." These are the most important sessions to lock in first.</div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-event">Wave 2</div>
+      <div class="flow-desc"><strong>Next 8 clients</strong> — auto-sends 45 minutes later. By now, some Wave 1 replies are in and Matt can handle conflicts.</div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-event">Wave 3</div>
+      <div class="flow-desc"><strong>Everyone else</strong> — auto-sends 2 hours after Wave 1. The schedule is mostly set; these fill remaining gaps.</div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-event">Follow-up</div>
+      <div class="flow-desc"><strong>After 1 hour</strong> — non-responders get a nudge. "Hey, just checking — are you still free for that session?"</div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-event">Expire</div>
+      <div class="flow-desc"><strong>After 3 hours</strong> — unconfirmed slots are released and can be reassigned. The client can still confirm later via text.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">When Matt Needs to Act</div>
+  <h2>What Requires Your Attention</h2>
+  <div class="section-desc">Most of the process is automated. Here's what only Matt can do.</div>
+
+  <div class="status-grid">
+    <div class="status-card">
+      <div class="status-name"><span class="status-dot" style="background:#f59e0b"></span>Reschedule Request</div>
+      <div class="status-desc">Client wants a different time. Matt checks the calendar for an open slot, moves the session, and confirms.</div>
+    </div>
+    <div class="status-card">
+      <div class="status-name"><span class="status-dot" style="background:#8b5cf6"></span>Ambiguous Reply</div>
+      <div class="status-desc">System couldn't classify the response. Matt reads the message and clicks Confirm or Decline.</div>
+    </div>
+    <div class="status-card">
+      <div class="status-name"><span class="status-dot" style="background:#3b82f6"></span>Manual Adjustment</div>
+      <div class="status-desc">Drag sessions on the calendar to resolve conflicts. If a confirmed session moves, Matt is prompted to text the client.</div>
+    </div>
+    <div class="status-card">
+      <div class="status-name"><span class="status-dot" style="background:#10b981"></span>Session Movement SMS</div>
+      <div class="status-desc">When moving or cancelling a confirmed session, a pre-drafted text is shown. Matt can edit before sending.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Data Sources</div>
+  <h2>Where Information Comes From</h2>
+  <div class="section-desc">M2 pulls from two external sources and is the source of truth for scheduling.</div>
+
+  <div class="pillars">
+    <div class="pillar">
+      <div class="pillar-icon">📊</div>
+      <h4>Google Sheets</h4>
+      <p>Client rates, package sizes, payment status (DUE). The financial truth.</p>
+    </div>
+    <div class="pillar">
+      <div class="pillar-icon">📅</div>
+      <h4>Google Calendar</h4>
+      <p>Historical sessions, personal events. Used for pattern detection and schedule overlay.</p>
+    </div>
+    <div class="pillar">
+      <div class="pillar-icon">🗓️</div>
+      <h4>M2 Scheduler</h4>
+      <p>The scheduling truth. Sessions, outreach, packages, and priority rankings live here.</p>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <div class="container">M2 Scheduler — Built for Matt's Saturday morning workflow</div>
+</footer>
+
+</body>
+</html>
