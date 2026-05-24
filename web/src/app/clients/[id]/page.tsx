@@ -106,6 +106,22 @@ export default async function ClientDetailPage({
   const activePackage = clientPackages.find((p) => p.status === "active" || p.status === "unpaid");
   const preferredDays: string[] = client.preferredDays ? JSON.parse(client.preferredDays) : [];
 
+  function timeLabel(hhmm: string): string {
+    const [h, m] = hhmm.split(":").map(Number);
+    const hour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    const suffix = h >= 12 ? "pm" : "am";
+    return m === 0 ? `${hour}${suffix}` : `${hour}:${String(m).padStart(2, "0")}${suffix}`;
+  }
+
+  function timeSortKey(label: string): number {
+    const m = label.match(/^(\d+):?(\d+)?(am|pm)$/);
+    if (!m) return 0;
+    let h = parseInt(m[1]);
+    if (m[3] === "pm" && h !== 12) h += 12;
+    if (m[3] === "am" && h === 12) h = 0;
+    return h * 60 + (parseInt(m[2] ?? "0"));
+  }
+
   // Compute global slot usage (which days/times have 2+ uses by anyone)
   const allSessions = await db.select({ date: sessions.scheduledDate, time: sessions.scheduledTime }).from(sessions).all();
   const globalDayCounts = new Map<string, number>();
@@ -115,14 +131,14 @@ export default async function ClientDetailPage({
     const d = new Date(s.date + "T12:00:00");
     const day = DAY_NAMES[d.getDay()];
     globalDayCounts.set(day, (globalDayCounts.get(day) ?? 0) + 1);
-    const hour = parseInt(s.time.split(":")[0]);
-    const h = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-    const suffix = hour >= 12 ? "pm" : "am";
-    const timeSlot = `${h}${suffix}`;
-    globalTimeCounts.set(timeSlot, (globalTimeCounts.get(timeSlot) ?? 0) + 1);
+    const slot = timeLabel(s.time);
+    globalTimeCounts.set(slot, (globalTimeCounts.get(slot) ?? 0) + 1);
   }
   const activeDays = [...globalDayCounts.entries()].filter(([, c]) => c >= 2).map(([d]) => d);
-  const activeTimeSlots = [...globalTimeCounts.entries()].filter(([, c]) => c >= 2).map(([t]) => t);
+  const activeTimeSlots = [...globalTimeCounts.entries()]
+    .filter(([, c]) => c >= 2)
+    .map(([t]) => t)
+    .sort((a, b) => timeSortKey(a) - timeSortKey(b));
 
   // Compute per-client day/time frequencies
   const clientDayCounts = new Map<string, number>();
@@ -131,11 +147,8 @@ export default async function ClientDetailPage({
     const d = new Date(s.scheduledDate + "T12:00:00");
     const day = DAY_NAMES[d.getDay()];
     clientDayCounts.set(day, (clientDayCounts.get(day) ?? 0) + 1);
-    const hour = parseInt(s.scheduledTime.split(":")[0]);
-    const h = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-    const suffix = hour >= 12 ? "pm" : "am";
-    const timeSlot = `${h}${suffix}`;
-    clientTimeCounts.set(timeSlot, (clientTimeCounts.get(timeSlot) ?? 0) + 1);
+    const slot = timeLabel(s.scheduledTime);
+    clientTimeCounts.set(slot, (clientTimeCounts.get(slot) ?? 0) + 1);
   }
   const clientTotal = allClientSessions.length || 1;
   const dayFrequencies: Record<string, number> = {};

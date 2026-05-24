@@ -288,13 +288,13 @@ function EditableTime({
   frequencies?: Record<string, number>;
 }) {
   const [isPending, startTransition] = useTransition();
-  const currentNorm = value?.toLowerCase().replace(/[^0-9apm]/g, "").replace(/^(\d+).*?(am|pm)$/, "$1$2") ?? "";
+  const current = value?.toLowerCase() ?? "";
   const slots = availableSlots && availableSlots.length > 0
-    ? DEFAULT_TIME_SLOTS.filter((s) => availableSlots.includes(s))
+    ? availableSlots
     : DEFAULT_TIME_SLOTS;
 
   const toggle = (slot: string) => {
-    const newValue = currentNorm === slot ? "" : slot;
+    const newValue = current === slot ? "" : slot;
     startTransition(() => {
       updateClientField(clientId, "preferredTime", newValue);
     });
@@ -309,7 +309,7 @@ function EditableTime({
             key={slot}
             onClick={() => toggle(slot)}
             className={`flex flex-col items-center gap-0.5 px-2 pt-0.5 pb-1 rounded text-xs font-medium transition-colors ${
-              currentNorm === slot
+              current === slot
                 ? "bg-accent/20 text-accent"
                 : "bg-muted text-muted-foreground hover:bg-muted/80"
             }`}

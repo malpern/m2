@@ -258,8 +258,9 @@ async function getCalendarHistory(): Promise<Map<string, CalendarClientData>> {
     for (const s of data.sessions) {
       dayCounts.set(s.dayOfWeek, (dayCounts.get(s.dayOfWeek) ?? 0) + 1);
       const hour = parseInt(s.time.split(":")[0]);
-      const roundedTime = formatHour(hour, 0);
-      timeCounts.set(roundedTime, (timeCounts.get(roundedTime) ?? 0) + 1);
+      const min = parseInt(s.time.split(":")[1]);
+      const timeSlot = formatHour(hour, min);
+      timeCounts.set(timeSlot, (timeCounts.get(timeSlot) ?? 0) + 1);
     }
 
     const total = data.sessions.length;
