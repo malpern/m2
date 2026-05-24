@@ -1,7 +1,8 @@
 import { db } from "@/db";
-import { sessions, clients } from "@/db/schema";
+import { sessions, clients, outreach } from "@/db/schema";
 import { and, gte, lte, eq, ne } from "drizzle-orm";
 import { listEvents, isConnected } from "@/lib/google-calendar";
+import { OUTREACH_DEFAULTS } from "./outreach-config";
 
 type TimeSlot = "3pm" | "4pm" | "5pm" | "6pm" | "7pm";
 
@@ -42,6 +43,69 @@ function getMondayOfWeek(dateStr: string): string {
   return d.toISOString().split("T")[0];
 }
 
+const OFFERED_SLOTS_TAG = "[offered:";
+
+export function tagOfferedSlots(
+  message: string,
+  slots: { date: string; slot: string }[],
+): string {
+  if (slots.length === 0) return message;
+  const tags = slots.map((s) => `${s.date}|${s.slot}`).join(",");
+  return `${message}\n${OFFERED_SLOTS_TAG}${tags}]`;
+}
+
+function parseOfferedSlots(messageText: string): Set<string> {
+  const keys = new Set<string>();
+  const match = messageText.match(/\[offered:([^\]]+)\]/);
+  if (!match) return keys;
+  for (const pair of match[1].split(",")) {
+    keys.add(pair.trim());
+  }
+  return keys;
+}
+
+async function getPendingOfferKeys(weekOf: string, excludeClientId?: number): Promise<Set<string>> {
+  const monday = getMondayOfWeek(weekOf);
+  const allOutreach = await db.select().from(outreach).where(eq(outreach.weekOf, monday)).all();
+
+  const pendingKeys = new Set<string>();
+  const clientsSent = new Map<number, { sentAt: string; messageText: string }[]>();
+  const clientsReplied = new Set<number>();
+
+  for (const o of allOutreach) {
+    if (o.direction === "sent" && o.messageText.includes(OFFERED_SLOTS_TAG)) {
+      if (!clientsSent.has(o.clientId)) clientsSent.set(o.clientId, []);
+      clientsSent.get(o.clientId)!.push({ sentAt: o.sentAt ?? "", messageText: o.messageText });
+    }
+    if (o.direction === "received") {
+      clientsReplied.add(o.clientId);
+    }
+  }
+
+  const expireMs = OUTREACH_DEFAULTS.moveOnAfterMinutes * 60 * 1000;
+  const now = Date.now();
+
+  for (const [clientId, messages] of clientsSent) {
+    if (excludeClientId && clientId === excludeClientId) continue;
+
+    const latestOffer = messages.sort((a, b) => b.sentAt.localeCompare(a.sentAt))[0];
+    const sentTime = new Date(latestOffer.sentAt).getTime();
+    const expired = (now - sentTime) > expireMs;
+    if (expired) continue;
+
+    const hasRepliedAfter = allOutreach.some(
+      (o) => o.clientId === clientId && o.direction === "received" &&
+        (o.repliedAt ?? "") > latestOffer.sentAt
+    );
+    if (hasRepliedAfter) continue;
+
+    const offered = parseOfferedSlots(latestOffer.messageText);
+    for (const key of offered) pendingKeys.add(key);
+  }
+
+  return pendingKeys;
+}
+
 export async function getOpenSlots(
   weekOf: string,
   excludeClientId?: number,
@@ -76,6 +140,8 @@ export async function getOpenSlots(
     }
   } catch { /* ignore */ }
 
+  const pendingOffers = await getPendingOfferKeys(weekOf, excludeClientId);
+
   const today = new Date().toISOString().split("T")[0];
   const open: { day: string; date: string; slot: TimeSlot; time: string }[] = [];
 
@@ -83,7 +149,8 @@ export async function getOpenSlots(
     if (date < today) continue;
     for (const slot of SLOTS) {
       const time = SLOT_TIMES[slot];
-      if (!bookedKeys.has(`${date}|${time}`) && !gcalKeys.has(`${date}|${time}`)) {
+      const key = `${date}|${time}`;
+      if (!bookedKeys.has(key) && !gcalKeys.has(key) && !pendingOffers.has(`${date}|${slot}`)) {
         open.push({ day, date, slot, time });
       }
     }

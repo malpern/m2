@@ -3,7 +3,7 @@ import { outreach, clients, sessions } from "@/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { classifyReply, type ReplyInterpretation } from "@/lib/classify-reply";
-import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, isSlotStillOpen } from "@/lib/suggest-alternatives";
+import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, isSlotStillOpen, tagOfferedSlots } from "@/lib/suggest-alternatives";
 import { sendSMS } from "@/lib/twilio";
 import twilio from "twilio";
 
@@ -141,7 +141,8 @@ export async function POST(request: NextRequest) {
         } else if (matched) {
           const stillOpen = await getOpenSlots(weekOf, client.id);
           const reRanked = await rankSlotsForClient(client.id, stillOpen);
-          const reply = `Sorry, that slot just got booked! ${formatAlternativesMessage(firstName, reRanked)}`;
+          const msg = `Sorry, that slot just got booked! ${formatAlternativesMessage(firstName, reRanked)}`;
+          const reply = tagOfferedSlots(msg, reRanked.slice(0, 3));
           await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
           return twiml();
         }
@@ -176,7 +177,8 @@ export async function POST(request: NextRequest) {
 
       const open = await getOpenSlots(weekOf, client.id);
       const ranked = await rankSlotsForClient(client.id, open);
-      const reply = formatAlternativesMessage(firstName, ranked);
+      const msg = formatAlternativesMessage(firstName, ranked);
+      const reply = tagOfferedSlots(msg, ranked.slice(0, 3));
       await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
       return twiml();
     }
@@ -203,8 +205,9 @@ async function logAndSend(clientId: number, sessionId: number | null, weekOf: st
     sentAt: new Date().toISOString(),
   }).run();
 
+  const smsText = message.replace(/\n\[offered:[^\]]+\]/, "");
   try {
-    await sendSMS(phone, message);
+    await sendSMS(phone, smsText);
   } catch (e) {
     console.error(`Failed to send SMS to ${phone}:`, e);
   }
