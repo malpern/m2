@@ -54,6 +54,9 @@ export default async function SchedulePage({
     if (connected) {
       const clientNames = new Set(allClients.map((c) => c.name.toLowerCase()));
       const events = await listEvents("f4lathletics@gmail.com", weekStart, weekEnd);
+      const m2SessionKeys = new Set(
+        weekSessions.map((s) => `${s.scheduledDate}|${s.scheduledTime}`)
+      );
       googleEvents = events
         .filter((e) => e.start?.dateTime)
         .map((e) => {
@@ -67,7 +70,8 @@ export default async function SchedulePage({
             endTime: endRaw ? endRaw.slice(11, 16) : `${String(parseInt(startRaw.slice(11, 13)) + 1).padStart(2, "0")}:${startRaw.slice(14, 16)}`,
             isTraining: clientNames.has(title.toLowerCase()),
           };
-        });
+        })
+        .filter((e) => !m2SessionKeys.has(`${e.date}|${e.time}`));
     }
   } catch (e) {
     console.error("Failed to fetch Google Calendar events:", e);
