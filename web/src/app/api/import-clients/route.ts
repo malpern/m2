@@ -299,6 +299,7 @@ export async function GET() {
 
     for (const name of allNames) {
       if (isBlockedName(name)) continue;
+      if (!sheetClients.has(name)) continue;
 
       const sheetData = sheetClients.get(name);
       const calData = calendarData.get(name);
