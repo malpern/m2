@@ -365,13 +365,14 @@
         <span class="step-who who-matt">Matt</span>
       </div>
       <div class="step-body">
-        As clients reply, the system classifies each response. Most are automatic, but some need Matt:
+        As clients reply, the system classifies each response using AI (Claude Sonnet). Most are handled automatically:
         <div class="step-detail">
           <strong>"Yes" / "Sounds good"</strong> → Auto-confirmed. Session turns green. ✅<br>
-          <strong>"No" / "Can't make it"</strong> → Not cancelled automatically. The system offers alternative open times from the current calendar, or asks if the client can't meet this week at all. Only cancel if the client confirms they're skipping the week entirely. 🔄<br>
-          <strong>"Can I do Thursday instead?"</strong> → Flagged as <strong>Reschedule</strong>. Matt decides. 🔄<br>
-          <strong>"Maybe" / unclear</strong> → Flagged as <strong>Ambiguous</strong>. Matt decides. ❓<br><br>
-          The "Needs Your Decision" section on the Outreach page shows reschedule, declined, and ambiguous items with action buttons.
+          <strong>"Can't do Friday, how about Monday?"</strong> → System checks if Monday is open. If yes, auto-confirms and replies. If not, offers other open times. 🔄<br>
+          <strong>"That doesn't work, what else?"</strong> → System finds open slots, ranks by this client's historical pattern, and texts back the top 3 alternatives. 📋<br>
+          <strong>"Not this week" / "Skip me"</strong> → Only case that actually cancels. System replies "No problem, we'll get you next week." ❌<br>
+          <strong>"Maybe" / unclear</strong> → Flagged for Matt in Mission Control. ❓<br><br>
+          <strong>Race condition protection:</strong> If the system offers a slot and another client books it before this client replies, the system detects the conflict and offers remaining open slots instead of double-booking.
         </div>
       </div>
     </div>
@@ -569,18 +570,94 @@
 <div class="divider"></div>
 
 <section>
+  <div class="section-label">Command Center</div>
+  <h2>Mission Control</h2>
+  <div class="section-desc">A single screen that shows the state of every client conversation during the Saturday morning booking process.</div>
+
+  <p>Available at <strong>/outreach/live</strong> (or click "Mission Control" from the Outreach page).</p>
+
+  <div class="rules">
+    <div class="rule-item">
+      <div class="rule-num">1</div>
+      <div class="rule-content">
+        <div class="rule-title">Pipeline Columns</div>
+        <div class="rule-desc">Every client appears as a card moving left-to-right through five stages: <strong>Queued</strong> → <strong>Texted</strong> → <strong>In Progress</strong> → <strong>Confirmed</strong> → <strong>Resolved</strong>. No clicking into detail pages needed — the conversation state is visible on the card itself.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">2</div>
+      <div class="rule-content">
+        <div class="rule-title">Inline Conversations</div>
+        <div class="rule-desc">Each card shows the last 3 messages in the SMS thread — what you sent, what they replied. Cards needing attention glow amber with Confirm/Decline buttons built in.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">3</div>
+      <div class="rule-content">
+        <div class="rule-title">Open Slots Sidebar</div>
+        <div class="rule-desc">A mini calendar on the right shows which time slots are still open (green) vs booked (blue) across the week. Glance at it when handling reschedule requests.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">4</div>
+      <div class="rule-content">
+        <div class="rule-title">Live Summary</div>
+        <div class="rule-desc">Running counts: confirmed, awaiting, needs you, queued. The header shows the real-time state of the entire week at a glance.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Automated Replies</div>
+  <h2>What the System Handles Without Matt</h2>
+  <div class="section-desc">Most decline scenarios are now handled automatically. The system uses AI (Claude Sonnet) to classify replies and respond with alternatives.</div>
+
+  <div class="flow-list">
+    <div class="flow-item">
+      <div class="flow-event">Confirmed</div>
+      <div class="flow-desc">Client says yes → session auto-confirmed, moves to green. No action needed.</div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-event">Specific Alt</div>
+      <div class="flow-desc">"How about Monday?" → System checks if that slot is open. If yes, auto-confirms and replies. If not, offers what's available.</div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-event">Wants Options</div>
+      <div class="flow-desc">"That doesn't work" → System finds open slots, ranks by this client's usual pattern, texts back top 3 alternatives.</div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-event">Picks Offered</div>
+      <div class="flow-desc">Client picks from offered alternatives → System re-verifies slot is still open (race condition check), then confirms.</div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-event">Skip Week</div>
+      <div class="flow-desc">"Not this week" → Only case that cancels. System replies "No problem, we'll get you next week."</div>
+    </div>
+    <div class="flow-item">
+      <div class="flow-event">Slot Taken</div>
+      <div class="flow-desc">Client picks a slot that was booked by someone else in the meantime → System catches the conflict and offers remaining open slots.</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
   <div class="section-label">When Matt Needs to Act</div>
   <h2>What Requires Your Attention</h2>
-  <div class="section-desc">Most of the process is automated. Here's what only Matt can do.</div>
+  <div class="section-desc">With auto-alternatives, Matt only needs to step in for truly ambiguous cases.</div>
 
   <div class="status-grid">
     <div class="status-card">
-      <div class="status-name"><span class="status-dot" style="background:#f59e0b"></span>Reschedule Request</div>
-      <div class="status-desc">Client wants a different time. Matt checks the calendar for an open slot, moves the session, and confirms.</div>
+      <div class="status-name"><span class="status-dot" style="background:#8b5cf6"></span>Ambiguous Reply</div>
+      <div class="status-desc">AI couldn't classify the response. Matt reads the message on the Mission Control card and clicks Confirm or Decline.</div>
     </div>
     <div class="status-card">
-      <div class="status-name"><span class="status-dot" style="background:#8b5cf6"></span>Ambiguous Reply</div>
-      <div class="status-desc">System couldn't classify the response. Matt reads the message and clicks Confirm or Decline.</div>
+      <div class="status-name"><span class="status-dot" style="background:#f59e0b"></span>Complex Reschedule</div>
+      <div class="status-desc">Auto-alternatives didn't resolve it (e.g., client wants a time next week, or has a special request). Matt handles manually via Mission Control.</div>
     </div>
     <div class="status-card">
       <div class="status-name"><span class="status-dot" style="background:#3b82f6"></span>Manual Adjustment</div>
@@ -796,10 +873,10 @@
     <div class="step" style="border-left: 3px solid #f59e0b;">
       <div class="step-header">
         <div class="step-title">Scenario B: "Can't do Friday, what about Monday?"</div>
-        <span class="step-who who-matt">Matt</span>
+        <span class="step-who who-system">Auto</span>
       </div>
       <div class="step-body">
-        System classifies as <strong>reschedule request</strong>. Appears in "Needs Your Decision" on the Outreach page. Matt checks Monday's calendar — if 1:15pm is open, he drags Micah's session to Mon and confirms. The system sends a follow-up:
+        System classifies as <strong>declined_with_alternative</strong>, extracts "Monday." Checks if Monday has an open slot — it does. Auto-confirms and replies immediately. No action from Matt. His Mission Control card moves straight to "Confirmed."
       </div>
 
       <div style="max-width: 340px; margin: 16px auto 0; background: var(--surface); border-radius: 14px; padding: 14px;">
@@ -809,37 +886,65 @@
         <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: right; margin-top: 4px;">Sat 10:05 AM</div>
         <div style="height: 8px;"></div>
         <div style="background: #0071e3; color: white; padding: 10px 14px; border-radius: 14px 14px 4px 14px; font-size: 0.88rem; line-height: 1.45; max-width: 85%;">
-          Monday 1:15pm works! You're confirmed.
+          Monday at 3pm — you're confirmed! See you then.
         </div>
-        <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px;">Sat 10:08 AM</div>
-        <div style="font-size: 0.72rem; color: #f59e0b; font-weight: 600; text-align: center; margin-top: 8px;">↻ Rescheduled by Matt</div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px;">Sat 10:05 AM</div>
+        <div style="font-size: 0.72rem; color: #22c55e; font-weight: 600; text-align: center; margin-top: 8px;">✓ Auto-rescheduled and confirmed</div>
+      </div>
+    </div>
+
+    <div class="step" style="border-left: 3px solid #3b82f6;">
+      <div class="step-header">
+        <div class="step-title">Scenario C: "That doesn't work"</div>
+        <span class="step-who who-system">Auto</span>
+      </div>
+      <div class="step-body">
+        System classifies as <strong>declined_wants_options</strong>. Automatically finds open slots, ranks them by Micah's historical pattern (Mondays score high), and texts alternatives.
+      </div>
+
+      <div style="max-width: 340px; margin: 16px auto 0; background: var(--surface); border-radius: 14px; padding: 14px;">
+        <div style="background: #e8e8ed; color: var(--text); padding: 10px 14px; border-radius: 14px 14px 14px 4px; font-size: 0.88rem; margin-left: auto; max-width: 70%; text-align: right;">
+          That doesn't work
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: right; margin-top: 4px;">Sat 11:30 AM</div>
+        <div style="height: 8px;"></div>
+        <div style="background: #0071e3; color: white; padding: 10px 14px; border-radius: 14px 14px 4px 14px; font-size: 0.88rem; line-height: 1.45; max-width: 90%;">
+          No worries! I also have Monday at 3pm, Wednesday at 5pm, Thursday at 4pm open. Any of those work? Or if you need to skip this week, no problem.
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px;">Sat 11:30 AM</div>
+        <div style="height: 8px;"></div>
+        <div style="background: #e8e8ed; color: var(--text); padding: 10px 14px; border-radius: 14px 14px 14px 4px; font-size: 0.88rem; margin-left: auto; max-width: 70%; text-align: right;">
+          Monday works
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: right; margin-top: 4px;">Sat 11:42 AM</div>
+        <div style="height: 8px;"></div>
+        <div style="background: #0071e3; color: white; padding: 10px 14px; border-radius: 14px 14px 4px 14px; font-size: 0.88rem; line-height: 1.45; max-width: 85%;">
+          Monday at 3pm — you're confirmed! See you then.
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px;">Sat 11:42 AM</div>
+        <div style="font-size: 0.72rem; color: #22c55e; font-weight: 600; text-align: center; margin-top: 8px;">✓ Auto-confirmed from alternatives</div>
       </div>
     </div>
 
     <div class="step" style="border-left: 3px solid #ef4444;">
       <div class="step-header">
-        <div class="step-title">Scenario C: "Not this week"</div>
+        <div class="step-title">Scenario D: "Not this week"</div>
         <span class="step-who who-system">Auto</span>
       </div>
       <div class="step-body">
-        System first offers alternatives — other open times this week. Only if Micah confirms he's skipping entirely does the session cancel. The system should respond with available slots before giving up.
+        System classifies as <strong>declined_skip_week</strong>. This is the only case that actually cancels. No alternatives offered — the client explicitly said they're out.
       </div>
 
       <div style="max-width: 340px; margin: 16px auto 0; background: var(--surface); border-radius: 14px; padding: 14px;">
         <div style="background: #e8e8ed; color: var(--text); padding: 10px 14px; border-radius: 14px 14px 14px 4px; font-size: 0.88rem; margin-left: auto; max-width: 70%; text-align: right;">
-          Not this week
+          Not this week, I'm away
         </div>
         <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: right; margin-top: 4px;">Sat 11:30 AM</div>
         <div style="height: 8px;"></div>
-        <div style="background: #0071e3; color: white; padding: 10px 14px; border-radius: 14px 14px 4px 14px; font-size: 0.88rem; line-height: 1.45; max-width: 90%;">
-          No worries! I also have Mon 1:15pm or Wed 3pm open if either works. Otherwise we'll catch you next week.
+        <div style="background: #0071e3; color: white; padding: 10px 14px; border-radius: 14px 14px 4px 14px; font-size: 0.88rem; line-height: 1.45; max-width: 85%;">
+          No problem, Micah. We'll get you in next week!
         </div>
-        <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px;">Sat 11:31 AM</div>
-        <div style="height: 8px;"></div>
-        <div style="background: #e8e8ed; color: var(--text); padding: 10px 14px; border-radius: 14px 14px 14px 4px; font-size: 0.88rem; margin-left: auto; max-width: 70%; text-align: right;">
-          Nah I'm good, next week
-        </div>
-        <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: right; margin-top: 4px;">Sat 11:45 AM</div>
+        <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px;">Sat 11:30 AM</div>
         <div style="font-size: 0.72rem; color: #ef4444; font-weight: 600; text-align: center; margin-top: 8px;">✕ Cancelled — skipping this week</div>
       </div>
     </div>
