@@ -181,7 +181,7 @@ export default function ImportClientsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="hidden sm:grid grid-cols-[auto_1fr_60px_70px_80px_90px] gap-x-3 px-2 pb-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider border-b">
+              <div className="hidden sm:grid grid-cols-[auto_1fr_70px_80px_90px_120px] gap-x-4 px-2 pb-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider border-b">
                 <div className="w-4" />
                 <div>Name</div>
                 <div className="text-right">Rate</div>
@@ -193,7 +193,7 @@ export default function ImportClientsPage() {
                 {data.preview.map((client) => (
                   <label
                     key={client.name}
-                    className="grid grid-cols-1 sm:grid-cols-[auto_1fr_60px_70px_80px_90px] gap-x-3 items-center py-2 px-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                    className="grid grid-cols-1 sm:grid-cols-[auto_1fr_70px_80px_90px_120px] gap-x-4 items-center py-2 px-2 rounded-md hover:bg-muted/50 cursor-pointer"
                   >
                     <Checkbox
                       checked={selected.has(client.name)}
@@ -220,17 +220,17 @@ export default function ImportClientsPage() {
                     </div>
                     <div className="flex gap-1 justify-end">
                       {client.inSheets && (
-                        <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-medium">
                           Sheets
                         </span>
                       )}
                       {client.inCalendar && (
-                        <span className="text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded font-medium">
                           Cal
                         </span>
                       )}
                       {client.hasDue && (
-                        <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold">
                           DUE
                         </span>
                       )}
