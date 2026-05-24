@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DeleteButton } from "./delete-button";
 import { MessageHistory } from "./message-history";
-import { SessionCalendar } from "./session-calendar";
+import { SessionHistoryCard } from "./session-history-card";
 import {
   EditableText,
   EditableNumber,
@@ -384,24 +384,7 @@ export default async function ClientDetailPage({
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Recent Sessions</CardTitle>
-              {allClientSessions.length > 0 && (
-                <Link
-                  href={`/clients/${clientId}/history`}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  View all {allClientSessions.length} sessions &rarr;
-                </Link>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <SessionCalendar sessions={allClientSessions} limitDays={30} />
-          </CardContent>
-        </Card>
+        <SessionHistoryCard sessions={allClientSessions} />
 
         <Card className="md:col-span-2">
           <CardHeader>
