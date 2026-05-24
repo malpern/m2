@@ -637,8 +637,12 @@
       <div class="flow-desc">"Not this week" → Only case that cancels. System replies "No problem, we'll get you next week."</div>
     </div>
     <div class="flow-item">
+      <div class="flow-event">Slot Reserved</div>
+      <div class="flow-desc">When alternatives are offered to a client, those slots are <strong>soft-reserved</strong> until that client replies or the offer expires (3 hours). Lower-priority clients won't be offered the same slots.</div>
+    </div>
+    <div class="flow-item">
       <div class="flow-event">Slot Taken</div>
-      <div class="flow-desc">Client picks a slot that was booked by someone else in the meantime → System catches the conflict and offers remaining open slots.</div>
+      <div class="flow-desc">If a client picks a slot that was booked in the meantime (edge case), the system catches the conflict and offers remaining open slots.</div>
     </div>
   </div>
 </section>
