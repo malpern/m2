@@ -230,6 +230,78 @@ export default async function ClientDetailPage({
       </div>
 
 
+      {allClientSessions.length > 0 && (() => {
+        const sorted = [...allClientSessions]
+          .filter((s) => s.status === "completed" || s.status === "confirmed")
+          .sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate));
+
+        const today = new Date();
+        const lastMonday = new Date(today);
+        const dow = lastMonday.getDay();
+        lastMonday.setDate(lastMonday.getDate() - (dow === 0 ? 6 : dow - 1) - 7);
+        const lastSunday = new Date(lastMonday);
+        lastSunday.setDate(lastMonday.getDate() + 6);
+        const lwStart = lastMonday.toISOString().split("T")[0];
+        const lwEnd = lastSunday.toISOString().split("T")[0];
+
+        const lastWeekSessions = sorted.filter(
+          (s) => s.scheduledDate >= lwStart && s.scheduledDate <= lwEnd
+        );
+
+        const typicalDayTime = new Map<string, number>();
+        for (const s of sorted) {
+          const d = new Date(s.scheduledDate + "T12:00:00");
+          const day = DAY_NAMES[d.getDay()];
+          const time = timeLabel(s.scheduledTime);
+          const k = `${day.slice(0, 3)} ${time}`;
+          typicalDayTime.set(k, (typicalDayTime.get(k) ?? 0) + 1);
+        }
+        const totalSorted = sorted.length || 1;
+
+        return (
+          <>
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-base">Last Week</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {lastWeekSessions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No sessions last week.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {lastWeekSessions.map((s) => {
+                      const d = new Date(s.scheduledDate + "T12:00:00");
+                      const dayName = DAY_NAMES[d.getDay()];
+                      const time = timeLabel(s.scheduledTime);
+                      const label = `${dayName.slice(0, 3)} ${time}`;
+                      const count = typicalDayTime.get(label) ?? 0;
+                      const pct = Math.round((count / totalSorted) * 100);
+                      const isUnusual = pct < 10;
+                      return (
+                        <div key={s.id} className="flex items-center justify-between py-1.5">
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium capitalize">{dayName.slice(0, 3)}</span>
+                            <span className="text-sm tabular-nums text-muted-foreground">{time}</span>
+                          </div>
+                          {isUnusual ? (
+                            <span className="text-[10px] font-medium bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded">
+                              Unusual — only {pct}% of sessions
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">
+                              {pct}% of sessions
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+      </>);
+      })()}
+
       {allClientSessions.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
