@@ -6,6 +6,7 @@ CREATE TABLE clients (
     grade_level TEXT,
     college_bound INTEGER NOT NULL DEFAULT 0,
     behavior_score INTEGER NOT NULL DEFAULT 5,
+    no_show_count INTEGER NOT NULL DEFAULT 0,
     preferred_days TEXT,
     preferred_time TEXT,
     max_sessions_per_week INTEGER NOT NULL DEFAULT 1,

@@ -13,6 +13,7 @@ function makeClient(overrides: Record<string, unknown> = {}) {
     collegeBound: false,
     gradeLevel: "junior" as const,
     behaviorScore: 5,
+    noShowCount: 0,
     sortOrder: null as number | null,
     ...overrides,
   };

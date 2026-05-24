@@ -32,6 +32,7 @@ interface ClientPreview {
   collegeBound: boolean;
   gradeLevel: "freshman" | "sophomore" | "junior" | "senior" | "post_grad" | "adult" | null;
   behaviorScore: number;
+  noShowCount: number;
   sortOrder: number | null;
 }
 

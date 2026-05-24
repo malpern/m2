@@ -9,6 +9,7 @@ function makeClient(overrides: Partial<Client> & { id: number; name: string }): 
     gradeLevel: "junior",
     collegeBound: false,
     behaviorScore: 5,
+    noShowCount: 0,
     preferredDays: null,
     preferredTime: null,
     maxSessionsPerWeek: 1,

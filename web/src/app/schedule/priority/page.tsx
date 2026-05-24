@@ -17,6 +17,7 @@ export default async function PriorityPage() {
       collegeBound: clients.collegeBound,
       gradeLevel: clients.gradeLevel,
       behaviorScore: clients.behaviorScore,
+      noShowCount: clients.noShowCount,
       sortOrder: clients.sortOrder,
     })
     .from(clients)

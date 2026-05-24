@@ -35,6 +35,7 @@ export default async function ClientsPage() {
       sessionType: clients.sessionType,
       parentGuardian: clients.parentGuardian,
       email: clients.email,
+      noShowCount: clients.noShowCount,
       createdAt: clients.createdAt,
       updatedAt: clients.updatedAt,
       sessionsRemaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`.as(

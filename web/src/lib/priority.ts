@@ -22,22 +22,24 @@ export const DEFAULT_WEIGHTS: PriorityWeights = {
 };
 
 export function computePriorityScore(
-  client: Pick<Client, "collegeBound" | "gradeLevel" | "behaviorScore">,
+  client: Pick<Client, "collegeBound" | "gradeLevel" | "behaviorScore" | "noShowCount">,
   weights: PriorityWeights
 ): number {
   const collegeValue = client.collegeBound ? 10 : 0;
   const gradeValue = (GRADE_RANK[client.gradeLevel ?? ""] ?? 0) * 2;
   const effortValue = client.behaviorScore;
+  const noShowPenalty = (client.noShowCount ?? 0) * 3;
 
   return (
     collegeValue * weights.collegeBoundWeight +
     gradeValue * weights.gradeLevelWeight +
-    effortValue * weights.effortWeight
+    effortValue * weights.effortWeight -
+    noShowPenalty
   );
 }
 
 export function sortByWeightedPriority<
-  T extends Pick<Client, "collegeBound" | "gradeLevel" | "behaviorScore" | "sortOrder">
+  T extends Pick<Client, "collegeBound" | "gradeLevel" | "behaviorScore" | "noShowCount" | "sortOrder">
 >(clients: T[], weights: PriorityWeights): T[] {
   const sorted = [...clients];
   const hasManualOrder = sorted.some((c) => c.sortOrder != null);
@@ -54,7 +56,7 @@ export function sortByWeightedPriority<
   return sorted;
 }
 
-export function sortByPriority<T extends Pick<Client, "collegeBound" | "gradeLevel" | "behaviorScore" | "sortOrder">>(
+export function sortByPriority<T extends Pick<Client, "collegeBound" | "gradeLevel" | "behaviorScore" | "noShowCount" | "sortOrder">>(
   clients: T[]
 ): T[] {
   return sortByWeightedPriority(clients, DEFAULT_WEIGHTS);

@@ -17,6 +17,7 @@ export const clients = sqliteTable("clients", {
     .notNull()
     .default(false),
   behaviorScore: integer("behavior_score").notNull().default(5),
+  noShowCount: integer("no_show_count").notNull().default(0),
   preferredDays: text("preferred_days"),
   preferredTime: text("preferred_time"),
   maxSessionsPerWeek: integer("max_sessions_per_week").notNull().default(1),
