@@ -224,6 +224,9 @@ export function OutreachDashboard({
               Send Next Batch ({nextBatch.length})
             </Button>
           )}
+          <Link href="/outreach/live">
+            <Button variant="outline" size="sm">Mission Control</Button>
+          </Link>
         </div>
       </div>
 
