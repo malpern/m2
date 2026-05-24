@@ -107,16 +107,16 @@ export default async function ClientDetailPage({
 
   // Compute per-client day×time frequencies weighted by recency
   const now = Date.now();
-  const HALF_LIFE_DAYS = 90;
+  const FULL_WEIGHT_DAYS = 30;
+  const HALF_LIFE_DAYS = 60;
   const dayTimeScores = new Map<string, number>();
   const clientTimeSlots = new Set<string>();
   for (const s of allClientSessions) {
     const d = new Date(s.scheduledDate + "T12:00:00");
     const day = DAY_NAMES[d.getDay()];
     const slot = timeLabel(s.scheduledTime);
-    const ageMs = now - d.getTime();
-    const ageDays = ageMs / 86400000;
-    const weight = Math.pow(0.5, ageDays / HALF_LIFE_DAYS);
+    const ageDays = (now - d.getTime()) / 86400000;
+    const weight = ageDays <= FULL_WEIGHT_DAYS ? 1 : Math.pow(0.5, (ageDays - FULL_WEIGHT_DAYS) / HALF_LIFE_DAYS);
     const key = `${day}:${slot}`;
     dayTimeScores.set(key, (dayTimeScores.get(key) ?? 0) + weight);
     clientTimeSlots.add(slot);
