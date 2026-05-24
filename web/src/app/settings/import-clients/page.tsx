@@ -27,7 +27,7 @@ export default function ImportClientsPage() {
   const [importing, setImporting] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ imported: number } | null>(null);
+  const [result, setResult] = useState<{ imported: number; totalSessions?: number } | null>(null);
 
   useEffect(() => {
     fetch("/api/import-clients")
@@ -95,9 +95,13 @@ export default function ImportClientsPage() {
             <div className="text-2xl font-bold text-green-600 mb-2">
               {result.imported} clients imported
             </div>
+            {result.totalSessions != null && result.totalSessions > 0 && (
+              <div className="text-lg font-medium text-muted-foreground mb-2">
+                {result.totalSessions} historical sessions loaded
+              </div>
+            )}
             <p className="text-sm text-muted-foreground mb-4">
-              All test data has been replaced with real clients, rates, and
-              packages.
+              Clients imported with rates, packages, session history, and auto-detected preferred days/times.
             </p>
             <div className="flex gap-3 justify-center">
               <Button onClick={() => router.push("/clients")}>

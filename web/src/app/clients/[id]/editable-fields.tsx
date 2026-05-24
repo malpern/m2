@@ -253,11 +253,53 @@ function EditableScoreBar({
   );
 }
 
+const TIME_SLOTS = [
+  "8am", "9am", "10am", "11am", "12pm",
+  "1pm", "2pm", "3pm", "4pm", "5pm", "6pm", "7pm",
+];
+
+function EditableTime({
+  clientId,
+  value,
+}: {
+  clientId: number;
+  value: string;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const current = value?.toLowerCase() ?? "";
+
+  const toggle = (slot: string) => {
+    const newValue = current === slot ? "" : slot;
+    startTransition(() => {
+      updateClientField(clientId, "preferredTime", newValue);
+    });
+  };
+
+  return (
+    <div className={`flex gap-1.5 flex-wrap ${isPending ? "opacity-50" : ""}`}>
+      {TIME_SLOTS.map((slot) => (
+        <button
+          key={slot}
+          onClick={() => toggle(slot)}
+          className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+            current === slot
+              ? "bg-accent/20 text-accent"
+              : "bg-muted text-muted-foreground hover:bg-muted/80"
+          }`}
+        >
+          {slot}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export {
   EditableText,
   EditableNumber,
   EditableSelect,
   EditableToggle,
   EditableDays,
+  EditableTime,
   EditableScoreBar,
 };

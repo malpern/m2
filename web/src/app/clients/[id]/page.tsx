@@ -14,6 +14,7 @@ import {
   EditableSelect,
   EditableToggle,
   EditableDays,
+  EditableTime,
   EditableScoreBar,
 } from "./editable-fields";
 
@@ -246,13 +247,7 @@ export default async function ClientDetailPage({
             </div>
             <div>
               <div className="text-sm text-muted-foreground mb-1">Preferred Time</div>
-              <EditableText
-                clientId={clientId}
-                field="preferredTime"
-                value={client.preferredTime ?? ""}
-                className="text-sm"
-                inputClassName="text-sm"
-              />
+              <EditableTime clientId={clientId} value={client.preferredTime ?? ""} />
             </div>
             <Separator />
             <div>

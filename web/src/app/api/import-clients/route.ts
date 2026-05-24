@@ -173,26 +173,99 @@ async function getClientInfo(): Promise<Map<string, ClientInfo>> {
   return infoMap;
 }
 
-async function getCalendarClients(): Promise<Set<string>> {
+type CalendarSession = {
+  date: string;
+  time: string;
+  dayOfWeek: string;
+  durationMin: number;
+};
+
+type CalendarClientData = {
+  sessions: CalendarSession[];
+  preferredDays: string[];
+  preferredTime: string;
+};
+
+const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+function formatHour(hour: number, min: number): string {
+  const h = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+  const suffix = hour >= 12 ? "pm" : "am";
+  return min === 0 ? `${h}${suffix}` : `${h}:${String(min).padStart(2, "0")}${suffix}`;
+}
+
+async function getCalendarHistory(): Promise<Map<string, CalendarClientData>> {
   const now = new Date();
-  const fourWeeksAgo = new Date(now);
-  fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-  const twoWeeksAhead = new Date(now);
-  twoWeeksAhead.setDate(twoWeeksAhead.getDate() + 14);
+  const start = new Date(now);
+  start.setMonth(start.getMonth() - 12);
 
-  const start = fourWeeksAgo.toISOString().split("T")[0];
-  const end = twoWeeksAhead.toISOString().split("T")[0];
+  const allEvents: { summary: string; startDt: Date; endDt: Date }[] = [];
+  const cursor = new Date(start);
+  while (cursor < now) {
+    const chunkEnd = new Date(cursor);
+    chunkEnd.setDate(chunkEnd.getDate() + 13);
+    if (chunkEnd > now) chunkEnd.setTime(now.getTime());
 
-  const events = await listEvents("f4lathletics@gmail.com", start, end);
-  const names = new Set<string>();
+    const s = cursor.toISOString().split("T")[0];
+    const e = chunkEnd.toISOString().split("T")[0];
+    const events = await listEvents("f4lathletics@gmail.com", s, e);
 
-  for (const event of events) {
-    if (!event.summary) continue;
-    const name = extractClientName(event.summary);
-    if (name) names.add(name);
+    for (const ev of events) {
+      if (!ev.summary || !ev.start?.dateTime) continue;
+      const startDt = new Date(ev.start.dateTime);
+      const endDt = ev.end?.dateTime ? new Date(ev.end.dateTime) : new Date(startDt.getTime() + 3600000);
+      allEvents.push({ summary: ev.summary, startDt, endDt });
+    }
+
+    cursor.setDate(cursor.getDate() + 14);
   }
 
-  return names;
+  const clientMap = new Map<string, CalendarClientData>();
+
+  for (const { summary, startDt, endDt } of allEvents) {
+    const name = extractClientName(summary);
+    if (!name) continue;
+
+    const session: CalendarSession = {
+      date: startDt.toISOString().split("T")[0],
+      time: `${String(startDt.getHours()).padStart(2, "0")}:${String(startDt.getMinutes()).padStart(2, "0")}`,
+      dayOfWeek: DAY_NAMES[startDt.getDay()],
+      durationMin: Math.round((endDt.getTime() - startDt.getTime()) / 60000),
+    };
+
+    if (!clientMap.has(name)) {
+      clientMap.set(name, { sessions: [], preferredDays: [], preferredTime: "" });
+    }
+    clientMap.get(name)!.sessions.push(session);
+  }
+
+  for (const [, data] of clientMap) {
+    const dayCounts = new Map<string, number>();
+    const timeCounts = new Map<string, number>();
+
+    for (const s of data.sessions) {
+      dayCounts.set(s.dayOfWeek, (dayCounts.get(s.dayOfWeek) ?? 0) + 1);
+      const hour = parseInt(s.time.split(":")[0]);
+      const min = parseInt(s.time.split(":")[1]);
+      const roundedTime = formatHour(hour, min < 15 ? 0 : min);
+      timeCounts.set(roundedTime, (timeCounts.get(roundedTime) ?? 0) + 1);
+    }
+
+    const total = data.sessions.length;
+    const threshold = Math.max(2, total * 0.2);
+
+    data.preferredDays = [...dayCounts.entries()]
+      .filter(([, count]) => count >= threshold)
+      .sort((a, b) => b[1] - a[1])
+      .map(([day]) => day);
+
+    const topTime = [...timeCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (topTime && topTime[1] >= threshold) {
+      data.preferredTime = topTime[0];
+    }
+  }
+
+  return clientMap;
 }
 
 export type ImportPreviewClient = {
@@ -200,6 +273,7 @@ export type ImportPreviewClient = {
   inSheets: boolean;
   inCalendar: boolean;
   sessions2026: number;
+  calendarSessions: number;
   lastDate: string;
   rate: number | null;
   sessionType: "individual" | "dual" | "group";
@@ -208,30 +282,34 @@ export type ImportPreviewClient = {
   hasDue: boolean;
   parentGuardian: string | null;
   email: string | null;
+  preferredDays: string[];
+  preferredTime: string;
 };
 
 export async function GET() {
   try {
-    const [sheetClients, calendarNames, clientInfo] = await Promise.all([
+    const [sheetClients, calendarData, clientInfo] = await Promise.all([
       getSheetClients(),
-      getCalendarClients(),
+      getCalendarHistory(),
       getClientInfo(),
     ]);
 
     const merged: ImportPreviewClient[] = [];
-    const allNames = new Set([...sheetClients.keys(), ...calendarNames]);
+    const allNames = new Set([...sheetClients.keys(), ...calendarData.keys()]);
 
     for (const name of allNames) {
       if (isBlockedName(name)) continue;
 
       const sheetData = sheetClients.get(name);
+      const calData = calendarData.get(name);
       const info = clientInfo.get(name);
 
       merged.push({
         name,
         inSheets: sheetClients.has(name),
-        inCalendar: calendarNames.has(name),
+        inCalendar: calendarData.has(name),
         sessions2026: sheetData?.sessions2026 ?? 0,
+        calendarSessions: calData?.sessions.length ?? 0,
         lastDate: sheetData?.lastDate ?? "",
         rate: sheetData?.rate ?? null,
         sessionType: sheetData?.sessionType ?? "individual",
@@ -240,6 +318,8 @@ export async function GET() {
         hasDue: sheetData?.hasDue ?? false,
         parentGuardian: info?.parentGuardian ?? null,
         email: info?.email ?? null,
+        preferredDays: calData?.preferredDays ?? [],
+        preferredTime: calData?.preferredTime ?? "",
       });
     }
 
@@ -255,7 +335,7 @@ export async function GET() {
       preview: merged,
       existingCount: existingClients.length,
       sheetsCount: sheetClients.size,
-      calendarCount: calendarNames.size,
+      calendarCount: calendarData.size,
     });
   } catch (error) {
     console.error("Import preview error:", error);
@@ -284,6 +364,8 @@ export async function POST(request: Request) {
     fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4);
     const cutoff = fourMonthsAgo.toISOString().split("T")[0];
 
+    const calendarData = await getCalendarHistory();
+
     const inserted = await db
       .insert(clients)
       .values(
@@ -299,10 +381,14 @@ export async function POST(request: Request) {
           sortOrder: i,
           maxSessionsPerWeek: c.sessionType === "group" ? 0 : 1,
           behaviorScore: 5,
+          preferredDays: c.preferredDays.length > 0 ? JSON.stringify(c.preferredDays) : null,
+          preferredTime: c.preferredTime || null,
         }))
       )
       .returning()
       .all();
+
+    let totalSessions = 0;
 
     for (let i = 0; i < inserted.length; i++) {
       const client = inserted[i];
@@ -322,10 +408,35 @@ export async function POST(request: Request) {
           status: preview.hasDue ? "unpaid" as const : "active" as const,
         })
         .run();
+
+      const calSessions = calendarData.get(preview.name)?.sessions ?? [];
+      if (calSessions.length > 0) {
+        for (const s of calSessions) {
+          const hour = parseInt(s.time.split(":")[0]);
+          const slotMap: Record<number, "3pm" | "4pm" | "5pm" | "6pm" | "7pm"> = {
+            15: "3pm", 16: "4pm", 17: "5pm", 18: "6pm", 19: "7pm",
+          };
+          const slot = slotMap[hour] ?? (hour < 15 ? "3pm" : "7pm");
+
+          await db
+            .insert(sessions)
+            .values({
+              clientId: client.id,
+              scheduledDate: s.date,
+              scheduledTime: s.time,
+              slot,
+              status: "completed" as const,
+              sessionType: preview.sessionType === "dual" ? "group" : preview.sessionType,
+            })
+            .run();
+        }
+        totalSessions += calSessions.length;
+      }
     }
 
     return NextResponse.json({
       imported: inserted.length,
+      totalSessions,
       clients: inserted.map((c) => ({ id: c.id, name: c.name })),
     });
   } catch (error) {
