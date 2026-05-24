@@ -228,16 +228,33 @@ function DragHandle() {
   );
 }
 
+type SessionRecord = { date: string; time: string; status: string };
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function formatSessionTime(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  const hour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  const suffix = h >= 12 ? "pm" : "am";
+  return m === 0 ? `${hour}${suffix}` : `${hour}:${String(m).padStart(2, "0")}${suffix}`;
+}
+
 function SortableRow({
   client,
   rank,
   showRank,
   isInactive,
+  sessions,
+  isExpanded,
+  onToggleExpand,
 }: {
   client: ClientWithPackage;
   rank: number;
   showRank: boolean;
   isInactive: boolean;
+  sessions: SessionRecord[];
+  isExpanded: boolean;
+  onToggleExpand: () => void;
 }) {
   const {
     attributes,
@@ -254,69 +271,111 @@ function SortableRow({
   };
 
   return (
-    <TableRow
-      ref={setNodeRef}
-      style={style}
-      className={`group ${isInactive ? "opacity-50" : ""} ${
-        isDragging ? "bg-muted/80 shadow-lg z-50 relative" : "hover:bg-muted/50"
-      }`}
-    >
-      <TableCell className="w-12">
-        <div className="flex items-center gap-1.5">
-          <span {...attributes} {...listeners}>
-            <DragHandle />
-          </span>
-          {showRank && !isInactive ? (
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-bold text-blue-400">
-              {rank}
+    <>
+      <TableRow
+        ref={setNodeRef}
+        style={style}
+        className={`group ${isInactive ? "opacity-50" : ""} ${
+          isDragging ? "bg-muted/80 shadow-lg z-50 relative" : "hover:bg-muted/50"
+        }`}
+      >
+        <TableCell className="w-12">
+          <div className="flex items-center gap-1.5">
+            <span {...attributes} {...listeners}>
+              <DragHandle />
             </span>
-          ) : (
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground">
-              {isInactive ? "—" : "·"}
-            </span>
-          )}
-        </div>
-      </TableCell>
-      <TableCell>
-        <Link href={`/clients/${client.id}`} className="font-semibold hover:underline">
-          {client.name}
-        </Link>
-      </TableCell>
-      <TableCell className="tabular-nums">
-        {client.sessionRate ? `$${(client.sessionRate / 100).toFixed(0)}` : "—"}
-      </TableCell>
-      <TableCell>{categoryBadge(client.category)}</TableCell>
-      <TableCell>
-        <InlineGradeSelect clientId={client.id} value={client.gradeLevel ?? ""} />
-      </TableCell>
-      <TableCell>
-        <InlineCollegeToggle clientId={client.id} value={client.collegeBound} />
-      </TableCell>
-      <TableCell><ScoreBar score={client.behaviorScore} /></TableCell>
-      <TableCell>
-        {client.sessionsRemaining != null
-          ? sessionsLeftBadge(client.sessionsRemaining)
-          : <span className="text-muted-foreground">—</span>}
-      </TableCell>
-      <TableCell className="text-muted-foreground text-xs">
-        {formatSchedule(client.preferredDays, client.preferredTime)}
-      </TableCell>
-    </TableRow>
+            {showRank && !isInactive ? (
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-bold text-blue-400">
+                {rank}
+              </span>
+            ) : (
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground">
+                {isInactive ? "—" : "·"}
+              </span>
+            )}
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-2">
+            <Link href={`/clients/${client.id}`} className="font-semibold hover:underline">
+              {client.name}
+            </Link>
+            {sessions.length > 0 && (
+              <button
+                onClick={onToggleExpand}
+                className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground px-1.5 py-0.5 rounded bg-muted/50 hover:bg-muted transition-colors"
+              >
+                {isExpanded ? "hide" : `${sessions.length}`}
+              </button>
+            )}
+          </div>
+        </TableCell>
+        <TableCell className="tabular-nums">
+          {client.sessionRate ? `$${(client.sessionRate / 100).toFixed(0)}` : "—"}
+        </TableCell>
+        <TableCell>{categoryBadge(client.category)}</TableCell>
+        <TableCell>
+          <InlineGradeSelect clientId={client.id} value={client.gradeLevel ?? ""} />
+        </TableCell>
+        <TableCell>
+          <InlineCollegeToggle clientId={client.id} value={client.collegeBound} />
+        </TableCell>
+        <TableCell><ScoreBar score={client.behaviorScore} /></TableCell>
+        <TableCell>
+          {client.sessionsRemaining != null
+            ? sessionsLeftBadge(client.sessionsRemaining)
+            : <span className="text-muted-foreground">—</span>}
+        </TableCell>
+        <TableCell className="text-muted-foreground text-xs">
+          {formatSchedule(client.preferredDays, client.preferredTime)}
+        </TableCell>
+      </TableRow>
+      {isExpanded && sessions.length > 0 && (
+        <TableRow className="hover:bg-transparent">
+          <TableCell colSpan={9} className="py-0 px-0">
+            <div className="ml-16 mr-4 mb-3 mt-1 px-3 py-2 rounded bg-muted/20 border border-border/30">
+              <div className="grid grid-cols-[80px_50px_60px_70px] gap-x-3 text-[10px] font-medium text-muted-foreground uppercase tracking-wider pb-1 border-b border-border/30 mb-1">
+                <div>Date</div>
+                <div>Day</div>
+                <div>Time</div>
+                <div>Status</div>
+              </div>
+              <div className="max-h-48 overflow-y-auto space-y-0.5">
+                {sessions.map((s, i) => {
+                  const d = new Date(s.date + "T12:00:00");
+                  return (
+                    <div key={i} className="grid grid-cols-[80px_50px_60px_70px] gap-x-3 text-xs text-muted-foreground py-0.5">
+                      <div className="tabular-nums">{s.date}</div>
+                      <div>{DAY_NAMES[d.getDay()]}</div>
+                      <div className="tabular-nums">{formatSessionTime(s.time)}</div>
+                      <div className="capitalize">{s.status}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
   );
 }
 
 export function ClientTable({
   activeClients,
   inactiveClients,
+  sessionsByClient,
 }: {
   activeClients: ClientWithPackage[];
   inactiveClients: ClientWithPackage[];
+  sessionsByClient: Record<number, SessionRecord[]>;
 }) {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("rank");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [localActive, setLocalActive] = useState(activeClients);
   const [isPending, startTransition] = useTransition();
+  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -500,6 +559,14 @@ export function ClientTable({
                     rank={i + 1}
                     showRank={sortKey === "rank"}
                     isInactive={false}
+                    sessions={sessionsByClient[client.id] ?? []}
+                    isExpanded={expandedIds.has(client.id)}
+                    onToggleExpand={() => setExpandedIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(client.id)) next.delete(client.id);
+                      else next.add(client.id);
+                      return next;
+                    })}
                   />
                 ))}
                 {filteredInactive.map((client) => (
@@ -509,6 +576,14 @@ export function ClientTable({
                     rank={0}
                     showRank={false}
                     isInactive={true}
+                    sessions={sessionsByClient[client.id] ?? []}
+                    isExpanded={expandedIds.has(client.id)}
+                    onToggleExpand={() => setExpandedIds((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(client.id)) next.delete(client.id);
+                      else next.add(client.id);
+                      return next;
+                    })}
                   />
                 ))}
                 {totalShown === 0 && (

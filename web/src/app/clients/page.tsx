@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { clients, packages } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { clients, packages, sessions } from "@/db/schema";
+import { eq, sql, desc } from "drizzle-orm";
 import { ClientTable } from "./client-table";
 
 const GRADE_RANK: Record<string, number> = {
@@ -45,6 +45,23 @@ export default async function ClientsPage() {
     .leftJoin(packages, eq(packages.clientId, clients.id))
     .all();
 
+  const allSessions = await db
+    .select({
+      clientId: sessions.clientId,
+      date: sessions.scheduledDate,
+      time: sessions.scheduledTime,
+      status: sessions.status,
+    })
+    .from(sessions)
+    .orderBy(desc(sessions.scheduledDate))
+    .all();
+
+  const sessionsByClient = new Map<number, { date: string; time: string; status: string }[]>();
+  for (const s of allSessions) {
+    if (!sessionsByClient.has(s.clientId)) sessionsByClient.set(s.clientId, []);
+    sessionsByClient.get(s.clientId)!.push({ date: s.date, time: s.time, status: s.status });
+  }
+
   const hasManualOrder = allClients.some((c) => c.sortOrder != null);
 
   const sorted = allClients.sort((a, b) => {
@@ -69,7 +86,7 @@ export default async function ClientsPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
-      <ClientTable activeClients={active} inactiveClients={inactive} />
+      <ClientTable activeClients={active} inactiveClients={inactive} sessionsByClient={Object.fromEntries(sessionsByClient)} />
     </div>
   );
 }
