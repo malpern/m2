@@ -81,6 +81,18 @@ export const sessions = sqliteTable("sessions", {
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const guideFeedback = sqliteTable("guide_feedback", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  xPercent: integer("x_percent").notNull(),
+  yPixels: integer("y_pixels").notNull(),
+  sectionId: text("section_id"),
+  feedbackText: text("feedback_text").notNull(),
+  githubIssueNumber: integer("github_issue_number").notNull(),
+  githubIssueUrl: text("github_issue_url").notNull(),
+  issueState: text("issue_state", { enum: ["open", "closed"] }).notNull().default("open"),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const outreach = sqliteTable("outreach", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   clientId: integer("client_id")

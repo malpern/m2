@@ -195,6 +195,59 @@
     font-size: 0.78rem; color: var(--text-tertiary); border-top: 1px solid var(--border-light);
   }
 
+  /* ── Feedback system ── */
+  body { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='10' fill='%23fbbf24' fill-opacity='0.15' stroke='%23f59e0b' stroke-width='1.5'/%3E%3Cline x1='12' y1='7' x2='12' y2='17' stroke='%23f59e0b' stroke-width='1.5' stroke-linecap='round'/%3E%3Cline x1='7' y1='12' x2='17' y2='12' stroke='%23f59e0b' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, crosshair; }
+  a, button, select, input, textarea { cursor: pointer !important; }
+
+  .fb-pin {
+    position: absolute; width: 20px; height: 20px; margin-left: -10px; margin-top: -10px;
+    background: #f59e0b; border-radius: 50%; border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 999; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: white; font-weight: 700;
+    transition: transform 0.15s;
+  }
+  .fb-pin:hover { transform: scale(1.2); }
+
+  .fb-bubble {
+    position: absolute; background: #fffbeb; border: 1px solid #fbbf24;
+    border-radius: 10px; padding: 12px 14px; max-width: 280px; min-width: 180px;
+    font-size: 0.82rem; color: #1d1d1f; line-height: 1.45;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 1000;
+  }
+  .fb-bubble-issue { font-size: 0.72rem; margin-top: 8px; }
+  .fb-bubble-issue a { color: #0071e3; text-decoration: none; font-weight: 600; }
+  .fb-bubble-issue a:hover { text-decoration: underline; }
+
+  .fb-input {
+    position: absolute; background: white; border: 1px solid #d2d2d7;
+    border-radius: 14px; padding: 16px; width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15); z-index: 1001;
+  }
+  .fb-input textarea {
+    width: 100%; resize: none; border: 1px solid #d2d2d7; border-radius: 8px;
+    padding: 10px 12px; font-size: 0.88rem; font-family: inherit;
+    line-height: 1.5; outline: none; cursor: text !important;
+  }
+  .fb-input textarea:focus { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,0.1); }
+  .fb-input-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .fb-btn {
+    padding: 6px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+    border: none; cursor: pointer !important; transition: all 0.15s;
+  }
+  .fb-btn-submit { background: #0071e3; color: white; }
+  .fb-btn-submit:hover { background: #005bb5; }
+  .fb-btn-submit:disabled { opacity: 0.5; cursor: not-allowed !important; }
+  .fb-btn-cancel { background: #f5f5f7; color: #6e6e73; }
+  .fb-btn-cancel:hover { background: #ebebed; }
+
+  .fb-banner {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #fffbeb; border-top: 1px solid #fbbf24;
+    padding: 8px 24px; text-align: center; font-size: 0.78rem; color: #92400e;
+    z-index: 998;
+  }
+
   @media (max-width: 640px) {
     .pillars { grid-template-columns: 1fr; }
     .status-grid { grid-template-columns: 1fr; }
@@ -1051,6 +1104,146 @@
 <footer>
   <div class="container">M2 Scheduler — Built for Matt's Saturday morning workflow</div>
 </footer>
+
+<div class="fb-banner">
+  💬 Click anywhere on this page to leave feedback, ask a question, or request a change.
+</div>
+
+<script>
+(function() {
+  const API = '/api/feedback';
+  let activeBubbles = new Map();
+
+  async function loadBubbles() {
+    try {
+      const res = await fetch(API);
+      const items = await res.json();
+      items.forEach(renderBubble);
+    } catch(e) { console.error('Failed to load feedback:', e); }
+  }
+
+  function renderBubble(fb) {
+    if (activeBubbles.has(fb.id)) return;
+    const x = (fb.xPercent / 100) * document.documentElement.scrollWidth;
+
+    const pin = document.createElement('div');
+    pin.className = 'fb-pin';
+    pin.style.left = x + 'px';
+    pin.style.top = fb.yPixels + 'px';
+    pin.textContent = '!';
+    pin.title = 'Click to view feedback';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'fb-bubble';
+    bubble.style.left = Math.min(x + 14, window.innerWidth - 300) + 'px';
+    bubble.style.top = (fb.yPixels - 10) + 'px';
+    bubble.style.display = 'none';
+    bubble.innerHTML =
+      '<div>' + escapeHtml(fb.feedbackText) + '</div>' +
+      '<div class="fb-bubble-issue">' +
+        '<a href="' + fb.githubIssueUrl + '" target="_blank">#' + fb.githubIssueNumber + '</a>' +
+        ' · open' +
+      '</div>';
+
+    pin.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const isVisible = bubble.style.display !== 'none';
+      document.querySelectorAll('.fb-bubble').forEach(b => b.style.display = 'none');
+      bubble.style.display = isVisible ? 'none' : 'block';
+    });
+
+    document.body.appendChild(pin);
+    document.body.appendChild(bubble);
+    activeBubbles.set(fb.id, { pin, bubble });
+  }
+
+  function showInput(x, y) {
+    closeInput();
+    const div = document.createElement('div');
+    div.className = 'fb-input';
+    div.id = 'fb-active-input';
+    div.style.left = Math.min(x, window.innerWidth - 340) + 'px';
+    div.style.top = y + 'px';
+    div.innerHTML =
+      '<textarea rows="3" placeholder="What\'s on your mind? Feedback, questions, requests..."></textarea>' +
+      '<div class="fb-input-actions">' +
+        '<button class="fb-btn fb-btn-submit">Submit</button>' +
+        '<button class="fb-btn fb-btn-cancel">Cancel</button>' +
+      '</div>';
+
+    div.addEventListener('click', function(e) { e.stopPropagation(); });
+
+    const textarea = div.querySelector('textarea');
+    const submitBtn = div.querySelector('.fb-btn-submit');
+    const cancelBtn = div.querySelector('.fb-btn-cancel');
+
+    cancelBtn.addEventListener('click', closeInput);
+
+    submitBtn.addEventListener('click', async function() {
+      const text = textarea.value.trim();
+      if (!text) return;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating issue...';
+
+      const section = findNearestSection(y);
+      const xPercent = (x / document.documentElement.scrollWidth) * 100;
+
+      try {
+        const res = await fetch(API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ xPercent, yPixels: y, sectionId: section, feedbackText: text }),
+        });
+        if (!res.ok) throw new Error('API error');
+        const fb = await res.json();
+        closeInput();
+        renderBubble(fb);
+      } catch(e) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Retry';
+        console.error('Submit failed:', e);
+      }
+    });
+
+    document.body.appendChild(div);
+    setTimeout(function() { textarea.focus(); }, 50);
+  }
+
+  function closeInput() {
+    const el = document.getElementById('fb-active-input');
+    if (el) el.remove();
+  }
+
+  function findNearestSection(y) {
+    const sections = document.querySelectorAll('section');
+    let closest = null;
+    for (const s of sections) {
+      const label = s.querySelector('.section-label');
+      const heading = s.querySelector('h2');
+      if (s.offsetTop <= y) {
+        closest = (label ? label.textContent : '') + (heading ? ': ' + heading.textContent : '');
+      }
+    }
+    return closest;
+  }
+
+  function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.fb-pin, .fb-bubble, .fb-input, .fb-banner, a, button, select, input, textarea')) {
+      return;
+    }
+    document.querySelectorAll('.fb-bubble').forEach(b => b.style.display = 'none');
+    showInput(e.pageX, e.pageY);
+  });
+
+  loadBubbles();
+})();
+</script>
 
 </body>
 </html>
