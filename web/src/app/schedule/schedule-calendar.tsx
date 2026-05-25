@@ -13,7 +13,6 @@ import {
   updateSessionTime,
   cancelSession,
   queueNotification,
-  exportICS,
 } from "./actions";
 
 interface SessionEvent {
@@ -148,7 +147,6 @@ export function ScheduleCalendar({
 }) {
   const calendarRef = useRef<FullCalendar>(null);
   const [isPending, startTransition] = useTransition();
-  const [isExporting, setIsExporting] = useState(false);
   const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
   const [revertInfo, setRevertInfo] = useState<(() => void) | null>(null);
   const isMobile = useIsMobile();
@@ -291,19 +289,6 @@ export function ScheduleCalendar({
     setRevertInfo(null);
   };
 
-  const handleExport = async () => {
-    setIsExporting(true);
-    const ics = await exportICS(weekStart);
-    const blob = new Blob([ics], { type: "text/calendar" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `m2-schedule-${weekStart}.ics`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setIsExporting(false);
-  };
-
   useEffect(() => {
     const api = calendarRef.current?.getApi();
     if (api) {
@@ -355,20 +340,6 @@ export function ScheduleCalendar({
           </Link>
           <Button onClick={handleGenerate} disabled={isPending} size="sm">
             Generate Week
-          </Button>
-          <Button onClick={handleExport} disabled={isExporting} variant="outline" size="sm">
-            {isExporting ? "Exporting..." : "Export .ics"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const url = `${window.location.origin}/api/calendar?token=${process.env.NEXT_PUBLIC_CALENDAR_TOKEN ?? ""}`;
-              navigator.clipboard.writeText(url);
-              alert("Calendar URL copied! Paste it in Google Calendar → Other calendars → From URL");
-            }}
-          >
-            Subscribe
           </Button>
           <Link href="/outreach">
             <Button variant="default" size="sm" className="bg-emerald-600 hover:bg-emerald-700">
