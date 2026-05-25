@@ -590,9 +590,8 @@
     <a href="https://web-jet-mu-62.vercel.app/schedule" class="nav-link">Schedule</a>
     <a href="https://web-jet-mu-62.vercel.app/clients" class="nav-link">Clients</a>
     <a href="https://web-jet-mu-62.vercel.app/outreach" class="nav-link">Outreach</a>
-    <a href="https://web-jet-mu-62.vercel.app/packages" class="nav-link">Packages</a>
     <a href="https://web-jet-mu-62.vercel.app/reports" class="nav-link">Reports</a>
-    <a href="questions.html" class="nav-link">Questions</a>
+    <a href="https://web-jet-mu-62.vercel.app/settings" class="nav-link">Settings</a>
     <div class="nav-spacer"></div>
     <a href="https://web-jet-mu-62.vercel.app" class="nav-cta">Open App</a>
   </div>
@@ -638,7 +637,7 @@
         <div class="wf-marker"><div class="wf-dot">3</div><div class="wf-line"></div></div>
         <div class="wf-content">
           <h3>Send outreach</h3>
-          <p>Hit "Send Next Batch." Three texts go out at once from your number. You're done until replies come in.</p>
+          <p>Go to Outreach and send texts via WhatsApp. Messages go out from your M2 number through Twilio. No Mac mini or iMessage needed &mdash; works from any device, anywhere.</p>
           <span class="wf-tag">Required</span>
         </div>
       </div>
@@ -647,7 +646,7 @@
         <div class="wf-marker"><div class="wf-dot">4</div><div class="wf-line"></div></div>
         <div class="wf-content">
           <h3>System handles replies</h3>
-          <p>AI reads each reply. Confirmed &rarr; locked in. Declined &rarr; slot reopens. No reply &rarr; follow-up after 1 hour. Moved on after 3 hours. Next batch of 3 goes out after a confirmation.</p>
+          <p>AI reads each reply. Confirmed &rarr; locked in. Declined &rarr; slot reopens. Reschedule requests get flagged for you. No reply &rarr; follow-up after 1 hour, moved on after 3.</p>
           <span class="wf-tag">Automatic</span>
         </div>
       </div>
@@ -664,8 +663,8 @@
       <div class="wf-step wf-auto">
         <div class="wf-marker"><div class="wf-dot">6</div><div class="wf-line"></div></div>
         <div class="wf-content">
-          <h3>Calendar syncs automatically</h3>
-          <p>Your Google Calendar subscribes to a live feed &mdash; confirmed sessions appear and update automatically. You can also edit times right from the dashboard.</p>
+          <h3>Google Calendar stays in sync</h3>
+          <p>M2 connects directly to your Google Calendar via API &mdash; your existing appointments show on the schedule in orange so you never double-book. Confirmed sessions sync back automatically.</p>
           <span class="wf-tag">Automatic</span>
         </div>
       </div>
@@ -746,10 +745,10 @@
         <ul style="list-style:none;font-size:14px;color:var(--text-muted);line-height:2">
           <li>Fills standing slots automatically</li>
           <li>Generates schedule using your priority rules</li>
-          <li>Sends texts from your number in batches of 3</li>
+          <li>Sends texts via WhatsApp (Twilio) &mdash; no Mac mini needed</li>
           <li>Reads and classifies every reply with AI</li>
           <li>Follows up after 1 hour, moves on after 3</li>
-          <li>Syncs confirmed sessions to your Google Calendar</li>
+          <li>Reads your Google Calendar to avoid conflicts</li>
           <li>Tracks package balances and flags missed deductions</li>
         </ul>
       </div>
@@ -779,31 +778,31 @@
 
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:24px">
       <div class="card" style="display:flex;gap:16px;align-items:flex-start">
-        <span style="background:rgba(248,113,113,0.12);color:var(--red);font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;flex-shrink:0;margin-top:2px">REQUIRED</span>
+        <span style="background:rgba(52,211,153,0.12);color:var(--green);font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;flex-shrink:0;margin-top:2px">DONE</span>
         <div>
-          <div style="font-size:14px;font-weight:600">Your client list</div>
-          <div style="font-size:13px;color:var(--text-muted)">Names, phone numbers, preferred days/times, and which clients have a standing weekly slot.</div>
+          <div style="font-size:14px;font-weight:600">Client list imported from Google Sheets</div>
+          <div style="font-size:13px;color:var(--text-muted)">Names, session rates, packages, parent/guardian info, and session history &mdash; all pulled from your spreadsheet.</div>
         </div>
       </div>
       <div class="card" style="display:flex;gap:16px;align-items:flex-start">
-        <span style="background:rgba(248,113,113,0.12);color:var(--red);font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;flex-shrink:0;margin-top:2px">REQUIRED</span>
+        <span style="background:rgba(52,211,153,0.12);color:var(--green);font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;flex-shrink:0;margin-top:2px">DONE</span>
         <div>
-          <div style="font-size:14px;font-weight:600">Sign in to iCloud on the Mac Mini</div>
-          <div style="font-size:13px;color:var(--text-muted)">The system sends texts from your iMessage account. Need your Apple ID signed in.</div>
+          <div style="font-size:14px;font-weight:600">Google Calendar connected</div>
+          <div style="font-size:13px;color:var(--text-muted)">Your f4lathletics calendar is connected via API. Existing appointments show on the schedule so you never double-book.</div>
         </div>
       </div>
       <div class="card" style="display:flex;gap:16px;align-items:flex-start">
-        <span style="background:rgba(248,113,113,0.12);color:var(--red);font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;flex-shrink:0;margin-top:2px">REQUIRED</span>
+        <span style="background:rgba(52,211,153,0.12);color:var(--green);font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;flex-shrink:0;margin-top:2px">DONE</span>
         <div>
-          <div style="font-size:14px;font-weight:600">Confirm your days and time slots</div>
-          <div style="font-size:13px;color:var(--text-muted)">Which days you work, what time slots are available each day, session length.</div>
+          <div style="font-size:14px;font-weight:600">Texting via Twilio + WhatsApp</div>
+          <div style="font-size:13px;color:var(--text-muted)">No Mac mini or iMessage needed. Outreach texts go through Twilio &mdash; works from any device, anywhere.</div>
         </div>
       </div>
       <div class="card" style="display:flex;gap:16px;align-items:flex-start">
-        <span style="background:rgba(248,113,113,0.12);color:var(--red);font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;flex-shrink:0;margin-top:2px">REQUIRED</span>
+        <span style="background:rgba(248,113,113,0.12);color:var(--red);font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;flex-shrink:0;margin-top:2px">NEEDED</span>
         <div>
-          <div style="font-size:14px;font-weight:600">A few example scheduling texts</div>
-          <div style="font-size:13px;color:var(--text-muted)">So the AI matches your voice. Just forward us 3&ndash;4 real texts you've sent to clients about scheduling.</div>
+          <div style="font-size:14px;font-weight:600">Real client phone numbers</div>
+          <div style="font-size:13px;color:var(--text-muted)">Client records are imported but most still have placeholder phone numbers. Need real numbers before outreach goes live.</div>
         </div>
       </div>
       <div class="card" style="display:flex;gap:16px;align-items:flex-start">
@@ -814,8 +813,6 @@
         </div>
       </div>
     </div>
-  </div>
-</section>
   </div>
 </section>
 
