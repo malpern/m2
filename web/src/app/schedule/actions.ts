@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { clients, sessions, outreach, prioritySettings, defaultAvailability, weeklyOverrides } from "@/db/schema";
 import { sendSMS } from "@/lib/twilio";
-import { eq, and, gte, lte, ne } from "drizzle-orm";
+import { eq, and, gte, lte, lt, ne } from "drizzle-orm";
 import { generateWeek, getMonday, type LastWeekSession, type AvailabilitySlot, type DayOfWeek, type TimeSlot } from "@/lib/scheduler";
 import { DEFAULT_WEIGHTS } from "@/lib/priority";
 import { revalidatePath } from "next/cache";
@@ -66,11 +66,11 @@ export async function generateSchedule(weekStartISO: string) {
     availability.push({ day: day as DayOfWeek, slot: slot as TimeSlot, enabled });
   }
 
-  // Auto-complete past confirmed sessions
+  // Auto-complete confirmed sessions from before today (not today — end of day)
   const today = new Date().toISOString().split("T")[0];
   const pastConfirmed = await db.select({ id: sessions.id })
     .from(sessions)
-    .where(and(eq(sessions.status, "confirmed"), lte(sessions.scheduledDate, today)))
+    .where(and(eq(sessions.status, "confirmed"), lt(sessions.scheduledDate, today)))
     .all();
   if (pastConfirmed.length > 0) {
     for (const s of pastConfirmed) {
