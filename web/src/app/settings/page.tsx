@@ -71,6 +71,17 @@ export default async function SettingsPage({
       <Separator className="my-10" />
 
       <FeedbackSection initialItems={feedbackItems} />
+
+      <Separator className="my-10" />
+
+      <form action="/api/auth/logout" method="POST">
+        <button
+          type="submit"
+          className="text-sm text-muted-foreground hover:text-destructive transition-colors"
+        >
+          Log out
+        </button>
+      </form>
     </div>
   );
 }
