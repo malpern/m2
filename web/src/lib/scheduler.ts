@@ -285,7 +285,13 @@ export function generateWeek(
 export function getMonday(date: Date = new Date()): Date {
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  // On weekends, show next week (planning mode)
+  if (day === 0 || day === 6) {
+    const daysUntilMonday = day === 0 ? 1 : 2;
+    d.setDate(d.getDate() + daysUntilMonday);
+    return d;
+  }
+  const diff = d.getDate() - day + 1;
   d.setDate(diff);
   return d;
 }
