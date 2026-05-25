@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { clients, sessions, outreach, packages, prioritySettings, defaultAvailability, weeklyOverrides } from "@/db/schema";
+import { clients, sessions, outreach, prioritySettings, defaultAvailability, weeklyOverrides } from "@/db/schema";
 import { sendSMS } from "@/lib/twilio";
 import { eq, and, gte, lte, ne } from "drizzle-orm";
 import { generateWeek, getMonday, type LastWeekSession, type AvailabilitySlot, type DayOfWeek, type TimeSlot } from "@/lib/scheduler";
@@ -66,17 +66,6 @@ export async function generateSchedule(weekStartISO: string) {
     availability.push({ day: day as DayOfWeek, slot: slot as TimeSlot, enabled });
   }
 
-  // Skip clients with exhausted packages
-  const allPackages = await db.select().from(packages).all();
-  const exhaustedClientIds = new Set<number>();
-  for (const c of allClients) {
-    const clientPkgs = allPackages.filter((p) => p.clientId === c.id && p.status === "active");
-    if (clientPkgs.length === 0) continue;
-    const hasRemaining = clientPkgs.some((p) => p.totalSessions - p.sessionsUsed > 0);
-    if (!hasRemaining) exhaustedClientIds.add(c.id);
-  }
-  const schedulableClients = allClients.filter((c) => !exhaustedClientIds.has(c.id));
-
   // Auto-complete past confirmed sessions
   const today = new Date().toISOString().split("T")[0];
   const pastConfirmed = await db.select({ id: sessions.id })
@@ -89,7 +78,7 @@ export async function generateSchedule(weekStartISO: string) {
     }
   }
 
-  const proposed = generateWeek(schedulableClients, weekStart, weights, lastWeekSessions, availability);
+  const proposed = generateWeek(allClients, weekStart, weights, lastWeekSessions, availability);
 
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
