@@ -282,9 +282,15 @@ describe("getMonday", () => {
     expect(monday.toISOString().split("T")[0]).toBe("2026-05-25");
   });
 
-  it("returns previous Monday for a Sunday", () => {
+  it("returns next Monday for a Sunday (planning mode)", () => {
     const sun = new Date(2026, 4, 31);
     const monday = getMonday(sun);
-    expect(monday.toISOString().split("T")[0]).toBe("2026-05-25");
+    expect(monday.toISOString().split("T")[0]).toBe("2026-06-01");
+  });
+
+  it("returns next Monday for a Saturday (planning mode)", () => {
+    const sat = new Date(2026, 4, 30);
+    const monday = getMonday(sat);
+    expect(monday.toISOString().split("T")[0]).toBe("2026-06-01");
   });
 });
