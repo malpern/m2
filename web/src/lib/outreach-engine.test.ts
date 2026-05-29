@@ -81,7 +81,7 @@ describe("getNextWaveToSend", () => {
       day: "", slot: "", date: "", time: "",
       status: "pending" as const, isStanding: false,
       sentAt: null, repliedAt: null, replyText: null,
-      interpretation: null, wave: i < 8 ? 1 : 2,
+      interpretation: null, sendError: null, outreachId: null, wave: i < 8 ? 1 : 2,
     }));
 
     const result = getNextWaveToSend(items);
@@ -97,14 +97,14 @@ describe("getNextWaveToSend", () => {
         day: "", slot: "", date: "", time: "",
         status: "sent" as const, isStanding: false,
         sentAt: fiftyMinAgo, repliedAt: null, replyText: null,
-        interpretation: null, wave: 1,
+        interpretation: null, sendError: null, outreachId: null, wave: 1,
       })),
       ...Array.from({ length: 5 }, (_, i) => ({
         sessionId: i + 8, clientId: i + 8, clientName: "", clientPhone: "",
         day: "", slot: "", date: "", time: "",
         status: "pending" as const, isStanding: false,
         sentAt: null, repliedAt: null, replyText: null,
-        interpretation: null, wave: 2,
+        interpretation: null, sendError: null, outreachId: null, wave: 2,
       })),
     ];
 
@@ -116,8 +116,8 @@ describe("getNextWaveToSend", () => {
   it("does not release wave 2 before delay", () => {
     const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const items = [
-      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: tenMinAgo, repliedAt: null, replyText: null, interpretation: null, wave: 1 },
-      { sessionId: 1, clientId: 1, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "pending" as const, isStanding: false, sentAt: null, repliedAt: null, replyText: null, interpretation: null, wave: 2 },
+      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: tenMinAgo, repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1 },
+      { sessionId: 1, clientId: 1, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "pending" as const, isStanding: false, sentAt: null, repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 2 },
     ];
 
     const result = getNextWaveToSend(items);
@@ -128,8 +128,8 @@ describe("getNextWaveToSend", () => {
   it("returns wave 3 after wave3DelayMinutes", () => {
     const threeHoursAgo = new Date(Date.now() - 180 * 60 * 1000).toISOString();
     const items = [
-      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: threeHoursAgo, repliedAt: null, replyText: null, interpretation: null, wave: 1 },
-      { sessionId: 1, clientId: 1, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "pending" as const, isStanding: false, sentAt: null, repliedAt: null, replyText: null, interpretation: null, wave: 3 },
+      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: threeHoursAgo, repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1 },
+      { sessionId: 1, clientId: 1, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "pending" as const, isStanding: false, sentAt: null, repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 3 },
     ];
 
     const result = getNextWaveToSend(items);
@@ -139,7 +139,7 @@ describe("getNextWaveToSend", () => {
 
   it("returns empty when all sent", () => {
     const items = [
-      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: new Date().toISOString(), repliedAt: null, replyText: null, interpretation: null, wave: 1 },
+      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: new Date().toISOString(), repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1 },
     ];
     const result = getNextWaveToSend(items);
     expect(result.items).toHaveLength(0);
@@ -154,7 +154,7 @@ describe("follow-up and move-on", () => {
       day: "", slot: "", date: "", time: "",
       status: "sent" as const, isStanding: false,
       sentAt: hourAgo, repliedAt: null,
-      replyText: null, interpretation: null, wave: 1,
+      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1,
     }];
     expect(getNeedsFollowUp(items)).toHaveLength(1);
   });
@@ -166,7 +166,7 @@ describe("follow-up and move-on", () => {
       day: "", slot: "", date: "", time: "",
       status: "sent" as const, isStanding: false,
       sentAt: threeHoursAgo, repliedAt: null,
-      replyText: null, interpretation: null, wave: 1,
+      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1,
     }];
     expect(getNeedsMoveOn(items)).toHaveLength(1);
     expect(getNeedsFollowUp(items)).toHaveLength(0);
@@ -179,7 +179,7 @@ describe("follow-up and move-on", () => {
       day: "", slot: "", date: "", time: "",
       status: "sent" as const, isStanding: false,
       sentAt: thirtyMinAgo, repliedAt: null,
-      replyText: null, interpretation: null, wave: 1,
+      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1,
     }];
     expect(getNeedsFollowUp(items)).toHaveLength(0);
     expect(getNeedsMoveOn(items)).toHaveLength(0);
@@ -192,7 +192,7 @@ describe("follow-up and move-on", () => {
       day: "", slot: "", date: "", time: "",
       status: "confirmed" as const, isStanding: false,
       sentAt: twoHoursAgo, repliedAt: null,
-      replyText: null, interpretation: null, wave: 1,
+      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1,
     }];
     expect(getNeedsFollowUp(items)).toHaveLength(0);
   });
@@ -209,7 +209,7 @@ describe("getNeedsMattAttention", () => {
       sessionId: i, clientId: i, clientName: "", clientPhone: "",
       day: "", slot: "", date: "", time: "",
       isStanding: false, sentAt: null, repliedAt: null,
-      replyText: null, interpretation: null, wave: 1, ...o,
+      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1, ...o,
     }));
     expect(getNeedsMattAttention(items)).toHaveLength(2);
   });
@@ -224,7 +224,7 @@ describe("getNeedsMattAttention", () => {
       sessionId: i, clientId: i, clientName: "", clientPhone: "",
       day: "", slot: "", date: "", time: "",
       isStanding: false, sentAt: null, repliedAt: null,
-      replyText: null, interpretation: null, wave: 1, ...o,
+      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1, ...o,
     }));
     expect(getNeedsMattAttention(items)).toHaveLength(0);
   });
@@ -244,7 +244,7 @@ describe("getOutreachSummary", () => {
       sessionId: i, clientId: i, clientName: "", clientPhone: "",
       day: "", slot: "", date: "", time: "",
       isStanding: false, sentAt: null, repliedAt: null,
-      replyText: null, interpretation: null, wave: 1, ...o,
+      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1, ...o,
     }));
 
     const summary = getOutreachSummary(items);

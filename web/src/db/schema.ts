@@ -113,6 +113,7 @@ export const outreach = sqliteTable("outreach", {
     .default("pending"),
   sentAt: text("sent_at"),
   repliedAt: text("replied_at"),
+  sendError: text("send_error"),
 });
 
 export const defaultAvailability = sqliteTable("default_availability", {

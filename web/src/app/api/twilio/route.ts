@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function logAndSend(clientId: number, sessionId: number | null, weekOf: string, phone: string, message: string) {
-  await db.insert(outreach).values({
+  const row = await db.insert(outreach).values({
     clientId,
     sessionId,
     weekOf,
@@ -204,13 +204,18 @@ async function logAndSend(clientId: number, sessionId: number | null, weekOf: st
     messageText: message,
     status: "awaiting_reply",
     sentAt: new Date().toISOString(),
-  }).run();
+  }).returning().get();
 
   const smsText = message.replace(/\n\[offered:[^\]]+\]/, "");
   try {
     await sendSMS(phone, smsText);
   } catch (e) {
+    const errorMsg = e instanceof Error ? e.message : String(e);
     console.error(`Failed to send SMS to ${phone}:`, e);
+    await db.update(outreach).set({
+      status: "pending",
+      sendError: errorMsg,
+    }).where(eq(outreach.id, row.id)).run();
   }
 }
 

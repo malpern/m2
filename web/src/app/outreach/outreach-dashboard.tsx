@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { markConfirmed, markDeclined, overrideStatus, sendOutreachBatch } from "./actions";
+import { markConfirmed, markDeclined, overrideStatus, sendOutreachBatch, retrySend } from "./actions";
 import { EmptyState } from "@/components/empty-state";
 import type { OutreachItem } from "@/lib/outreach-engine";
 
@@ -14,6 +14,7 @@ function statusBadge(status: string) {
     standing: "bg-blue-500/15 text-blue-400",
     pending: "bg-muted text-muted-foreground",
     sent: "bg-amber-500/15 text-amber-400",
+    send_failed: "bg-red-500/15 text-red-400",
     confirmed: "bg-emerald-500/15 text-emerald-400",
     declined: "bg-red-500/15 text-red-400",
     reschedule: "bg-purple-500/15 text-purple-400",
@@ -25,6 +26,7 @@ function statusBadge(status: string) {
     standing: "Standing",
     pending: "Queued",
     sent: "Waiting",
+    send_failed: "Failed",
     confirmed: "Confirmed",
     declined: "Declined",
     reschedule: "Reschedule",
@@ -62,6 +64,11 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
               &ldquo;{item.replyText}&rdquo;
             </div>
           )}
+          {item.sendError && (
+            <div className="text-xs text-red-400 mt-0.5 truncate" title={item.sendError}>
+              Send failed: {item.sendError}
+            </div>
+          )}
         </div>
       </div>
 
@@ -87,6 +94,17 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
               Decline
             </Button>
           </div>
+        )}
+
+        {item.status === "send_failed" && item.outreachId && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs text-red-400 hover:text-red-300"
+            onClick={() => startTransition(() => { retrySend(item.outreachId!); })}
+          >
+            Retry
+          </Button>
         )}
 
         {item.status === "sent" && (
@@ -214,9 +232,9 @@ export function OutreachDashboard({
           {nextBatch.length > 0 && (
             <Button
               onClick={() =>
-                startTransition(() =>
-                  sendOutreachBatch(nextBatch.map((i) => i.sessionId), weekOf)
-                )
+                startTransition(() => {
+                  sendOutreachBatch(nextBatch.map((i) => i.sessionId), weekOf);
+                })
               }
               disabled={isPending}
               size="sm"
@@ -231,7 +249,7 @@ export function OutreachDashboard({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+      <div className={`grid grid-cols-2 ${summary.failed > 0 ? "sm:grid-cols-5" : "sm:grid-cols-4"} gap-3 mb-8`}>
         <Card className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent" />
           <CardContent className="relative pt-5 pb-4">
@@ -288,7 +306,37 @@ export function OutreachDashboard({
             </div>
           </CardContent>
         </Card>
+        {summary.failed > 0 && (
+          <Card className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent" />
+            <CardContent className="relative pt-5 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-red-500/15 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-red-400">{summary.failed}</div>
+                  <div className="text-xs text-muted-foreground">Failed</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* Failed sends */}
+      {filteredItems.filter((i) => i.status === "send_failed").length > 0 && (
+        <Card className="mb-6 border-red-500/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-red-400">Failed Sends</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredItems.filter((i) => i.status === "send_failed").map((item) => (
+              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Needs attention */}
       {filteredNeedsAttention.length > 0 && (
