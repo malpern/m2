@@ -5,6 +5,7 @@ export type OutreachStatus =
   | "standing"
   | "pending"
   | "sent"
+  | "send_failed"
   | "confirmed"
   | "declined"
   | "reschedule"
@@ -28,6 +29,8 @@ export interface OutreachItem {
   replyText: string | null;
   interpretation: string | null;
   wave: number; // 1, 2, or 3
+  sendError: string | null;
+  outreachId: number | null;
 }
 
 export function buildOutreachQueue(
@@ -59,21 +62,29 @@ export function buildOutreachQueue(
     let repliedAt: string | null = null;
     let replyText: string | null = null;
     let interpretation: string | null = null;
+    let sendError: string | null = null;
+    let outreachId: number | null = null;
 
     if (isStanding) {
       status = "standing";
     } else if (existing) {
       sentAt = existing.sentAt;
-      const reply = existingOutreach.find(
-        (o) => o.sessionId === session.id && o.direction === "received"
-      );
-      if (reply) {
-        repliedAt = reply.repliedAt;
-        replyText = reply.messageText;
-        interpretation = reply.interpretation;
-        status = mapInterpretation(reply.interpretation, reply.status);
+      outreachId = existing.id;
+      if (existing.sendError) {
+        status = "send_failed";
+        sendError = existing.sendError;
       } else {
-        status = "sent";
+        const reply = existingOutreach.find(
+          (o) => o.sessionId === session.id && o.direction === "received"
+        );
+        if (reply) {
+          repliedAt = reply.repliedAt;
+          replyText = reply.messageText;
+          interpretation = reply.interpretation;
+          status = mapInterpretation(reply.interpretation, reply.status);
+        } else {
+          status = "sent";
+        }
       }
     }
 
@@ -108,6 +119,8 @@ export function buildOutreachQueue(
       replyText,
       interpretation,
       wave: isStanding ? 0 : wave,
+      sendError,
+      outreachId,
     });
   }
 
@@ -237,6 +250,7 @@ export function getOutreachSummary(items: OutreachItem[]) {
     sent: items.filter((i) => i.status === "sent").length,
     confirmed: items.filter((i) => i.status === "confirmed").length,
     declined: items.filter((i) => i.status === "declined").length,
+    failed: items.filter((i) => i.status === "send_failed").length,
     needsAttention: items.filter((i) => i.status === "reschedule" || i.status === "ambiguous").length,
     noReply: items.filter((i) => i.status === "no_reply").length,
     movedOn: items.filter((i) => i.status === "moved_on").length,

@@ -242,7 +242,7 @@ export function MissionControl({
           {pendingIds.length > 0 && (
             <Button
               size="sm"
-              onClick={() => startTransition(() => sendOutreachBatch(pendingIds, weekOf))}
+              onClick={() => startTransition(() => { sendOutreachBatch(pendingIds, weekOf); })}
               disabled={isPending}
             >
               {isPending ? "Sending..." : `Send ${pendingIds.length} texts`}

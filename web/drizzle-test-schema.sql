@@ -59,7 +59,8 @@ CREATE TABLE outreach (
     interpretation TEXT,
     status TEXT NOT NULL DEFAULT 'pending',
     sent_at TEXT,
-    replied_at TEXT
+    replied_at TEXT,
+    send_error TEXT
 );
 
 CREATE TABLE priority_settings (
