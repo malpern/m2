@@ -88,6 +88,10 @@ export function buildOutreachQueue(
       }
     }
 
+    if (session.status === "confirmed" && status !== "confirmed" && status !== "standing") {
+      status = "confirmed";
+    }
+
     let wave = 0;
     if (!isStanding && status === "pending") {
       pendingCount++;

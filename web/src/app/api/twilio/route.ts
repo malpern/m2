@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 import { classifyReply, ClassifyBillingError, type ReplyInterpretation } from "@/lib/classify-reply";
 import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, isSlotStillOpen, tagOfferedSlots } from "@/lib/suggest-alternatives";
 import { sendSMS } from "@/lib/twilio";
+import { getMonday } from "@/lib/scheduler";
 import twilio from "twilio";
 
 function escapeXml(text: string): string {
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
         await db.insert(outreach).values({
           clientId: client.id,
           sessionId: lastSent?.sessionId ?? null,
-          weekOf: new Date().toISOString().split("T")[0],
+          weekOf: getMonday().toISOString().split("T")[0],
           direction: "received" as const,
           messageText: body,
           status: "needs_matt" as const,
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
     await db.insert(outreach).values({
       clientId: client.id,
       sessionId: lastSent?.sessionId ?? null,
-      weekOf: new Date().toISOString().split("T")[0],
+      weekOf: getMonday().toISOString().split("T")[0],
       direction: "received" as const,
       messageText: body,
       interpretation,
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
     }).run();
 
     const firstName = client.name.split(" ")[0];
-    const weekOf = new Date().toISOString().split("T")[0];
+    const weekOf = getMonday().toISOString().split("T")[0];
 
     if (interpretation === "confirmed" && lastSent?.sessionId) {
       await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, lastSent.sessionId)).run();
