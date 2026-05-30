@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       ambiguous: "needs_matt",
     };
 
-    await db.insert(outreach).values({
+    const replyRecord = await db.insert(outreach).values({
       clientId: client.id,
       sessionId: lastSent?.sessionId ?? null,
       weekOf: getMonday().toISOString().split("T")[0],
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       interpretation,
       status: statusMap[interpretation] ?? ("needs_matt" as OutreachStatus),
       repliedAt: new Date().toISOString(),
-    }).run();
+    }).returning().get();
 
     const firstName = client.name.split(" ")[0];
     const weekOf = getMonday().toISOString().split("T")[0];
@@ -152,6 +152,7 @@ export async function POST(request: NextRequest) {
             slot: matched.slot,
             status: "confirmed",
           }).where(eq(sessions.id, lastSent.sessionId)).run();
+          await db.update(outreach).set({ status: "confirmed" }).where(eq(outreach.id, replyRecord.id)).run();
 
           const dayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
           const reply = `${dayLabel} at ${matched.slot} — you're confirmed! See you then.`;
@@ -162,6 +163,7 @@ export async function POST(request: NextRequest) {
           const reRanked = await rankSlotsForClient(client.id, stillOpen);
           const msg = `Sorry, that slot just got booked! ${formatAlternativesMessage(firstName, reRanked)}`;
           const reply = tagOfferedSlots(msg, diversifyAcrossDays(reRanked, 3));
+          await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
           await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
           return twiml();
         }
@@ -187,6 +189,7 @@ export async function POST(request: NextRequest) {
             slot: matched.slot,
             status: "proposed",
           }).where(eq(sessions.id, lastSent.sessionId)).run();
+          await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
 
           const dayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
           const msg = `I have ${dayLabel} at ${matched.slot} open — does that work?`;
@@ -202,6 +205,7 @@ export async function POST(request: NextRequest) {
         const ranked = await rankSlotsForClient(client.id, open);
         const msg = `Sorry, ${requestLabel} isn't available this week.\n\n${formatAlternativesMessage(firstName, ranked)}`;
         const reply = tagOfferedSlots(msg, diversifyAcrossDays(ranked, 3));
+        await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
         await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
         return twiml();
       }
@@ -209,6 +213,7 @@ export async function POST(request: NextRequest) {
       const ranked = await rankSlotsForClient(client.id, open);
       const msg = formatAlternativesMessage(firstName, ranked);
       const reply = tagOfferedSlots(msg, diversifyAcrossDays(ranked, 3));
+      await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
       await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
       return twiml();
     }
