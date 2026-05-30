@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
 
         if (result.interpretation === "cancellation") {
           await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, lastSent.sessionId)).run();
-          syncSessionToCalendar(lastSent.sessionId).catch(() => {});
+          syncSessionToCalendar(lastSent.sessionId).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: lastSent.sessionId }));
           const session = await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get();
           const dayLabel = session ? new Date(session.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }) : "your session";
           const slot = session?.slot ?? "";
@@ -421,10 +421,12 @@ export async function POST(request: NextRequest) {
               }
             }
 
-            const reply = await composeReply({
+            let reply = await composeReply({
               firstName, history: historyWithReply,
               scenario: { type: "multi_session_final", summary: `Final schedule: ${summaryLines.join(". ")}.` },
             });
+            const invitePrompt = await getInvitePrompt(client.id);
+            if (invitePrompt) reply += invitePrompt;
             await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
             return twiml();
           }
@@ -442,7 +444,7 @@ export async function POST(request: NextRequest) {
         if (singleResult.interpretation === "confirmed") {
           for (const ps of pendingSessions) {
             await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, ps.id)).run();
-          syncSessionToCalendar(ps.id).catch(() => {});
+          syncSessionToCalendar(ps.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: ps.id }));
           }
 
           await db.insert(outreach).values({
@@ -464,10 +466,12 @@ export async function POST(request: NextRequest) {
           if (canc.length > 0) finalParts.push(`Cancelled: ${canc.map((s) => new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" })).join(", ")}.`);
 
           const historyWithReply = [...history, { direction: "received" as const, text: body }];
-          const reply = await composeReply({
+          let reply = await composeReply({
             firstName, history: historyWithReply,
             scenario: { type: "multi_session_final", summary: `Here's your final schedule: ${finalParts.join(" ")}` },
           });
+          const invitePrompt = await getInvitePrompt(client.id);
+          if (invitePrompt) reply += invitePrompt;
           await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
           return twiml();
         }
@@ -518,11 +522,11 @@ export async function POST(request: NextRequest) {
 
         if (action.action === "confirm") {
           await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, matchedSession.id)).run();
-          syncSessionToCalendar(matchedSession.id).catch(() => {});
+          syncSessionToCalendar(matchedSession.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: matchedSession.id }));
           sessionOutcomes.push({ originalDay: dayLabel, originalSlot: matchedSession.slot, result: `${dayLabel} at ${matchedSession.slot} — confirmed`, sessionId: matchedSession.id });
         } else if (action.action === "cancel") {
           await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, matchedSession.id)).run();
-          syncSessionToCalendar(matchedSession.id).catch(() => {});
+          syncSessionToCalendar(matchedSession.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: matchedSession.id }));
           cancelledDays.add(dayLabel.toLowerCase());
           sessionOutcomes.push({ originalDay: dayLabel, originalSlot: matchedSession.slot, result: `${dayLabel} — cancelled`, sessionId: matchedSession.id });
           autoFillCancelledSlot(matchedSession.scheduledDate, matchedSession.slot, client.id).catch(() => {});
@@ -588,10 +592,12 @@ export async function POST(request: NextRequest) {
         await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, tagged);
       } else {
         const summaryText = sessionOutcomes.map((o) => o.result).join(". ") + ".";
-        const reply = await composeReply({
+        let reply = await composeReply({
           firstName, history: historyWithReply,
           scenario: { type: "multi_session_final", summary: `Final schedule: ${summaryText}` },
         });
+        const invitePrompt = await getInvitePrompt(client.id);
+        if (invitePrompt) reply += invitePrompt;
         await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
       }
       return twiml();
@@ -650,7 +656,7 @@ export async function POST(request: NextRequest) {
 
       for (const sid of sidsToConfirm) {
         await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, sid)).run();
-          syncSessionToCalendar(sid).catch(() => {});
+          syncSessionToCalendar(sid).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: sid }));
       }
 
       if (sidsToConfirm.length > 0) {
@@ -766,7 +772,7 @@ export async function POST(request: NextRequest) {
         if (rejected.length > 0 && accepted.length > 0) {
           for (const s of accepted) {
             await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, s.id)).run();
-          syncSessionToCalendar(s.id).catch(() => {});
+          syncSessionToCalendar(s.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: s.id }));
           }
           await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
 
@@ -863,7 +869,7 @@ export async function POST(request: NextRequest) {
       for (const sid of sidsToCancel) {
         const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
         await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sid)).run();
-        syncSessionToCalendar(sid).catch(() => {});
+        syncSessionToCalendar(sid).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: sid }));
         if (s) cancelledSlots.push({ date: s.scheduledDate, slot: s.slot, clientId: client.id });
       }
       const reply = await composeReply({
@@ -885,7 +891,7 @@ export async function POST(request: NextRequest) {
       for (const sid of sidsToCancel) {
         const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
         await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sid)).run();
-        syncSessionToCalendar(sid).catch(() => {});
+        syncSessionToCalendar(sid).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: sid }));
         if (s) cancelledSlots.push({ date: s.scheduledDate, slot: s.slot, clientId: client.id });
       }
       const session = cancelledSlots[0];
