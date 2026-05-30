@@ -7,6 +7,7 @@ import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, diversifyA
 import { sendSMS } from "@/lib/twilio";
 import { getMonday } from "@/lib/scheduler";
 import { autoFillCancelledSlot } from "@/lib/auto-fill";
+import { syslog } from "@/lib/logger";
 import twilio from "twilio";
 
 function escapeXml(text: string): string {
@@ -255,13 +256,13 @@ export async function POST(request: NextRequest) {
         multiResult = await classifyMultiSessionReply(history, body, offeredSessions);
       } catch (e) {
         const errorType = e instanceof ClassifyBillingError ? "ai_billing_exhausted" : "ai_classify_error";
-        console.error("Multi-session classification failed:", e);
         await db.insert(outreach).values({
           clientId: client.id, sessionId: lastSent?.sessionId ?? null, weekOf,
           direction: "received" as const, messageText: body,
           status: "needs_matt" as const, repliedAt: new Date().toISOString(),
           sendError: errorType,
         }).run();
+        syslog.error("classifier", `Couldn't understand ${firstName}'s reply — flagged for you`, `Multi-session classify failed: ${errorType}. Reply: "${body}"`, { clientId: client.id });
         await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone,
           "Let me check with Matt and get back to you.");
         return twiml();
@@ -352,7 +353,6 @@ export async function POST(request: NextRequest) {
       result = await classifyReply(history, body);
     } catch (e) {
       const errorType = e instanceof ClassifyBillingError ? "ai_billing_exhausted" : "ai_classify_error";
-      console.error("Classification failed:", e);
       await db.insert(outreach).values({
         clientId: client.id,
         sessionId: lastSent?.sessionId ?? null,
@@ -363,6 +363,7 @@ export async function POST(request: NextRequest) {
         repliedAt: new Date().toISOString(),
         sendError: errorType,
       }).run();
+      syslog.error("classifier", `Couldn't understand ${firstName}'s reply — flagged for you`, `Classify failed: ${errorType}. Reply: "${body}"`, { clientId: client.id });
       await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone,
         "Let me check with Matt and get back to you.");
       return twiml();
@@ -672,13 +673,14 @@ async function logAndSend(clientId: number, sessionId: number | null, weekOf: st
   const smsText = message.replace(/\n\[offered:[^\]]+\]/, "");
   try {
     await sendSMS(phone, smsText);
+    syslog.info("twilio", `Sent message to client`, `SMS sent to ${phone}, outreach id=${row.id}`, { clientId, sessionId });
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : String(e);
-    console.error(`Failed to send SMS to ${phone}:`, e);
     await db.update(outreach).set({
       status: "pending",
       sendError: errorMsg,
     }).where(eq(outreach.id, row.id)).run();
+    syslog.error("twilio", `Failed to send message — will retry`, `SMS to ${phone} failed: ${errorMsg}`, { clientId, sessionId, metadata: { error: errorMsg } });
   }
 }
 
