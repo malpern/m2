@@ -646,8 +646,23 @@ export async function POST(request: NextRequest) {
     }
 
     if (interpretation === "ambiguous") {
-      const reply = "Let me check with Matt and get back to you.";
-      await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+      const recentAmbiguous = recentOutreach.filter(
+        (o) => o.direction === "received" && o.interpretation === "ambiguous"
+      ).length;
+
+      if (recentAmbiguous >= 3) {
+        const reply = "Let me check with Matt and get back to you.";
+        await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+        syslog.warn("classifier", `${firstName} has been unclear 3+ times — escalated to Matt`, `Escalated after ${recentAmbiguous} ambiguous replies`, { clientId: client.id });
+      } else {
+        const reply = await composeReply({
+          firstName,
+          history: historyWithReply,
+          scenario: { type: "clarification" },
+        });
+        await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+        syslog.info("classifier", `${firstName}'s reply was unclear — asked for clarification`, `Ambiguous reply (attempt ${recentAmbiguous + 1}/3): "${body}"`, { clientId: client.id });
+      }
       return twiml();
     }
   }

@@ -201,7 +201,8 @@ export type ComposeContext = {
     | { type: "late_reply" }
     | { type: "re_engage"; alternatives: string }
     | { type: "re_engage_full" }
-    | { type: "multi_session_update"; summary: string };
+    | { type: "multi_session_update"; summary: string }
+    | { type: "clarification" };
 };
 
 export async function composeReply(ctx: ComposeContext): Promise<string> {
@@ -243,7 +244,10 @@ export async function composeReply(ctx: ComposeContext): Promise<string> {
       instructions = `The client was previously moved on but is now responding. Unfortunately the week is fully booked now. Let them know and tell them they'll be first up next week.`;
       break;
     case "multi_session_update":
-      instructions = `Summarize the scheduling update for the client. ${ctx.scenario.summary} Keep it natural and brief.`;
+      instructions = `Summarize the scheduling update for the client. You MUST mention every change: ${ctx.scenario.summary} Include all confirmations, cancellations, and reschedule options. Don't skip any. Keep it natural but complete.`;
+      break;
+    case "clarification":
+      instructions = `The client's reply wasn't clear. Look at the conversation context — if you just offered specific options, ask which one they meant. Keep it short and helpful, don't be robotic. Never say "let me check with Matt" — just ask the client to clarify.`;
       break;
   }
 
@@ -295,5 +299,7 @@ function fallbackMessage(ctx: ComposeContext): string {
       return `Hey ${ctx.firstName}! Unfortunately this week is fully booked now, but I'll make sure you're first up next week.`;
     case "multi_session_update":
       return ctx.scenario.summary;
+    case "clarification":
+      return "Sorry, I didn't quite catch that — could you clarify?";
   }
 }
