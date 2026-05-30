@@ -42,6 +42,33 @@ function statusBadge(status: string) {
   );
 }
 
+function formatElapsed(sentAt: string): { text: string; color: string } {
+  const elapsed = Date.now() - new Date(sentAt).getTime();
+  const totalMinutes = Math.floor(elapsed / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const text = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+
+  if (totalMinutes >= 150) return { text, color: "text-red-400" };
+  if (totalMinutes >= 60) return { text, color: "text-amber-400" };
+  return { text, color: "text-muted-foreground" };
+}
+
+function FollowUpCancelButton({ sessionId }: { sessionId: number }) {
+  const [isPending, startTransition] = useTransition();
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="h-7 text-xs text-red-400 hover:text-red-300"
+      disabled={isPending}
+      onClick={() => startTransition(() => markDeclined(sessionId))}
+    >
+      Cancel
+    </Button>
+  );
+}
+
 function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
   const [isPending, startTransition] = useTransition();
 
@@ -49,20 +76,40 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
     weekday: "short",
   });
 
+  const elapsed = item.status === "sent" && item.sentAt ? formatElapsed(item.sentAt) : null;
+
   return (
     <div className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 border-b border-border last:border-0 transition-all duration-300 ${isPending ? "opacity-50 scale-[0.99]" : "opacity-100 scale-100"}`}>
       <div className="flex items-center gap-3 sm:contents">
         <div className="w-16 shrink-0 text-xs text-muted-foreground">
-          <div className="font-semibold text-foreground">{dayLabel}</div>
+          <div className="flex items-center gap-1">
+            <span className="font-semibold text-foreground">{dayLabel}</span>
+            {item.wave > 0 && (
+              <span className="text-[10px] text-muted-foreground/60">W{item.wave}</span>
+            )}
+          </div>
           <div>{item.slot}</div>
         </div>
 
         <div className="flex-1 min-w-0">
-          <Link href={`/clients/${item.clientId}`} className="font-semibold text-sm hover:underline">{item.clientName}</Link>
+          <div className="flex items-center gap-1.5">
+            <Link href={`/clients/${item.clientId}`} className="font-semibold text-sm hover:underline">{item.clientName}</Link>
+            {item.outreachGroupId && (
+              <svg className="w-3 h-3 text-muted-foreground/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            )}
+          </div>
           {item.replyText && (
             <div className="text-xs text-muted-foreground mt-0.5 truncate">
               &ldquo;{item.replyText}&rdquo;
+              {item.messageCount > 1 && (
+                <span className="ml-1.5 text-muted-foreground/50">{item.messageCount} msgs</span>
+              )}
             </div>
+          )}
+          {!item.replyText && item.messageCount > 1 && (
+            <div className="text-xs text-muted-foreground/50 mt-0.5">{item.messageCount} msgs</div>
           )}
           {item.sendError && (
             <div className="text-xs text-red-400 mt-0.5 truncate" title={item.sendError}>
@@ -74,6 +121,16 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
 
       <div className="flex items-center gap-2 ml-16 sm:ml-0">
         {statusBadge(item.status)}
+
+        {item.isAutoFill && (
+          <Badge className="border-0 bg-cyan-500/15 text-cyan-400 text-[10px] px-1.5 py-0">
+            Auto-fill
+          </Badge>
+        )}
+
+        {elapsed && (
+          <span className={`text-xs ${elapsed.color}`}>{elapsed.text}</span>
+        )}
 
         {(item.status === "reschedule" || item.status === "ambiguous") && (
           <div className="flex gap-1">
@@ -137,6 +194,7 @@ export function OutreachDashboard({
   summary,
   nextBatch,
   needsAttention,
+  followUpItems = [],
   weekOf,
   hasAiBillingError,
 }: {
@@ -144,6 +202,7 @@ export function OutreachDashboard({
   summary: ReturnType<typeof import("@/lib/outreach-engine").getOutreachSummary>;
   nextBatch: OutreachItem[];
   needsAttention: OutreachItem[];
+  followUpItems?: OutreachItem[];
   weekOf: string;
   hasAiBillingError?: boolean;
 }) {
@@ -166,6 +225,14 @@ export function OutreachDashboard({
         (i) => !query || i.clientName.toLowerCase().includes(query)
       ),
     [needsAttention, query]
+  );
+
+  const filteredFollowUps = useMemo(
+    () =>
+      followUpItems.filter(
+        (i) => !query || i.clientName.toLowerCase().includes(query)
+      ),
+    [followUpItems, query]
   );
 
   const weekLabel = new Date(weekOf + "T12:00:00").toLocaleDateString("en-US", {
@@ -352,6 +419,41 @@ export function OutreachDashboard({
           <CardContent>
             {filteredItems.filter((i) => i.status === "send_failed").map((item) => (
               <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} />
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Follow-ups pending */}
+      {filteredFollowUps.length > 0 && (
+        <Card className="mb-6 border-amber-500/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-amber-400">Follow-ups Pending</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredFollowUps.map((item) => (
+              <div key={item.sessionId} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 border-b border-border last:border-0">
+                <div className="flex items-center gap-3 sm:contents">
+                  <div className="w-16 shrink-0 text-xs text-muted-foreground">
+                    <div className="font-semibold text-foreground">
+                      {new Date(item.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" })}
+                    </div>
+                    <div>{item.slot}</div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Link href={`/clients/${item.clientId}`} className="font-semibold text-sm hover:underline">{item.clientName}</Link>
+                    {item.sentAt && (
+                      <div className="text-xs text-amber-400/80 mt-0.5">
+                        Sent {formatElapsed(item.sentAt).text} ago
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 ml-16 sm:ml-0">
+                  <Badge className="border-0 bg-amber-500/15 text-amber-400">Awaiting reply</Badge>
+                  <FollowUpCancelButton sessionId={item.sessionId} />
+                </div>
+              </div>
             ))}
           </CardContent>
         </Card>

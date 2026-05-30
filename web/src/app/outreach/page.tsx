@@ -6,6 +6,7 @@ import {
   buildOutreachQueue,
   getNextBatchToSend,
   getNeedsMattAttention,
+  getNeedsFollowUp,
   getOutreachSummary,
 } from "@/lib/outreach-engine";
 import { OutreachWithMessages } from "./outreach-with-messages";
@@ -52,6 +53,7 @@ export default async function OutreachPage() {
   const summary = getOutreachSummary(items);
   const nextBatch = getNextBatchToSend(items);
   const needsAttention = getNeedsMattAttention(items);
+  const followUpItems = getNeedsFollowUp(items);
 
   const billingErrors = await db
     .select({ id: outreach.id })
@@ -85,6 +87,7 @@ export default async function OutreachPage() {
           summary,
           nextBatch,
           needsAttention,
+          followUpItems,
           weekOf: weekStart,
           hasAiBillingError,
         }}

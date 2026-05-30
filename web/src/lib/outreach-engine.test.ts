@@ -82,6 +82,7 @@ describe("getNextWaveToSend", () => {
       status: "pending" as const, isStanding: false,
       sentAt: null, repliedAt: null, replyText: null,
       interpretation: null, sendError: null, outreachId: null, wave: i < 8 ? 1 : 2,
+      isAutoFill: false, messageCount: 0, outreachGroupId: null,
     }));
 
     const result = getNextWaveToSend(items);
@@ -98,6 +99,7 @@ describe("getNextWaveToSend", () => {
         status: "sent" as const, isStanding: false,
         sentAt: fiftyMinAgo, repliedAt: null, replyText: null,
         interpretation: null, sendError: null, outreachId: null, wave: 1,
+        isAutoFill: false, messageCount: 0, outreachGroupId: null,
       })),
       ...Array.from({ length: 5 }, (_, i) => ({
         sessionId: i + 8, clientId: i + 8, clientName: "", clientPhone: "",
@@ -105,6 +107,7 @@ describe("getNextWaveToSend", () => {
         status: "pending" as const, isStanding: false,
         sentAt: null, repliedAt: null, replyText: null,
         interpretation: null, sendError: null, outreachId: null, wave: 2,
+        isAutoFill: false, messageCount: 0, outreachGroupId: null,
       })),
     ];
 
@@ -116,8 +119,8 @@ describe("getNextWaveToSend", () => {
   it("does not release wave 2 before delay", () => {
     const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const items = [
-      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: tenMinAgo, repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1 },
-      { sessionId: 1, clientId: 1, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "pending" as const, isStanding: false, sentAt: null, repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 2 },
+      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: tenMinAgo, repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1, isAutoFill: false, messageCount: 0, outreachGroupId: null },
+      { sessionId: 1, clientId: 1, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "pending" as const, isStanding: false, sentAt: null, repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 2, isAutoFill: false, messageCount: 0, outreachGroupId: null },
     ];
 
     const result = getNextWaveToSend(items);
@@ -128,8 +131,8 @@ describe("getNextWaveToSend", () => {
   it("returns wave 3 after wave3DelayMinutes", () => {
     const threeHoursAgo = new Date(Date.now() - 180 * 60 * 1000).toISOString();
     const items = [
-      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: threeHoursAgo, repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1 },
-      { sessionId: 1, clientId: 1, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "pending" as const, isStanding: false, sentAt: null, repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 3 },
+      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: threeHoursAgo, repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1, isAutoFill: false, messageCount: 0, outreachGroupId: null },
+      { sessionId: 1, clientId: 1, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "pending" as const, isStanding: false, sentAt: null, repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 3, isAutoFill: false, messageCount: 0, outreachGroupId: null },
     ];
 
     const result = getNextWaveToSend(items);
@@ -139,7 +142,7 @@ describe("getNextWaveToSend", () => {
 
   it("returns empty when all sent", () => {
     const items = [
-      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: new Date().toISOString(), repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1 },
+      { sessionId: 0, clientId: 0, clientName: "", clientPhone: "", day: "", slot: "", date: "", time: "", status: "sent" as const, isStanding: false, sentAt: new Date().toISOString(), repliedAt: null, replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1, isAutoFill: false, messageCount: 0, outreachGroupId: null },
     ];
     const result = getNextWaveToSend(items);
     expect(result.items).toHaveLength(0);
@@ -155,6 +158,7 @@ describe("follow-up and move-on", () => {
       status: "sent" as const, isStanding: false,
       sentAt: hourAgo, repliedAt: null,
       replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1,
+      isAutoFill: false, messageCount: 0, outreachGroupId: null,
     }];
     expect(getNeedsFollowUp(items)).toHaveLength(1);
   });
@@ -167,6 +171,7 @@ describe("follow-up and move-on", () => {
       status: "sent" as const, isStanding: false,
       sentAt: threeHoursAgo, repliedAt: null,
       replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1,
+      isAutoFill: false, messageCount: 0, outreachGroupId: null,
     }];
     expect(getNeedsMoveOn(items)).toHaveLength(1);
     expect(getNeedsFollowUp(items)).toHaveLength(0);
@@ -180,6 +185,7 @@ describe("follow-up and move-on", () => {
       status: "sent" as const, isStanding: false,
       sentAt: thirtyMinAgo, repliedAt: null,
       replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1,
+      isAutoFill: false, messageCount: 0, outreachGroupId: null,
     }];
     expect(getNeedsFollowUp(items)).toHaveLength(0);
     expect(getNeedsMoveOn(items)).toHaveLength(0);
@@ -193,6 +199,7 @@ describe("follow-up and move-on", () => {
       status: "confirmed" as const, isStanding: false,
       sentAt: twoHoursAgo, repliedAt: null,
       replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1,
+      isAutoFill: false, messageCount: 0, outreachGroupId: null,
     }];
     expect(getNeedsFollowUp(items)).toHaveLength(0);
   });
@@ -209,7 +216,8 @@ describe("getNeedsMattAttention", () => {
       sessionId: i, clientId: i, clientName: "", clientPhone: "",
       day: "", slot: "", date: "", time: "",
       isStanding: false, sentAt: null, repliedAt: null,
-      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1, ...o,
+      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1,
+      isAutoFill: false, messageCount: 0, outreachGroupId: null, ...o,
     }));
     expect(getNeedsMattAttention(items)).toHaveLength(2);
   });
@@ -224,7 +232,8 @@ describe("getNeedsMattAttention", () => {
       sessionId: i, clientId: i, clientName: "", clientPhone: "",
       day: "", slot: "", date: "", time: "",
       isStanding: false, sentAt: null, repliedAt: null,
-      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1, ...o,
+      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1,
+      isAutoFill: false, messageCount: 0, outreachGroupId: null, ...o,
     }));
     expect(getNeedsMattAttention(items)).toHaveLength(0);
   });
@@ -268,7 +277,8 @@ describe("getOutreachSummary", () => {
       sessionId: i, clientId: i, clientName: "", clientPhone: "",
       day: "", slot: "", date: "", time: "",
       isStanding: false, sentAt: null, repliedAt: null,
-      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1, ...o,
+      replyText: null, interpretation: null, sendError: null, outreachId: null, wave: 1,
+      isAutoFill: false, messageCount: 0, outreachGroupId: null, ...o,
     }));
 
     const summary = getOutreachSummary(items);
@@ -276,5 +286,76 @@ describe("getOutreachSummary", () => {
     expect(summary.standing).toBe(1);
     expect(summary.confirmed).toBe(2);
     expect(summary.needsAttention).toBe(1);
+  });
+});
+
+describe("new OutreachItem fields", () => {
+  it("sets isAutoFill true when sent message contains 'just opened up'", () => {
+    const sessions = [makeSession({ id: 1 })];
+    const outreachRecords = [{
+      id: 10, clientId: 1, sessionId: 1, weekOf: "2026-05-25",
+      direction: "sent" as const, messageText: "Hey, a slot just opened up for Tuesday at 3pm!",
+      interpretation: null, status: "awaiting_reply" as const,
+      sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null, outreachGroupId: null,
+    }];
+    const queue = buildOutreachQueue(sessions, outreachRecords);
+    expect(queue[0].isAutoFill).toBe(true);
+  });
+
+  it("sets isAutoFill false for normal messages", () => {
+    const sessions = [makeSession({ id: 1 })];
+    const outreachRecords = [{
+      id: 10, clientId: 1, sessionId: 1, weekOf: "2026-05-25",
+      direction: "sent" as const, messageText: "Hey, are you free Monday at 3pm?",
+      interpretation: null, status: "awaiting_reply" as const,
+      sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null, outreachGroupId: null,
+    }];
+    const queue = buildOutreachQueue(sessions, outreachRecords);
+    expect(queue[0].isAutoFill).toBe(false);
+  });
+
+  it("counts messageCount correctly for multiple outreach records on same session", () => {
+    const sessions = [makeSession({ id: 1 })];
+    const outreachRecords = [
+      {
+        id: 10, clientId: 1, sessionId: 1, weekOf: "2026-05-25",
+        direction: "sent" as const, messageText: "Hey, Monday at 3pm?",
+        interpretation: null, status: "awaiting_reply" as const,
+        sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null, outreachGroupId: null,
+      },
+      {
+        id: 11, clientId: 1, sessionId: 1, weekOf: "2026-05-25",
+        direction: "received" as const, messageText: "Yes!",
+        interpretation: "confirmed" as const, status: "confirmed" as const,
+        sentAt: null, repliedAt: "2026-05-24T11:00:00Z", sendError: null, outreachGroupId: null,
+      },
+    ];
+    const queue = buildOutreachQueue(sessions, outreachRecords);
+    expect(queue[0].messageCount).toBe(2);
+  });
+
+  it("sets messageCount to 0 when no outreach records exist", () => {
+    const sessions = [makeSession({ id: 1 })];
+    const queue = buildOutreachQueue(sessions, []);
+    expect(queue[0].messageCount).toBe(0);
+  });
+
+  it("passes through outreachGroupId from sent outreach record", () => {
+    const sessions = [makeSession({ id: 1 })];
+    const outreachRecords = [{
+      id: 10, clientId: 1, sessionId: 1, weekOf: "2026-05-25",
+      direction: "sent" as const, messageText: "Hey, Monday at 3pm?",
+      interpretation: null, status: "awaiting_reply" as const,
+      sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null,
+      outreachGroupId: "og_1_12345",
+    }];
+    const queue = buildOutreachQueue(sessions, outreachRecords);
+    expect(queue[0].outreachGroupId).toBe("og_1_12345");
+  });
+
+  it("sets outreachGroupId to null when no outreach exists", () => {
+    const sessions = [makeSession({ id: 1 })];
+    const queue = buildOutreachQueue(sessions, []);
+    expect(queue[0].outreachGroupId).toBeNull();
   });
 });
