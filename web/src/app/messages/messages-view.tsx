@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 
@@ -22,8 +22,85 @@ interface ClientGroup {
   messages: Message[];
 }
 
+function stripOfferedTags(text: string): string {
+  return text.replace(/\n?\[offered:[^\]]+\]/g, "").trim();
+}
+
+function formatTimestamp(dateStr: string, isFirst: boolean): string {
+  const date = new Date(dateStr);
+  if (isFirst) {
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function MessageBubble({ msg, isFirst }: { msg: Message; isFirst: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.opacity = "0";
+    el.style.transform = msg.direction === "sent" ? "translateX(12px)" : "translateX(-12px)";
+    requestAnimationFrame(() => {
+      el.style.transition = "opacity 0.3s ease-out, transform 0.3s ease-out";
+      el.style.opacity = "1";
+      el.style.transform = "translateX(0)";
+    });
+  }, [msg.direction]);
+
+  const timestamp = msg.sentAt ?? msg.repliedAt ?? "";
+  const isSent = msg.direction === "sent";
+
+  return (
+    <div
+      ref={ref}
+      className={`flex flex-col ${isSent ? "items-end" : "items-start"}`}
+    >
+      <div
+        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+          isSent
+            ? "bg-blue-600 text-white rounded-br-md"
+            : "bg-muted text-foreground rounded-bl-md"
+        }`}
+      >
+        {stripOfferedTags(msg.messageText)}
+      </div>
+      <div className="flex items-center gap-2 mt-1 px-1">
+        {timestamp && (
+          <span className="text-[10px] text-muted-foreground">
+            {formatTimestamp(timestamp, isFirst)}
+          </span>
+        )}
+        {msg.direction === "received" && msg.interpretation && (
+          <span className={`text-[10px] font-medium ${
+            msg.interpretation === "confirmed" || msg.interpretation === "selecting_offered_slot"
+              ? "text-emerald-400"
+            : msg.interpretation === "declined_skip_week"
+              ? "text-red-400"
+            : msg.interpretation === "declined_with_alternative" || msg.interpretation === "reschedule_request"
+              ? "text-purple-400"
+            : "text-amber-400"
+          }`}>
+            {msg.interpretation.replace(/_/g, " ")}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function MessagesView({ messages }: { messages: Message[] }) {
   const [search, setSearch] = useState("");
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const query = search.toLowerCase().trim();
 
@@ -46,11 +123,9 @@ export function MessagesView({ messages }: { messages: Message[] }) {
       group.messages.push(msg);
     }
 
-    // Sort groups by client name
     const groups = Array.from(groupMap.values());
     groups.sort((a, b) => a.clientName.localeCompare(b.clientName));
 
-    // Sort messages within each group chronologically (oldest first)
     for (const g of groups) {
       g.messages.sort((a, b) => {
         const ta = a.sentAt ?? a.repliedAt ?? "";
@@ -108,44 +183,13 @@ export function MessagesView({ messages }: { messages: Message[] }) {
                 {group.clientName}
               </Link>
               <div className="space-y-3">
-                {group.messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex flex-col ${msg.direction === "sent" ? "items-end" : "items-start"}`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
-                        msg.direction === "sent"
-                          ? "bg-blue-600 text-white rounded-br-md"
-                          : "bg-muted text-foreground rounded-bl-md"
-                      }`}
-                    >
-                      {msg.messageText}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1 px-1">
-                      <span className="text-[10px] text-muted-foreground">
-                        {msg.sentAt
-                          ? new Date(msg.sentAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                          : msg.repliedAt
-                            ? new Date(msg.repliedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                            : ""}
-                      </span>
-                      {msg.direction === "received" && msg.interpretation && (
-                        <span className={`text-[10px] font-medium ${
-                          msg.interpretation === "confirmed" ? "text-emerald-400"
-                          : msg.interpretation === "declined" ? "text-red-400"
-                          : msg.interpretation === "reschedule_request" ? "text-purple-400"
-                          : "text-amber-400"
-                        }`}>
-                          {msg.interpretation === "reschedule_request" ? "reschedule" : msg.interpretation}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                {group.messages.map((msg, idx) => (
+                  <MessageBubble key={msg.id} msg={msg} isFirst={idx === 0} />
                 ))}
               </div>
             </div>
           ))}
+          <div ref={bottomRef} />
         </div>
       ) : (
         <div>
