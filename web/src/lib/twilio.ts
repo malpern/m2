@@ -26,10 +26,15 @@ export async function sendSMS(to: string, body: string): Promise<string> {
 
   const toNumber = USE_WHATSAPP ? `whatsapp:${to}` : to;
 
+  const statusCallback = process.env.NEXT_PUBLIC_APP_URL
+    ? `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio`
+    : undefined;
+
   const message = await getClient().messages.create({
     body,
     from,
     to: toNumber,
+    ...(statusCallback && { statusCallback }),
   });
   return message.sid;
 }
