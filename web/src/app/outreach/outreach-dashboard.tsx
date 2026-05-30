@@ -50,7 +50,7 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
   });
 
   return (
-    <div className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 border-b border-border last:border-0 ${isPending ? "opacity-50" : ""}`}>
+    <div className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 border-b border-border last:border-0 transition-all duration-300 ${isPending ? "opacity-50 scale-[0.99]" : "opacity-100 scale-100"}`}>
       <div className="flex items-center gap-3 sm:contents">
         <div className="w-16 shrink-0 text-xs text-muted-foreground">
           <div className="font-semibold text-foreground">{dayLabel}</div>
