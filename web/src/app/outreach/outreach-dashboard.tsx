@@ -85,7 +85,7 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
           <div className="flex items-center gap-1">
             <span className="font-semibold text-foreground">{dayLabel}</span>
             {item.wave > 0 && (
-              <span className="text-[10px] text-muted-foreground/60">W{item.wave}</span>
+              <span className="text-[10px] text-muted-foreground/60 cursor-default" title={`Wave ${item.wave} — ${item.wave === 1 ? "sent first" : item.wave === 2 ? "sent after ~45min" : "sent after ~2hr"}`}>W{item.wave}</span>
             )}
           </div>
           <div>{item.slot}</div>
