@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { outreach, clients, sessions } from "@/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { NextRequest } from "next/server";
-import { classifyReply, ClassifyBillingError, type ReplyInterpretation } from "@/lib/classify-reply";
+import { classifyReply, composeReply, ClassifyBillingError, type ConversationMessage } from "@/lib/classify-reply";
 import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, diversifyAcrossDays, isSlotStillOpen, tagOfferedSlots, whySlotUnavailable } from "@/lib/suggest-alternatives";
 import { sendSMS } from "@/lib/twilio";
 import { getMonday } from "@/lib/scheduler";
@@ -31,6 +31,31 @@ function verifyTwilioSignature(request: NextRequest, params: Record<string, stri
   return twilio.validateRequest(authToken, signature, url, params);
 }
 
+function stripOfferedTags(text: string): string {
+  return text.replace(/\n?\[offered:[^\]]+\]/g, "").trim();
+}
+
+function buildConversationHistory(records: { direction: string; messageText: string; sentAt: string | null; repliedAt: string | null }[]): ConversationMessage[] {
+  return records
+    .sort((a, b) => {
+      const ta = a.sentAt ?? a.repliedAt ?? "";
+      const tb = b.sentAt ?? b.repliedAt ?? "";
+      return ta.localeCompare(tb);
+    })
+    .map((r) => ({
+      direction: r.direction as "sent" | "received",
+      text: stripOfferedTags(r.messageText),
+    }));
+}
+
+function formatSlotsText(slots: { day: string; slot: string }[]): string {
+  const DAY_LABELS: Record<string, string> = {
+    monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday",
+    thursday: "Thursday", friday: "Friday", sunday: "Sunday",
+  };
+  return slots.map((s) => `${DAY_LABELS[s.day] ?? s.day} at ${s.slot}`).join(", ");
+}
+
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const params: Record<string, string> = {};
@@ -47,22 +72,18 @@ export async function POST(request: NextRequest) {
 
   const lower = body.toLowerCase().trim();
 
-  // Handle STOP — Twilio handles opt-out automatically, but log it
   if (lower === "stop" || lower === "unsubscribe" || lower === "cancel" || lower === "quit") {
     return twiml();
   }
 
-  // Handle HELP
   if (lower === "help" || lower === "info") {
     return twiml("M2 Performance & Therapy — session scheduling texts. Reply STOP to opt out. Contact: (408) 599-1777");
   }
 
-  // Handle START / opt-in
   if (lower === "start" || lower === "subscribe" || (lower === "yes" && !await findClient(from))) {
     return twiml("M2 Performance: You're signed up for session scheduling texts. For help, reply HELP. To opt out, reply STOP. Msg & data rates may apply.");
   }
 
-  // Find the client
   const client = await findClient(from);
 
   if (client) {
@@ -76,10 +97,11 @@ export async function POST(request: NextRequest) {
       .filter((o) => o.direction === "sent")
       .sort((a, b) => (b.sentAt ?? "").localeCompare(a.sentAt ?? ""))[0];
 
-    const outreachMessage = lastSent?.messageText ?? "";
+    const history = buildConversationHistory(recentOutreach);
+
     let result;
     try {
-      result = await classifyReply(outreachMessage, body);
+      result = await classifyReply(history, body);
     } catch (e) {
       if (e instanceof ClassifyBillingError) {
         await db.insert(outreach).values({
@@ -122,6 +144,7 @@ export async function POST(request: NextRequest) {
 
     const firstName = client.name.split(" ")[0];
     const weekOf = getMonday().toISOString().split("T")[0];
+    const historyWithReply = [...history, { direction: "received" as const, text: body }];
 
     if (interpretation === "confirmed" && lastSent?.sessionId) {
       await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, lastSent.sessionId)).run();
@@ -155,16 +178,26 @@ export async function POST(request: NextRequest) {
           await db.update(outreach).set({ status: "confirmed" }).where(eq(outreach.id, replyRecord.id)).run();
 
           const dayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
-          const reply = `${dayLabel} at ${matched.slot} — you're confirmed! See you then.`;
+          const reply = await composeReply({
+            firstName,
+            history: historyWithReply,
+            scenario: { type: "confirmed", day: dayLabel, slot: matched.slot },
+          });
           await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
           return twiml();
         } else if (matched) {
           const stillOpen = await getOpenSlots(weekOf, client.id);
           const reRanked = await rankSlotsForClient(client.id, stillOpen);
-          const msg = `Sorry, that slot just got booked! ${formatAlternativesMessage(firstName, reRanked)}`;
-          const reply = tagOfferedSlots(msg, diversifyAcrossDays(reRanked, 3));
+          const diverse = diversifyAcrossDays(reRanked, 3);
+          const altText = formatSlotsText(diverse);
+          const reply = await composeReply({
+            firstName,
+            history: historyWithReply,
+            scenario: { type: "slot_taken", alternatives: altText },
+          });
+          const tagged = tagOfferedSlots(reply, diverse);
           await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
-          await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+          await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, tagged);
           return twiml();
         }
       }
@@ -192,9 +225,13 @@ export async function POST(request: NextRequest) {
           await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
 
           const dayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
-          const msg = `I have ${dayLabel} at ${matched.slot} open — does that work?`;
-          const reply = tagOfferedSlots(msg, [matched]);
-          await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+          const reply = await composeReply({
+            firstName,
+            history: historyWithReply,
+            scenario: { type: "counter_offer", day: dayLabel, slot: matched.slot },
+          });
+          const tagged = tagOfferedSlots(reply, [matched]);
+          await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, tagged);
           return twiml();
         }
 
@@ -203,29 +240,43 @@ export async function POST(request: NextRequest) {
         const requestLabel = [requestedDay, requestedTime].filter(Boolean).join(" at ");
 
         const reason = await whySlotUnavailable(weekOf, result.extractedDay ?? null, result.extractedTime ?? null);
-        const reasonText = reason === "not_a_slot" || reason === "not_available"
-          ? `I don't have ${requestLabel} this week`
-          : `${requestLabel} is already booked this week`;
-
         const ranked = await rankSlotsForClient(client.id, open);
-        const msg = `Sorry, ${reasonText}.\n\n${formatAlternativesMessage(firstName, ranked)}`;
-        const reply = tagOfferedSlots(msg, diversifyAcrossDays(ranked, 3));
+        const diverse = diversifyAcrossDays(ranked, 3);
+        const altText = formatSlotsText(diverse);
+
+        const scenarioType = (reason === "not_a_slot" || reason === "not_available") ? "not_available" as const : "already_booked" as const;
+        const reply = await composeReply({
+          firstName,
+          history: historyWithReply,
+          scenario: { type: scenarioType, requestLabel, alternatives: altText },
+        });
+        const tagged = tagOfferedSlots(reply, diverse);
         await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
-        await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+        await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, tagged);
         return twiml();
       }
 
       const ranked = await rankSlotsForClient(client.id, open);
-      const msg = formatAlternativesMessage(firstName, ranked);
-      const reply = tagOfferedSlots(msg, diversifyAcrossDays(ranked, 3));
+      const diverse = diversifyAcrossDays(ranked, 3);
+      const altText = formatSlotsText(diverse);
+      const reply = await composeReply({
+        firstName,
+        history: historyWithReply,
+        scenario: { type: "alternatives", alternatives: altText },
+      });
+      const tagged = tagOfferedSlots(reply, diverse);
       await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
-      await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+      await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, tagged);
       return twiml();
     }
 
     if (interpretation === "declined_skip_week" && lastSent?.sessionId) {
       await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, lastSent.sessionId)).run();
-      const reply = `No problem, ${firstName}. We'll get you in next week!`;
+      const reply = await composeReply({
+        firstName,
+        history: historyWithReply,
+        scenario: { type: "skip_week" },
+      });
       await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
       return twiml();
     }
@@ -259,13 +310,11 @@ async function logAndSend(clientId: number, sessionId: number | null, weekOf: st
 }
 
 async function findClient(phone: string) {
-  // Strip whatsapp: prefix and whitespace
   const normalized = phone.replace(/^whatsapp:/i, "").replace(/\s/g, "");
   const digits = normalized.replace(/\D/g, "");
   const allClients = await db.select().from(clients).all();
   return allClients.find((c) => {
     const clientDigits = c.phone.replace(/\D/g, "");
-    // Match on last 10 digits to handle +1 prefix variations
     return clientDigits.slice(-10) === digits.slice(-10);
   }) ?? null;
 }
