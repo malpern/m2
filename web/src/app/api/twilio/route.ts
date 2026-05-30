@@ -263,8 +263,54 @@ export async function POST(request: NextRequest) {
         }
 
         if (singleResult.interpretation === "confirmed" || singleResult.interpretation === "selecting_offered_slot") {
-          for (const ps of pendingSessions) {
-            await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, ps.id)).run();
+          const lastSentText = lastSent?.messageText ?? "";
+          const offeredMatch = lastSentText.match(/\[offered:([^\]]+)\]/);
+          const offeredSlots = offeredMatch
+            ? offeredMatch[1].split(",").map((s) => {
+                const [date, slot] = s.split("|");
+                const day = new Date(date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }).toLowerCase();
+                return { date, slot, day };
+              })
+            : [];
+
+          const extractedDay = singleResult.extractedDay?.toLowerCase();
+          const extractedTime = singleResult.extractedTime?.toLowerCase();
+
+          let matchedSlots = offeredSlots;
+          if (extractedDay) matchedSlots = matchedSlots.filter((s) => s.day.startsWith(extractedDay.slice(0, 3)));
+          if (extractedTime) matchedSlots = matchedSlots.filter((s) => s.slot === extractedTime);
+          if (!extractedDay && extractedTime) matchedSlots = offeredSlots.filter((s) => s.slot === extractedTime);
+          if (!extractedDay && !extractedTime) {
+            const lower = body.toLowerCase().trim();
+            matchedSlots = offeredSlots.filter((s) => lower.includes(s.slot) || lower.includes(s.day.slice(0, 3)));
+          }
+
+          const historyWithReply = [...history, { direction: "received" as const, text: body }];
+
+          if (matchedSlots.length === 0 && offeredSlots.length === 0) {
+            for (const ps of pendingSessions) {
+              await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, ps.id)).run();
+            }
+          } else if (matchedSlots.length > 1) {
+            const options = matchedSlots.map((s) => `${s.day.charAt(0).toUpperCase() + s.day.slice(1)} at ${s.slot}`).join(" or ");
+            const reply = await composeReply({ firstName, history: historyWithReply, scenario: { type: "clarification" } });
+            await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+            return twiml();
+          } else if (matchedSlots.length === 1) {
+            const picked = matchedSlots[0];
+            const SLOT_TIMES: Record<string, string> = { "3pm": "15:00", "4pm": "16:00", "5pm": "17:00", "6pm": "18:00", "7pm": "19:00" };
+            for (const ps of pendingSessions) {
+              await db.update(sessions).set({
+                scheduledDate: picked.date,
+                scheduledTime: SLOT_TIMES[picked.slot] ?? "15:00",
+                slot: picked.slot as "3pm" | "4pm" | "5pm" | "6pm" | "7pm",
+                status: "confirmed",
+              }).where(eq(sessions.id, ps.id)).run();
+            }
+          } else {
+            for (const ps of pendingSessions) {
+              await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, ps.id)).run();
+            }
           }
 
           const refreshed = [];
@@ -279,7 +325,6 @@ export async function POST(request: NextRequest) {
           if (conf.length > 0) finalParts.push(`Confirmed: ${conf.map((s) => `${new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" })} at ${s.slot}`).join(", ")}.`);
           if (canc.length > 0) finalParts.push(`Cancelled: ${canc.map((s) => new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" })).join(", ")}.`);
 
-          const historyWithReply = [...history, { direction: "received" as const, text: body }];
           const reply = await composeReply({
             firstName, history: historyWithReply,
             scenario: { type: "multi_session_final", summary: `Here's your final schedule: ${finalParts.join(" ")}` },
