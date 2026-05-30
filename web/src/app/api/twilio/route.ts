@@ -148,6 +148,17 @@ export async function POST(request: NextRequest) {
 
     if (interpretation === "confirmed" && lastSent?.sessionId) {
       await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, lastSent.sessionId)).run();
+      const session = await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get();
+      if (session) {
+        const dayLabel = new Date(session.scheduledDate + "T12:00:00")
+          .toLocaleDateString("en-US", { weekday: "long" });
+        const reply = await composeReply({
+          firstName,
+          history: historyWithReply,
+          scenario: { type: "confirmed", day: dayLabel, slot: session.slot },
+        });
+        await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+      }
       return twiml();
     }
 
