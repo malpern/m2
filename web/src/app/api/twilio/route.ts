@@ -280,6 +280,12 @@ export async function POST(request: NextRequest) {
       await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
       return twiml();
     }
+
+    if (interpretation === "ambiguous") {
+      const reply = "Let me check with Matt and get back to you.";
+      await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+      return twiml();
+    }
   }
 
   return twiml();
