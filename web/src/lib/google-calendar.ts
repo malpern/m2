@@ -146,6 +146,10 @@ export async function createCalendarEvent(
 
   const attendees = opts?.attendeeEmail ? [{ email: opts.attendeeEmail }] : undefined;
 
+  const description = attendees
+    ? "M2 Performance & Therapy session.\n\nTo stop receiving calendar invites, reply STOP INVITES to your scheduling text."
+    : undefined;
+
   const res = await calendar.events.insert({
     calendarId: CALENDAR_ID,
     sendUpdates: opts?.attendeeEmail ? "all" : "none",
@@ -154,6 +158,7 @@ export async function createCalendarEvent(
       start: { dateTime: start.toISOString(), timeZone: "America/Los_Angeles" },
       end: { dateTime: end.toISOString(), timeZone: "America/Los_Angeles" },
       ...(attendees && { attendees }),
+      ...(description && { description }),
     },
   });
 
