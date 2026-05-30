@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { outreach, clients, sessions } from "@/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { NextRequest } from "next/server";
-import { classifyReply, composeReply, ClassifyBillingError, type ConversationMessage } from "@/lib/classify-reply";
+import { classifyReply, classifyMultiSessionReply, composeReply, ClassifyBillingError, type ConversationMessage } from "@/lib/classify-reply";
 import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, diversifyAcrossDays, isSlotStillOpen, tagOfferedSlots, whySlotUnavailable } from "@/lib/suggest-alternatives";
 import { sendSMS } from "@/lib/twilio";
 import { getMonday } from "@/lib/scheduler";
@@ -235,6 +235,117 @@ export async function POST(request: NextRequest) {
     }
 
     const history = buildConversationHistory(recentOutreach);
+    const groupIds = await getGroupedSessionIds(lastSent?.outreachGroupId ?? null);
+    const isMultiSession = groupIds && groupIds.length > 1;
+
+    if (isMultiSession) {
+      const allGroupSessions = [];
+      for (const sid of groupIds) {
+        const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
+        if (s) allGroupSessions.push(s);
+      }
+
+      const offeredSessions = allGroupSessions.map((s) => ({
+        day: new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }).toLowerCase(),
+        slot: s.slot,
+      }));
+
+      let multiResult;
+      try {
+        multiResult = await classifyMultiSessionReply(history, body, offeredSessions);
+      } catch (e) {
+        const errorType = e instanceof ClassifyBillingError ? "ai_billing_exhausted" : "ai_classify_error";
+        console.error("Multi-session classification failed:", e);
+        await db.insert(outreach).values({
+          clientId: client.id, sessionId: lastSent?.sessionId ?? null, weekOf,
+          direction: "received" as const, messageText: body,
+          status: "needs_matt" as const, repliedAt: new Date().toISOString(),
+          sendError: errorType,
+        }).run();
+        await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone,
+          "Let me check with Matt and get back to you.");
+        return twiml();
+      }
+
+      await db.insert(outreach).values({
+        clientId: client.id, sessionId: lastSent?.sessionId ?? null, weekOf,
+        direction: "received" as const, messageText: body,
+        status: "awaiting_reply" as const, repliedAt: new Date().toISOString(),
+      }).run();
+
+      const confirmed: string[] = [];
+      const cancelled: string[] = [];
+      const rescheduleNeeded: { session: typeof allGroupSessions[0]; requestedDay?: string; requestedTime?: string }[] = [];
+
+      for (const action of multiResult.actions) {
+        const matchedSession = allGroupSessions.find((s) => {
+          const sDay = new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }).toLowerCase();
+          return sDay === action.day.toLowerCase();
+        });
+
+        if (!matchedSession) continue;
+
+        const dayLabel = new Date(matchedSession.scheduledDate + "T12:00:00Z")
+          .toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });
+
+        if (action.action === "confirm") {
+          await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, matchedSession.id)).run();
+          confirmed.push(`${dayLabel} at ${matchedSession.slot}`);
+        } else if (action.action === "cancel") {
+          await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, matchedSession.id)).run();
+          cancelled.push(`${dayLabel}`);
+          autoFillCancelledSlot(matchedSession.scheduledDate, matchedSession.slot, client.id).catch(() => {});
+        } else if (action.action === "reschedule") {
+          rescheduleNeeded.push({ session: matchedSession, requestedDay: action.requestedDay, requestedTime: action.requestedTime });
+        }
+      }
+
+      const summaryParts: string[] = [];
+      if (confirmed.length > 0) summaryParts.push(`Confirmed: ${confirmed.join(", ")}.`);
+      if (cancelled.length > 0) summaryParts.push(`Cancelled: ${cancelled.join(", ")}.`);
+
+      if (rescheduleNeeded.length > 0) {
+        const open = await getOpenSlots(weekOf, client.id);
+        for (const { session: rSession, requestedDay, requestedTime } of rescheduleNeeded) {
+          const rDayLabel = new Date(rSession.scheduledDate + "T12:00:00Z")
+            .toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });
+
+          if (requestedDay || requestedTime) {
+            const matched = open.find((s) =>
+              (!requestedDay || s.day.startsWith(requestedDay.toLowerCase().slice(0, 3))) &&
+              (!requestedTime || s.slot === requestedTime.toLowerCase())
+            );
+
+            if (matched && await isSlotStillOpen(matched.date, matched.time)) {
+              await db.update(sessions).set({
+                scheduledDate: matched.date, scheduledTime: matched.time,
+                slot: matched.slot, status: "proposed",
+              }).where(eq(sessions.id, rSession.id)).run();
+              const mDayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
+              summaryParts.push(`${rDayLabel} moved — how about ${mDayLabel} at ${matched.slot}?`);
+            } else {
+              const ranked = await rankSlotsForClient(client.id, open);
+              const diverse = diversifyAcrossDays(ranked, 3);
+              const altText = formatSlotsText(diverse);
+              summaryParts.push(`${rDayLabel} doesn't work at that time. Options: ${altText}.`);
+            }
+          } else {
+            const ranked = await rankSlotsForClient(client.id, open);
+            const diverse = diversifyAcrossDays(ranked, 3);
+            const altText = formatSlotsText(diverse);
+            summaryParts.push(`For ${rDayLabel}, I have ${altText} available.`);
+          }
+        }
+      }
+
+      const historyWithReply = [...history, { direction: "received" as const, text: body }];
+      const reply = await composeReply({
+        firstName, history: historyWithReply,
+        scenario: { type: "multi_session_update", summary: summaryParts.join(" ") },
+      });
+      await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+      return twiml();
+    }
 
     let result;
     try {
