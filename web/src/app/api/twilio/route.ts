@@ -153,8 +153,9 @@ export async function POST(request: NextRequest) {
          interpretation === "declined_with_alternative" ||
          interpretation === "reschedule_request") && lastSent?.sessionId) {
 
+      const open = await getOpenSlots(weekOf, client.id);
+
       if (result.extractedDay || result.extractedTime) {
-        const open = await getOpenSlots(weekOf, client.id);
         const matched = open.find((s) =>
           (!result.extractedDay || s.day.startsWith(result.extractedDay.toLowerCase().slice(0, 3))) &&
           (!result.extractedTime || s.slot === result.extractedTime.toLowerCase())
@@ -174,9 +175,18 @@ export async function POST(request: NextRequest) {
           await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
           return twiml();
         }
+
+        const requestedDay = result.extractedDay ? result.extractedDay.charAt(0).toUpperCase() + result.extractedDay.slice(1) : null;
+        const requestedTime = result.extractedTime ?? null;
+        const requestLabel = [requestedDay, requestedTime].filter(Boolean).join(" at ");
+
+        const ranked = await rankSlotsForClient(client.id, open);
+        const msg = `Sorry, ${requestLabel} isn't available this week. ${formatAlternativesMessage(firstName, ranked)}`;
+        const reply = tagOfferedSlots(msg, ranked.slice(0, 3));
+        await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+        return twiml();
       }
 
-      const open = await getOpenSlots(weekOf, client.id);
       const ranked = await rankSlotsForClient(client.id, open);
       const msg = formatAlternativesMessage(firstName, ranked);
       const reply = tagOfferedSlots(msg, ranked.slice(0, 3));
