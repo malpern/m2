@@ -15,8 +15,8 @@ export async function getInvitePrompt(clientId: number): Promise<string | null> 
   if (client.calendarInviteOptIn === true && client.email) return null;
 
   if (client.email) {
-    return `\n\nWant me to send a calendar invite to ${client.email}?`;
+    return `\n\nWant me to send calendar invites to ${client.email} going forward?`;
   }
 
-  return "\n\nWould you like a calendar invite sent to your email?";
+  return "\n\nWant me to send you calendar invites for future sessions? If so, what's your email?";
 }
