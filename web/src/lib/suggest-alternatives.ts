@@ -23,7 +23,7 @@ const DAY_LABELS: Record<string, string> = {
 };
 
 function getWeekDates(weekStart: string): { day: string; date: string }[] {
-  const start = new Date(weekStart + "T12:00:00");
+  const start = new Date(weekStart + "T12:00:00Z");
   const days = [
     { day: "monday", offset: 0 }, { day: "tuesday", offset: 1 },
     { day: "wednesday", offset: 2 }, { day: "thursday", offset: 3 },
@@ -37,7 +37,7 @@ function getWeekDates(weekStart: string): { day: string; date: string }[] {
 }
 
 function getMondayOfWeek(dateStr: string): string {
-  const d = new Date(dateStr + "T12:00:00");
+  const d = new Date(dateStr + "T12:00:00Z");
   const dow = d.getDay();
   d.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
   return d.toISOString().split("T")[0];
@@ -212,7 +212,7 @@ export async function rankSlotsForClient(
   const dayCounts = new Map<string, number>();
   const slotCounts = new Map<string, number>();
   for (const s of allSessions) {
-    const d = new Date(s.date + "T12:00:00");
+    const d = new Date(s.date + "T12:00:00Z");
     const day = DAY_NAMES[d.getDay()];
     dayCounts.set(day, (dayCounts.get(day) ?? 0) + 1);
     slotCounts.set(s.time, (slotCounts.get(s.time) ?? 0) + 1);

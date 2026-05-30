@@ -169,6 +169,6 @@ export async function retrySend(outreachId: number) {
 }
 
 function formatDay(dateStr: string): string {
-  const date = new Date(dateStr + "T12:00:00");
+  const date = new Date(dateStr + "T12:00:00Z");
   return date.toLocaleDateString("en-US", { weekday: "long" });
 }
