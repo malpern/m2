@@ -204,8 +204,31 @@ export function formatAlternativesMessage(
     return `No worries, ${firstName}! Unfortunately I'm fully booked this week. We'll get you in next week.`;
   }
 
-  const options = top.map((s) => `${DAY_LABELS[s.day]} at ${s.slot}`).join(", ");
+  const options = formatGroupedSlots(top);
   return `No worries! I also have ${options} open. Any of those work? Or if you need to skip this week, no problem.`;
+}
+
+function formatGroupedSlots(slots: { day: string; slot: TimeSlot }[]): string {
+  const slotOrder = SLOTS as readonly string[];
+  const grouped = new Map<string, TimeSlot[]>();
+  for (const s of slots) {
+    const existing = grouped.get(s.day) ?? [];
+    existing.push(s.slot);
+    grouped.set(s.day, existing);
+  }
+
+  const parts: string[] = [];
+  for (const [day, times] of grouped) {
+    const sorted = times.sort((a, b) => slotOrder.indexOf(a) - slotOrder.indexOf(b));
+    const label = DAY_LABELS[day] ?? day;
+    if (sorted.length === 1) {
+      parts.push(`${label} at ${sorted[0]}`);
+    } else {
+      const last = sorted.pop()!;
+      parts.push(`${label} at ${sorted.join(", ")}, or ${last}`);
+    }
+  }
+  return parts.join(", ");
 }
 
 export async function isSlotStillOpen(date: string, time: string): Promise<boolean> {

@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
         const requestLabel = [requestedDay, requestedTime].filter(Boolean).join(" at ");
 
         const ranked = await rankSlotsForClient(client.id, open);
-        const msg = `Sorry, ${requestLabel} isn't available this week. ${formatAlternativesMessage(firstName, ranked)}`;
+        const msg = `Sorry, ${requestLabel} isn't available this week.\n\n${formatAlternativesMessage(firstName, ranked)}`;
         const reply = tagOfferedSlots(msg, ranked.slice(0, 3));
         await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
         return twiml();
