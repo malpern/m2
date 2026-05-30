@@ -1,0 +1,80 @@
+import { db } from "@/db";
+import { sessions, clients } from "@/db/schema";
+import { eq } from "drizzle-orm";
+import { createCalendarEvent, deleteCalendarEvent, isConnected } from "./google-calendar";
+import { syslog } from "./logger";
+
+export async function syncSessionToCalendar(sessionId: number): Promise<void> {
+  const { connected } = await isConnected();
+  if (!connected) return;
+
+  const session = await db.select({
+    id: sessions.id,
+    clientName: clients.name,
+    scheduledDate: sessions.scheduledDate,
+    scheduledTime: sessions.scheduledTime,
+    slot: sessions.slot,
+    status: sessions.status,
+    gcalEventId: sessions.gcalEventId,
+  })
+  .from(sessions)
+  .innerJoin(clients, eq(clients.id, sessions.clientId))
+  .where(eq(sessions.id, sessionId))
+  .get();
+
+  if (!session) return;
+
+  if (session.status === "confirmed" && !session.gcalEventId) {
+    try {
+      const eventId = await createCalendarEvent(
+        session.clientName,
+        session.scheduledDate,
+        session.scheduledTime,
+      );
+      if (eventId) {
+        await db.update(sessions).set({ gcalEventId: eventId }).where(eq(sessions.id, sessionId)).run();
+        syslog.info("system", `Added ${session.clientName}'s session to Google Calendar`, `GCal event created: ${eventId} for session ${sessionId}`, { sessionId, clientId: undefined });
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      syslog.error("system", `Couldn't add ${session.clientName}'s session to calendar`, `GCal create failed: ${msg}`, { sessionId });
+    }
+  }
+
+  if (session.status === "cancelled" && session.gcalEventId) {
+    try {
+      await deleteCalendarEvent(session.gcalEventId);
+      await db.update(sessions).set({ gcalEventId: null }).where(eq(sessions.id, sessionId)).run();
+      syslog.info("system", `Removed ${session.clientName}'s cancelled session from calendar`, `GCal event deleted: ${session.gcalEventId}`, { sessionId });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      syslog.error("system", `Couldn't remove cancelled session from calendar`, `GCal delete failed: ${msg}`, { sessionId });
+    }
+  }
+}
+
+export async function removeTestEvents(): Promise<number> {
+  const { connected } = await isConnected();
+  if (!connected) return 0;
+
+  const testSessions = await db.select({
+    id: sessions.id,
+    gcalEventId: sessions.gcalEventId,
+  })
+  .from(sessions)
+  .all();
+
+  let removed = 0;
+  for (const s of testSessions) {
+    if (s.gcalEventId) {
+      try {
+        await deleteCalendarEvent(s.gcalEventId);
+        await db.update(sessions).set({ gcalEventId: null }).where(eq(sessions.id, s.id)).run();
+        removed++;
+      } catch {
+        // Event may already be deleted
+      }
+    }
+  }
+  return removed;
+}

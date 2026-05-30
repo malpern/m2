@@ -18,7 +18,7 @@ export function getAuthUrl(): { url: string; state: string } {
     access_type: "offline",
     prompt: "consent",
     scope: [
-      "https://www.googleapis.com/auth/calendar.readonly",
+      "https://www.googleapis.com/auth/calendar",
       "https://www.googleapis.com/auth/spreadsheets.readonly",
       "https://www.googleapis.com/auth/drive.readonly",
     ],
@@ -123,6 +123,49 @@ export async function listEvents(calendarId: string, startDate: string, endDate:
     maxResults: 100,
   });
   return res.data.items ?? [];
+}
+
+const CALENDAR_ID = "f4lathletics@gmail.com";
+const IS_TESTING = process.env.OUTREACH_LIVE !== "true";
+const EVENT_PREFIX = "🤖 ";
+const TEST_SUFFIX = IS_TESTING ? " — IGNORE JUST TESTING" : "";
+
+export async function createCalendarEvent(
+  clientName: string,
+  date: string,
+  startTime: string,
+  durationMinutes: number = 60,
+): Promise<string | null> {
+  const auth = await getAuthenticatedClient();
+  if (!auth) return null;
+
+  const calendar = google.calendar({ version: "v3", auth });
+  const start = new Date(`${date}T${startTime}:00`);
+  const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+
+  const res = await calendar.events.insert({
+    calendarId: CALENDAR_ID,
+    requestBody: {
+      summary: `${EVENT_PREFIX}${clientName}${TEST_SUFFIX}`,
+      start: { dateTime: start.toISOString(), timeZone: "America/Los_Angeles" },
+      end: { dateTime: end.toISOString(), timeZone: "America/Los_Angeles" },
+    },
+  });
+
+  return res.data.id ?? null;
+}
+
+export async function deleteCalendarEvent(eventId: string): Promise<boolean> {
+  const auth = await getAuthenticatedClient();
+  if (!auth) return false;
+
+  const calendar = google.calendar({ version: "v3", auth });
+  try {
+    await calendar.events.delete({ calendarId: CALENDAR_ID, eventId });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function disconnect() {

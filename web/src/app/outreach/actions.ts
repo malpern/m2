@@ -5,15 +5,18 @@ import { outreach, sessions, clients } from "@/db/schema";
 import { sendSMS } from "@/lib/twilio";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { syncSessionToCalendar } from "@/lib/gcal-sync";
 
 export async function markConfirmed(sessionId: number) {
   await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, sessionId)).run();
+  syncSessionToCalendar(sessionId).catch(() => {});
   revalidatePath("/outreach");
   revalidatePath("/schedule");
 }
 
 export async function markDeclined(sessionId: number) {
   await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sessionId)).run();
+  syncSessionToCalendar(sessionId).catch(() => {});
   revalidatePath("/outreach");
   revalidatePath("/schedule");
 }
