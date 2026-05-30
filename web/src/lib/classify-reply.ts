@@ -7,7 +7,8 @@ export type ReplyInterpretation =
   | "declined_skip_week"
   | "reschedule_request"
   | "ambiguous"
-  | "selecting_offered_slot";
+  | "selecting_offered_slot"
+  | "cancellation";
 
 export type ClassifyResult = {
   interpretation: ReplyInterpretation;
@@ -32,6 +33,7 @@ Categories:
 - "declined_skip_week": Client explicitly says they're skipping this week entirely ("not this week", "I'm away", "skip me this week", "nah I'm good, next week")
 - "reschedule_request": Client wants to change but is vague about what they want ("can we move it?", "need to reschedule")
 - "selecting_offered_slot": Client is picking from alternatives that were already offered ("Monday", "the 3pm one", "first option", "Wednesday at 5")
+- "cancellation": Client wants to cancel an already-confirmed session ("something came up", "I can't make it", "need to cancel", "actually I won't be able to come")
 - "ambiguous": Unclear or noncommittal ("let me check", "maybe", "idk")
 
 If the client mentions a specific day or time, extract it:
@@ -112,7 +114,11 @@ export type ComposeContext = {
     | { type: "already_booked"; requestLabel: string; alternatives: string }
     | { type: "alternatives"; alternatives: string }
     | { type: "skip_week" }
-    | { type: "slot_taken"; alternatives: string };
+    | { type: "slot_taken"; alternatives: string }
+    | { type: "cancellation"; day: string; slot: string }
+    | { type: "late_reply" }
+    | { type: "re_engage"; alternatives: string }
+    | { type: "re_engage_full" };
 };
 
 export async function composeReply(ctx: ComposeContext): Promise<string> {
@@ -140,6 +146,18 @@ export async function composeReply(ctx: ComposeContext): Promise<string> {
       break;
     case "slot_taken":
       instructions = `The slot the client picked just got booked by someone else. Available alternatives: ${ctx.scenario.alternatives}. Let them know and offer other options.`;
+      break;
+    case "cancellation":
+      instructions = `The client is cancelling their confirmed ${ctx.scenario.day} at ${ctx.scenario.slot} session. Acknowledge the cancellation and ask if they want to reschedule for a different time this week.`;
+      break;
+    case "late_reply":
+      instructions = `The client is replying to scheduling from a previous week that has already passed. Let them know that week is done but they'll be included in next week's scheduling.`;
+      break;
+    case "re_engage":
+      instructions = `The client was previously moved on (no reply in time) but is now responding. Welcome them back and offer available slots: ${ctx.scenario.alternatives}.`;
+      break;
+    case "re_engage_full":
+      instructions = `The client was previously moved on but is now responding. Unfortunately the week is fully booked now. Let them know and tell them they'll be first up next week.`;
       break;
   }
 
@@ -181,5 +199,13 @@ function fallbackMessage(ctx: ComposeContext): string {
       return `No problem, ${ctx.firstName}. We'll get you in next week!`;
     case "slot_taken":
       return `Sorry, that slot just got booked! ${ctx.scenario.alternatives}`;
+    case "cancellation":
+      return `Got it, ${ctx.scenario.day} at ${ctx.scenario.slot} is cancelled. Want to reschedule for a different time this week?`;
+    case "late_reply":
+      return `Hey ${ctx.firstName}! That week has already passed, but I'll make sure you're included in next week's scheduling.`;
+    case "re_engage":
+      return `Hey ${ctx.firstName}, glad to hear from you! I still have ${ctx.scenario.alternatives} open this week if you want to get in.`;
+    case "re_engage_full":
+      return `Hey ${ctx.firstName}! Unfortunately this week is fully booked now, but I'll make sure you're first up next week.`;
   }
 }
