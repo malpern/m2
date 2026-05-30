@@ -60,7 +60,8 @@ CREATE TABLE outreach (
     status TEXT NOT NULL DEFAULT 'pending',
     sent_at TEXT,
     replied_at TEXT,
-    send_error TEXT
+    send_error TEXT,
+    outreach_group_id TEXT
 );
 
 CREATE TABLE priority_settings (

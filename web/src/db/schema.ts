@@ -114,6 +114,7 @@ export const outreach = sqliteTable("outreach", {
   sentAt: text("sent_at"),
   repliedAt: text("replied_at"),
   sendError: text("send_error"),
+  outreachGroupId: text("outreach_group_id"),
 });
 
 export const defaultAvailability = sqliteTable("default_availability", {
