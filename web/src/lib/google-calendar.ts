@@ -141,8 +141,12 @@ export async function createCalendarEvent(
 
   const durationMinutes = opts?.durationMinutes ?? 60;
   const calendar = google.calendar({ version: "v3", auth });
-  const start = new Date(`${date}T${startTime}:00`);
-  const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+
+  const [hours, minutes] = startTime.split(":").map(Number);
+  const endHours = hours + Math.floor((minutes + durationMinutes) / 60);
+  const endMinutes = (minutes + durationMinutes) % 60;
+  const startStr = `${date}T${startTime}:00`;
+  const endStr = `${date}T${String(endHours).padStart(2, "0")}:${String(endMinutes).padStart(2, "0")}:00`;
 
   const attendees = opts?.attendeeEmail ? [{ email: opts.attendeeEmail }] : undefined;
 
@@ -155,8 +159,8 @@ export async function createCalendarEvent(
     sendUpdates: opts?.attendeeEmail ? "all" : "none",
     requestBody: {
       summary: `${EVENT_PREFIX}${clientName}${TEST_SUFFIX}`,
-      start: { dateTime: start.toISOString(), timeZone: "America/Los_Angeles" },
-      end: { dateTime: end.toISOString(), timeZone: "America/Los_Angeles" },
+      start: { dateTime: startStr, timeZone: "America/Los_Angeles" },
+      end: { dateTime: endStr, timeZone: "America/Los_Angeles" },
       ...(attendees && { attendees }),
       ...(description && { description }),
     },
