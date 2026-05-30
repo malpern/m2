@@ -135,7 +135,7 @@ function isStandingSession(
   session: { clientId: number; slot: string; scheduledDate: string; standingSlot: string | null }
 ): boolean {
   if (!session.standingSlot) return false;
-  const dayOfWeek = new Date(session.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+  const dayOfWeek = new Date(session.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
   const shortDay = dayOfWeek.slice(0, 3);
   const standing = session.standingSlot.toLowerCase();
   return standing.includes(`${shortDay} ${session.slot}`) || standing.includes(`${dayOfWeek} ${session.slot}`);

@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
         if (result.interpretation === "cancellation") {
           await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, lastSent.sessionId)).run();
           const session = await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get();
-          const dayLabel = session ? new Date(session.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" }) : "your session";
+          const dayLabel = session ? new Date(session.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }) : "your session";
           const slot = session?.slot ?? "";
 
           await db.insert(outreach).values({
@@ -236,20 +236,21 @@ export async function POST(request: NextRequest) {
     try {
       result = await classifyReply(history, body);
     } catch (e) {
-      if (e instanceof ClassifyBillingError) {
-        await db.insert(outreach).values({
-          clientId: client.id,
-          sessionId: lastSent?.sessionId ?? null,
-          weekOf: getMonday().toISOString().split("T")[0],
-          direction: "received" as const,
-          messageText: body,
-          status: "needs_matt" as const,
-          repliedAt: new Date().toISOString(),
-          sendError: "ai_billing_exhausted",
-        }).run();
-        return twiml();
-      }
-      throw e;
+      const errorType = e instanceof ClassifyBillingError ? "ai_billing_exhausted" : "ai_classify_error";
+      console.error("Classification failed:", e);
+      await db.insert(outreach).values({
+        clientId: client.id,
+        sessionId: lastSent?.sessionId ?? null,
+        weekOf,
+        direction: "received" as const,
+        messageText: body,
+        status: "needs_matt" as const,
+        repliedAt: new Date().toISOString(),
+        sendError: errorType,
+      }).run();
+      await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone,
+        "Let me check with Matt and get back to you.");
+      return twiml();
     }
     const interpretation = result.interpretation;
 
@@ -295,7 +296,7 @@ export async function POST(request: NextRequest) {
 
         if (confirmedSessions.length === 1) {
           const s = confirmedSessions[0];
-          const dayLabel = new Date(s.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" });
+          const dayLabel = new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });
           const reply = await composeReply({
             firstName, history: historyWithReply,
             scenario: { type: "confirmed", day: dayLabel, slot: s.slot },
@@ -304,7 +305,7 @@ export async function POST(request: NextRequest) {
         } else if (confirmedSessions.length > 1) {
           const sorted = confirmedSessions.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
           const slotList = sorted.map((s) => {
-            const d = new Date(s.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" });
+            const d = new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });
             return `${d} at ${s.slot}`;
           }).join(", ");
           const reply = await composeReply({
@@ -312,6 +313,9 @@ export async function POST(request: NextRequest) {
             scenario: { type: "confirmed", day: slotList, slot: "" },
           });
           await logAndSend(client.id, lastSent!.sessionId, weekOf, client.phone, reply);
+        } else {
+          await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone,
+            `You're confirmed, ${firstName}! See you then.`);
         }
       }
       return twiml();
@@ -384,7 +388,7 @@ export async function POST(request: NextRequest) {
 
         const rejectedDay = result.extractedDay.toLowerCase().slice(0, 3);
         const rejected = allGroupSessions.filter((s) => {
-          const d = new Date(s.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+          const d = new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }).toLowerCase();
           return d.startsWith(rejectedDay);
         });
         const accepted = allGroupSessions.filter((s) => !rejected.includes(s));
@@ -396,7 +400,7 @@ export async function POST(request: NextRequest) {
           await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
 
           const confirmedList = accepted.map((s) => {
-            const d = new Date(s.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" });
+            const d = new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });
             return `${d} at ${s.slot}`;
           }).join(" and ");
 
@@ -505,7 +509,7 @@ export async function POST(request: NextRequest) {
       const session = lastSent?.sessionId
         ? await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get()
         : null;
-      const dayLabel = session ? new Date(session.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" }) : "your session";
+      const dayLabel = session ? new Date(session.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }) : "your session";
       const reply = await composeReply({
         firstName,
         history: historyWithReply,
