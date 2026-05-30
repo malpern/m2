@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { outreach, sessions, clients } from "@/db/schema";
 import { sendSMS } from "@/lib/twilio";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function markConfirmed(sessionId: number) {
@@ -52,7 +52,29 @@ export async function sendOutreachBatch(sessionIds: number[], weekOf: string) {
 
     if (!session) continue;
 
-    const message = `Hey ${session.clientName.split(" ")[0]}, are you free ${formatDay(session.scheduledDate)} at ${session.slot} for a session?`;
+    const firstName = session.clientName.split(" ")[0];
+    const dayLabel = formatDay(session.scheduledDate);
+
+    const lastSession = await db.select({
+      scheduledDate: sessions.scheduledDate,
+      slot: sessions.slot,
+    })
+    .from(sessions)
+    .where(and(
+      eq(sessions.clientId, session.clientId),
+      eq(sessions.status, "completed"),
+    ))
+    .orderBy(desc(sessions.scheduledDate))
+    .limit(1)
+    .get();
+
+    const isSameAsLastWeek = lastSession
+      && formatDay(lastSession.scheduledDate) === dayLabel
+      && lastSession.slot === session.slot;
+
+    const message = isSameAsLastWeek
+      ? `Hey ${firstName}, same time as last week — ${dayLabel} at ${session.slot}?`
+      : `Hey ${firstName}, are you free ${dayLabel} at ${session.slot} for a session?`;
 
     const row = await db.insert(outreach).values({
       clientId: session.clientId,

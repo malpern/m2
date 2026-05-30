@@ -7,6 +7,15 @@ const mockRevalidatePath = vi.fn();
 
 // Mock chain builder helpers
 function chainGet(value: unknown) {
+  const terminalWhere = {
+    get: () => value,
+    run: () => {},
+    orderBy: () => ({
+      limit: () => ({
+        get: () => null,
+      }),
+    }),
+  };
   return {
     from: () => ({
       innerJoin: () => ({
@@ -14,10 +23,7 @@ function chainGet(value: unknown) {
           get: () => value,
         }),
       }),
-      where: () => ({
-        get: () => value,
-        run: () => {},
-      }),
+      where: () => terminalWhere,
     }),
   };
 }
