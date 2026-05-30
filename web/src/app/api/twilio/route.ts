@@ -236,7 +236,11 @@ export async function POST(request: NextRequest) {
     }
 
     const history = buildConversationHistory(recentOutreach);
-    const groupIds = await getGroupedSessionIds(lastSent?.outreachGroupId ?? null);
+
+    const outreachGroupId = lastSent?.outreachGroupId
+      ?? recentOutreach.find((o) => o.direction === "sent" && o.outreachGroupId)?.outreachGroupId
+      ?? null;
+    const groupIds = await getGroupedSessionIds(outreachGroupId);
     const isMultiSession = groupIds && groupIds.length > 1;
 
     if (isMultiSession) {
@@ -244,6 +248,45 @@ export async function POST(request: NextRequest) {
       for (const sid of groupIds) {
         const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
         if (s) allGroupSessions.push(s);
+      }
+
+      const pendingSessions = allGroupSessions.filter((s) => s.status === "proposed");
+      const resolvedSessions = allGroupSessions.filter((s) => s.status === "confirmed" || s.status === "cancelled");
+
+      if (pendingSessions.length > 0 && pendingSessions.length < allGroupSessions.length) {
+        let singleResult;
+        try {
+          singleResult = await classifyReply(history, body);
+        } catch (e) {
+          if (e instanceof ClassifyBillingError) throw e;
+          singleResult = { interpretation: "ambiguous" as const, confidence: 0.3 };
+        }
+
+        if (singleResult.interpretation === "confirmed" || singleResult.interpretation === "selecting_offered_slot") {
+          for (const ps of pendingSessions) {
+            await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, ps.id)).run();
+          }
+
+          const refreshed = [];
+          for (const sid of groupIds) {
+            const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
+            if (s) refreshed.push(s);
+          }
+
+          const finalParts: string[] = [];
+          const conf = refreshed.filter((s) => s.status === "confirmed");
+          const canc = refreshed.filter((s) => s.status === "cancelled");
+          if (conf.length > 0) finalParts.push(`Confirmed: ${conf.map((s) => `${new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" })} at ${s.slot}`).join(", ")}.`);
+          if (canc.length > 0) finalParts.push(`Cancelled: ${canc.map((s) => new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" })).join(", ")}.`);
+
+          const historyWithReply = [...history, { direction: "received" as const, text: body }];
+          const reply = await composeReply({
+            firstName, history: historyWithReply,
+            scenario: { type: "multi_session_final", summary: `Here's your final schedule: ${finalParts.join(" ")}` },
+          });
+          await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+          return twiml();
+        }
       }
 
       const offeredSessions = allGroupSessions.map((s) => ({
@@ -301,9 +344,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const summaryParts: string[] = [];
-      if (confirmed.length > 0) summaryParts.push(`Confirmed: ${confirmed.join(", ")}.`);
-      if (cancelled.length > 0) summaryParts.push(`Cancelled: ${cancelled.join(", ")}.`);
+      const pendingParts: string[] = [];
 
       if (rescheduleNeeded.length > 0) {
         const open = await getOpenSlots(weekOf, client.id);
@@ -323,28 +364,56 @@ export async function POST(request: NextRequest) {
                 slot: matched.slot, status: "proposed",
               }).where(eq(sessions.id, rSession.id)).run();
               const mDayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
-              summaryParts.push(`${rDayLabel} moved — how about ${mDayLabel} at ${matched.slot}?`);
+              pendingParts.push(`For ${rDayLabel}, how about ${mDayLabel} at ${matched.slot}?`);
             } else {
               const ranked = await rankSlotsForClient(client.id, open);
               const diverse = diversifyAcrossDays(ranked, 3);
               const altText = formatSlotsText(diverse);
-              summaryParts.push(`${rDayLabel} doesn't work at that time. Options: ${altText}.`);
+              pendingParts.push(`For ${rDayLabel}, I don't have that time but I can do ${altText}.`);
             }
           } else {
             const ranked = await rankSlotsForClient(client.id, open);
             const diverse = diversifyAcrossDays(ranked, 3);
             const altText = formatSlotsText(diverse);
-            summaryParts.push(`For ${rDayLabel}, I have ${altText} available.`);
+            pendingParts.push(`For ${rDayLabel}, I have ${altText} available.`);
           }
         }
       }
 
       const historyWithReply = [...history, { direction: "received" as const, text: body }];
-      const reply = await composeReply({
-        firstName, history: historyWithReply,
-        scenario: { type: "multi_session_update", summary: summaryParts.join(" ") },
-      });
-      await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+
+      if (pendingParts.length > 0) {
+        const intermediateParts: string[] = [];
+        if (confirmed.length > 0) intermediateParts.push(`${confirmed.join(" and ")} — locked in.`);
+        if (cancelled.length > 0) intermediateParts.push(`${cancelled.join(" and ")} — cancelled.`);
+        intermediateParts.push(...pendingParts);
+
+        const reply = await composeReply({
+          firstName, history: historyWithReply,
+          scenario: { type: "multi_session_update", summary: intermediateParts.join(" ") },
+        });
+        await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+      } else {
+        const allResolved = allGroupSessions.every((s) => {
+          const current = confirmed.some((c) => c.includes(
+            new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" })
+          )) || cancelled.some((c) => c.includes(
+            new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" })
+          ));
+          return current;
+        });
+
+        const finalParts: string[] = [];
+        if (confirmed.length > 0) finalParts.push(`Confirmed: ${confirmed.join(", ")}.`);
+        if (cancelled.length > 0) finalParts.push(`Cancelled: ${cancelled.join(", ")}.`);
+
+        const scenario = allResolved
+          ? { type: "multi_session_final" as const, summary: `Here's your final schedule: ${finalParts.join(" ")}` }
+          : { type: "multi_session_update" as const, summary: finalParts.join(" ") };
+
+        const reply = await composeReply({ firstName, history: historyWithReply, scenario });
+        await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+      }
       return twiml();
     }
 
