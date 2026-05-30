@@ -28,18 +28,12 @@ function stripOfferedTags(text: string): string {
 
 function formatTimestamp(dateStr: string, isFirst: boolean): string {
   const date = new Date(dateStr);
+  const time = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   if (isFirst) {
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
+    const day = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return `${day}, ${time}`;
   }
-  return date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return time;
 }
 
 function MessageBubble({ msg, isFirst }: { msg: Message; isFirst: boolean }) {

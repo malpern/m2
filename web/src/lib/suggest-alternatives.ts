@@ -194,12 +194,39 @@ export async function rankSlotsForClient(
     .sort((a, b) => b.score - a.score);
 }
 
+export function diversifyAcrossDays<T extends { day: string }>(
+  ranked: T[],
+  maxOptions: number = 3,
+): T[] {
+  if (ranked.length <= maxOptions) return ranked;
+
+  const picked: T[] = [];
+  const usedDays = new Set<string>();
+
+  for (const slot of ranked) {
+    if (picked.length >= maxOptions) break;
+    if (!usedDays.has(slot.day)) {
+      picked.push(slot);
+      usedDays.add(slot.day);
+    }
+  }
+
+  for (const slot of ranked) {
+    if (picked.length >= maxOptions) break;
+    if (!picked.includes(slot)) {
+      picked.push(slot);
+    }
+  }
+
+  return picked;
+}
+
 export function formatAlternativesMessage(
   firstName: string,
   ranked: { day: string; slot: TimeSlot }[],
   maxOptions: number = 3,
 ): string {
-  const top = ranked.slice(0, maxOptions);
+  const top = diversifyAcrossDays(ranked, maxOptions);
   if (top.length === 0) {
     return `No worries, ${firstName}! Unfortunately I'm fully booked this week. We'll get you in next week.`;
   }
