@@ -92,6 +92,15 @@ export async function POST(request: NextRequest) {
     return twiml();
   }
 
+  if (lower === "stop invites" || lower === "stop calendar invites" || lower === "no more invites") {
+    const inviteClient = await findClient(from);
+    if (inviteClient) {
+      await db.update(clients).set({ calendarInviteOptIn: false }).where(eq(clients.id, inviteClient.id)).run();
+      return twiml("Got it — no more calendar invites. You'll still get scheduling texts.");
+    }
+    return twiml();
+  }
+
   if (lower === "help" || lower === "info") {
     return twiml("M2 Performance & Therapy — session scheduling texts. Reply STOP to opt out. Contact: (408) 599-1777");
   }
