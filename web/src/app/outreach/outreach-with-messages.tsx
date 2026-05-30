@@ -27,6 +27,7 @@ export function OutreachWithMessages({
     summary: ReturnType<typeof import("@/lib/outreach-engine").getOutreachSummary>;
     nextBatch: OutreachItem[];
     needsAttention: OutreachItem[];
+    followUpItems?: OutreachItem[];
     weekOf: string;
     hasAiBillingError?: boolean;
   };

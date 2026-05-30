@@ -31,6 +31,9 @@ export interface OutreachItem {
   wave: number; // 1, 2, or 3
   sendError: string | null;
   outreachId: number | null;
+  isAutoFill: boolean;
+  messageCount: number;
+  outreachGroupId: string | null;
 }
 
 export function buildOutreachQueue(
@@ -65,11 +68,14 @@ export function buildOutreachQueue(
     let sendError: string | null = null;
     let outreachId: number | null = null;
 
+    let outreachGroupId: string | null = null;
+
     if (isStanding) {
       status = "standing";
     } else if (existing) {
       sentAt = existing.sentAt;
       outreachId = existing.id;
+      outreachGroupId = existing.outreachGroupId;
       if (existing.sendError) {
         status = "send_failed";
         sendError = existing.sendError;
@@ -107,6 +113,15 @@ export function buildOutreachQueue(
       wave = 1;
     }
 
+    // Detect auto-fill: sent message contains "just opened up"
+    const sentMessage = existing?.messageText ?? "";
+    const isAutoFill = sentMessage.toLowerCase().includes("just opened up");
+
+    // Count all outreach records for this session (sent + received)
+    const messageCount = existingOutreach.filter(
+      (o) => o.sessionId === session.id
+    ).length;
+
     items.push({
       sessionId: session.id,
       clientId: session.clientId,
@@ -125,6 +140,9 @@ export function buildOutreachQueue(
       wave: isStanding ? 0 : wave,
       sendError,
       outreachId,
+      isAutoFill,
+      messageCount,
+      outreachGroupId,
     });
   }
 
