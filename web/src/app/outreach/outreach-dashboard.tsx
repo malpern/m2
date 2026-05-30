@@ -138,12 +138,14 @@ export function OutreachDashboard({
   nextBatch,
   needsAttention,
   weekOf,
+  hasAiBillingError,
 }: {
   items: OutreachItem[];
   summary: ReturnType<typeof import("@/lib/outreach-engine").getOutreachSummary>;
   nextBatch: OutreachItem[];
   needsAttention: OutreachItem[];
   weekOf: string;
+  hasAiBillingError?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
@@ -247,6 +249,23 @@ export function OutreachDashboard({
           </Link>
         </div>
       </div>
+
+      {hasAiBillingError && (
+        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            <span className="text-sm text-amber-200">AI reply classification is paused — Anthropic API credits exhausted. Replies are being saved but not auto-classified.</span>
+          </div>
+          <a
+            href="https://console.anthropic.com/settings/billing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-semibold text-amber-400 hover:text-amber-300 whitespace-nowrap ml-3"
+          >
+            Add credits &rarr;
+          </a>
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className={`grid grid-cols-2 ${summary.failed > 0 ? "sm:grid-cols-5" : "sm:grid-cols-4"} gap-3 mb-8`}>
