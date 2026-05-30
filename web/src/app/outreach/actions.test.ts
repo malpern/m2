@@ -202,6 +202,134 @@ describe("sendOutreachBatch", () => {
 });
 
 /* ================================================================== */
+/*  sendOutreachBatch — multi-session                                  */
+/* ================================================================== */
+describe("sendOutreachBatch — multi-session", () => {
+  const session1 = {
+    id: 1, clientId: 10, clientName: "John Smith", clientPhone: "+15551234567",
+    scheduledDate: "2026-06-02", scheduledTime: "15:00", slot: "3pm",
+  };
+  const session2 = {
+    id: 2, clientId: 10, clientName: "John Smith", clientPhone: "+15551234567",
+    scheduledDate: "2026-06-04", scheduledTime: "16:00", slot: "4pm",
+  };
+
+  it("groups multiple sessions for same client into one SMS", async () => {
+    let selectCall = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCall++;
+      return chainGet(selectCall <= 2 ? (selectCall === 1 ? session1 : session2) : null);
+    });
+    mockDbInsert.mockReturnValue(
+      chainReturningGet({ id: 100, clientId: 10, sessionId: 1 }),
+    );
+    mockDbUpdate.mockReturnValue(chainRun());
+    mockSendSMS.mockResolvedValue("SM123");
+
+    await sendOutreachBatch([1, 2], "2026-06-01");
+
+    expect(mockSendSMS).toHaveBeenCalledTimes(1);
+  });
+
+  it("combined message lists all session days and slots", async () => {
+    let selectCall = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCall++;
+      return chainGet(selectCall <= 2 ? (selectCall === 1 ? session1 : session2) : null);
+    });
+    mockDbInsert.mockReturnValue(
+      chainReturningGet({ id: 100, clientId: 10, sessionId: 1 }),
+    );
+    mockDbUpdate.mockReturnValue(chainRun());
+    mockSendSMS.mockResolvedValue("SM123");
+
+    await sendOutreachBatch([1, 2], "2026-06-01");
+
+    const message = mockSendSMS.mock.calls[0][1] as string;
+    expect(message).toContain("Tuesday");
+    expect(message).toContain("3pm");
+    expect(message).toContain("Thursday");
+    expect(message).toContain("4pm");
+  });
+
+  it("creates one outreach record per session with shared groupId", async () => {
+    let selectCall = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCall++;
+      return chainGet(selectCall <= 2 ? (selectCall === 1 ? session1 : session2) : null);
+    });
+
+    const insertCalls: unknown[] = [];
+    mockDbInsert.mockImplementation((...args: unknown[]) => {
+      insertCalls.push(args);
+      return chainReturningGet({ id: 100 + insertCalls.length, clientId: 10, sessionId: 1 });
+    });
+    mockDbUpdate.mockReturnValue(chainRun());
+    mockSendSMS.mockResolvedValue("SM123");
+
+    await sendOutreachBatch([1, 2], "2026-06-01");
+
+    expect(mockDbInsert).toHaveBeenCalledTimes(2);
+  });
+
+  it("all sessions in group fail together on SMS error", async () => {
+    let selectCall = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCall++;
+      return chainGet(selectCall <= 2 ? (selectCall === 1 ? session1 : session2) : null);
+    });
+    mockDbInsert.mockReturnValue(
+      chainReturningGet({ id: 100, clientId: 10, sessionId: 1 }),
+    );
+    mockDbUpdate.mockReturnValue(chainRun());
+    mockSendSMS.mockRejectedValue(new Error("Twilio error"));
+
+    const results = await sendOutreachBatch([1, 2], "2026-06-01");
+
+    expect(results).toHaveLength(2);
+    expect(results[0].success).toBe(false);
+    expect(results[1].success).toBe(false);
+  });
+
+  it("sends separate SMS for different clients", async () => {
+    const otherClientSession = {
+      id: 3, clientId: 20, clientName: "Jane Doe", clientPhone: "+15559876543",
+      scheduledDate: "2026-06-03", scheduledTime: "15:00", slot: "3pm",
+    };
+
+    let selectCall = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCall++;
+      return chainGet(selectCall <= 2 ? (selectCall === 1 ? session1 : otherClientSession) : null);
+    });
+    mockDbInsert.mockReturnValue(
+      chainReturningGet({ id: 100, clientId: 10, sessionId: 1 }),
+    );
+    mockDbUpdate.mockReturnValue(chainRun());
+    mockSendSMS.mockResolvedValue("SM123");
+
+    await sendOutreachBatch([1, 3], "2026-06-01");
+
+    expect(mockSendSMS).toHaveBeenCalledTimes(2);
+  });
+
+  it("single-session client still works without groupId", async () => {
+    mockDbSelect.mockReturnValue(chainGet(session1));
+    mockDbInsert.mockReturnValue(
+      chainReturningGet({ id: 100, clientId: 10, sessionId: 1 }),
+    );
+    mockDbUpdate.mockReturnValue(chainRun());
+    mockSendSMS.mockResolvedValue("SM123");
+
+    const results = await sendOutreachBatch([1], "2026-06-01");
+
+    expect(mockSendSMS).toHaveBeenCalledTimes(1);
+    expect(results).toHaveLength(1);
+    expect(results[0].success).toBe(true);
+  });
+});
+
+/* ================================================================== */
 /*  retrySend                                                          */
 /* ================================================================== */
 describe("retrySend", () => {
