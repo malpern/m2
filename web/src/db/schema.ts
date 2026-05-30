@@ -104,7 +104,7 @@ export const outreach = sqliteTable("outreach", {
   direction: text("direction", { enum: ["sent", "received"] }).notNull(),
   messageText: text("message_text").notNull(),
   interpretation: text("interpretation", {
-    enum: ["confirmed", "declined", "ambiguous", "reschedule_request", "declined_wants_options", "declined_with_alternative", "declined_skip_week", "selecting_offered_slot"],
+    enum: ["confirmed", "declined", "ambiguous", "reschedule_request", "declined_wants_options", "declined_with_alternative", "declined_skip_week", "selecting_offered_slot", "cancellation"],
   }),
   status: text("status", {
     enum: ["pending", "awaiting_reply", "confirmed", "needs_matt", "expired"],

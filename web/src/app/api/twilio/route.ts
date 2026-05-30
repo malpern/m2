@@ -98,9 +98,114 @@ export async function POST(request: NextRequest) {
       .sort((a, b) => (b.sentAt ?? "").localeCompare(a.sentAt ?? ""))[0];
 
     const weekOf = getMonday().toISOString().split("T")[0];
-    const hasActiveOutreach = lastSent && lastSent.status === "awaiting_reply";
+    const firstName = client.name.split(" ")[0];
 
-    if (!hasActiveOutreach) {
+    // #59: Late reply — outreach is from a previous week
+    if (lastSent && lastSent.weekOf !== weekOf) {
+      await db.insert(outreach).values({
+        clientId: client.id,
+        sessionId: null,
+        weekOf,
+        direction: "received" as const,
+        messageText: body,
+        status: "needs_matt" as const,
+        repliedAt: new Date().toISOString(),
+      }).run();
+      const history = buildConversationHistory(recentOutreach);
+      const reply = await composeReply({
+        firstName,
+        history: [...history, { direction: "received" as const, text: body }],
+        scenario: { type: "late_reply" },
+      });
+      await logAndSend(client.id, null, weekOf, client.phone, reply);
+      return twiml();
+    }
+
+    // #62: Re-engage after move-on — outreach expired but client is replying
+    if (lastSent && (lastSent.status === "expired" || lastSent.status === "confirmed")) {
+      // Check if this is a cancellation of a confirmed session (#54)
+      if (lastSent.status === "confirmed" && lastSent.sessionId) {
+        const history = buildConversationHistory(recentOutreach);
+        let result;
+        try {
+          result = await classifyReply(history, body);
+        } catch (e) {
+          if (e instanceof ClassifyBillingError) {
+            await db.insert(outreach).values({
+              clientId: client.id, sessionId: lastSent.sessionId, weekOf,
+              direction: "received" as const, messageText: body,
+              status: "needs_matt" as const, repliedAt: new Date().toISOString(),
+              sendError: "ai_billing_exhausted",
+            }).run();
+            return twiml();
+          }
+          throw e;
+        }
+
+        if (result.interpretation === "cancellation") {
+          await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, lastSent.sessionId)).run();
+          const session = await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get();
+          const dayLabel = session ? new Date(session.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" }) : "your session";
+          const slot = session?.slot ?? "";
+
+          await db.insert(outreach).values({
+            clientId: client.id, sessionId: lastSent.sessionId, weekOf,
+            direction: "received" as const, messageText: body,
+            interpretation: "cancellation", status: "expired" as const,
+            repliedAt: new Date().toISOString(),
+          }).run();
+
+          const reply = await composeReply({
+            firstName,
+            history: [...history, { direction: "received" as const, text: body }],
+            scenario: { type: "cancellation", day: dayLabel, slot },
+          });
+          await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+          return twiml();
+        }
+
+        // Not a cancellation — fall through to "pass along to Matt"
+        await db.insert(outreach).values({
+          clientId: client.id, sessionId: lastSent.sessionId, weekOf,
+          direction: "received" as const, messageText: body,
+          status: "needs_matt" as const, repliedAt: new Date().toISOString(),
+        }).run();
+        return twiml("Hey! I'll pass this along to Matt and he'll get back to you.");
+      }
+
+      // Expired/moved-on — try to re-engage
+      await db.insert(outreach).values({
+        clientId: client.id, sessionId: lastSent.sessionId, weekOf,
+        direction: "received" as const, messageText: body,
+        status: "awaiting_reply" as const, repliedAt: new Date().toISOString(),
+      }).run();
+
+      const open = await getOpenSlots(weekOf, client.id);
+      const ranked = await rankSlotsForClient(client.id, open);
+      const diverse = diversifyAcrossDays(ranked, 3);
+      const history = buildConversationHistory(recentOutreach);
+      const historyWithReply = [...history, { direction: "received" as const, text: body }];
+
+      if (diverse.length > 0) {
+        const altText = formatSlotsText(diverse);
+        const reply = await composeReply({
+          firstName, history: historyWithReply,
+          scenario: { type: "re_engage", alternatives: altText },
+        });
+        const tagged = tagOfferedSlots(reply, diverse);
+        await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, tagged);
+      } else {
+        const reply = await composeReply({
+          firstName, history: historyWithReply,
+          scenario: { type: "re_engage_full" },
+        });
+        await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+      }
+      return twiml();
+    }
+
+    // No active outreach at all
+    if (!lastSent || lastSent.status !== "awaiting_reply") {
       await db.insert(outreach).values({
         clientId: client.id,
         sessionId: null,
@@ -144,6 +249,7 @@ export async function POST(request: NextRequest) {
       declined_wants_options: "needs_matt",
       declined_with_alternative: "needs_matt",
       reschedule_request: "needs_matt",
+      cancellation: "expired",
       ambiguous: "needs_matt",
     };
 
@@ -158,7 +264,6 @@ export async function POST(request: NextRequest) {
       repliedAt: new Date().toISOString(),
     }).returning().get();
 
-    const firstName = client.name.split(" ")[0];
     const historyWithReply = [...history, { direction: "received" as const, text: body }];
 
     if (interpretation === "confirmed" && lastSent?.sessionId) {
@@ -302,6 +407,19 @@ export async function POST(request: NextRequest) {
         firstName,
         history: historyWithReply,
         scenario: { type: "skip_week" },
+      });
+      await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+      return twiml();
+    }
+
+    if (interpretation === "cancellation" && lastSent?.sessionId) {
+      await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, lastSent.sessionId)).run();
+      const session = await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get();
+      const dayLabel = session ? new Date(session.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" }) : "your session";
+      const reply = await composeReply({
+        firstName,
+        history: historyWithReply,
+        scenario: { type: "cancellation", day: dayLabel, slot: session?.slot ?? "" },
       });
       await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
       return twiml();
