@@ -65,6 +65,36 @@ export default async function SettingsPage({
         </div>
       )}
 
+      <h2 className="text-lg font-bold mb-4">API Billing</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+        <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener noreferrer">
+          <Card className="hover:border-foreground/20 transition-colors cursor-pointer h-full">
+            <CardContent className="pt-5 pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-sm">Anthropic API</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Manage credits for AI reply classification</div>
+                </div>
+                <svg className="w-4 h-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
+              </div>
+            </CardContent>
+          </Card>
+        </a>
+        <a href="https://console.twilio.com" target="_blank" rel="noopener noreferrer">
+          <Card className="hover:border-foreground/20 transition-colors cursor-pointer h-full">
+            <CardContent className="pt-5 pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-sm">Twilio</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">Manage credits for WhatsApp messaging</div>
+                </div>
+                <svg className="w-4 h-4 text-muted-foreground" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
+              </div>
+            </CardContent>
+          </Card>
+        </a>
+      </div>
+
       <h2 className="text-lg font-bold mb-4">Outreach Timing</h2>
       <SettingsEditor />
 
