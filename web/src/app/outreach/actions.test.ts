@@ -147,7 +147,7 @@ describe("sendOutreachBatch", () => {
   });
 
   it("handles multiple sessions with mixed success/failure", async () => {
-    const session2 = { ...fakeSession, id: 2, clientName: "Jane Doe", clientPhone: "+15559876543" };
+    const session2 = { ...fakeSession, id: 2, clientId: 20, clientName: "Jane Doe", clientPhone: "+15559876543" };
 
     let selectCallCount = 0;
     mockDbSelect.mockImplementation(() => {

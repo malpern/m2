@@ -56,6 +56,18 @@ function formatSlotsText(slots: { day: string; slot: string }[]): string {
   return slots.map((s) => `${DAY_LABELS[s.day] ?? s.day} at ${s.slot}`).join(", ");
 }
 
+async function getGroupedSessionIds(outreachGroupId: string | null): Promise<number[] | null> {
+  if (!outreachGroupId) return null;
+  const siblings = await db.select({ sessionId: outreach.sessionId })
+    .from(outreach)
+    .where(and(
+      eq(outreach.outreachGroupId, outreachGroupId),
+      eq(outreach.direction, "sent"),
+    ))
+    .all();
+  return siblings.map((s) => s.sessionId).filter((id): id is number => id !== null);
+}
+
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const params: Record<string, string> = {};
@@ -266,18 +278,41 @@ export async function POST(request: NextRequest) {
 
     const historyWithReply = [...history, { direction: "received" as const, text: body }];
 
-    if (interpretation === "confirmed" && lastSent?.sessionId) {
-      await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, lastSent.sessionId)).run();
-      const session = await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get();
-      if (session) {
-        const dayLabel = new Date(session.scheduledDate + "T12:00:00")
-          .toLocaleDateString("en-US", { weekday: "long" });
-        const reply = await composeReply({
-          firstName,
-          history: historyWithReply,
-          scenario: { type: "confirmed", day: dayLabel, slot: session.slot },
-        });
-        await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+    if (interpretation === "confirmed") {
+      const groupIds = await getGroupedSessionIds(lastSent?.outreachGroupId ?? null);
+      const sidsToConfirm = groupIds ?? (lastSent?.sessionId ? [lastSent.sessionId] : []);
+
+      for (const sid of sidsToConfirm) {
+        await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, sid)).run();
+      }
+
+      if (sidsToConfirm.length > 0) {
+        const confirmedSessions = [];
+        for (const sid of sidsToConfirm) {
+          const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
+          if (s) confirmedSessions.push(s);
+        }
+
+        if (confirmedSessions.length === 1) {
+          const s = confirmedSessions[0];
+          const dayLabel = new Date(s.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" });
+          const reply = await composeReply({
+            firstName, history: historyWithReply,
+            scenario: { type: "confirmed", day: dayLabel, slot: s.slot },
+          });
+          await logAndSend(client.id, lastSent!.sessionId, weekOf, client.phone, reply);
+        } else if (confirmedSessions.length > 1) {
+          const sorted = confirmedSessions.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+          const slotList = sorted.map((s) => {
+            const d = new Date(s.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" });
+            return `${d} at ${s.slot}`;
+          }).join(", ");
+          const reply = await composeReply({
+            firstName, history: historyWithReply,
+            scenario: { type: "confirmed", day: slotList, slot: "" },
+          });
+          await logAndSend(client.id, lastSent!.sessionId, weekOf, client.phone, reply);
+        }
       }
       return twiml();
     }
@@ -401,27 +436,37 @@ export async function POST(request: NextRequest) {
       return twiml();
     }
 
-    if (interpretation === "declined_skip_week" && lastSent?.sessionId) {
-      await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, lastSent.sessionId)).run();
+    if (interpretation === "declined_skip_week") {
+      const groupIds = await getGroupedSessionIds(lastSent?.outreachGroupId ?? null);
+      const sidsToCancel = groupIds ?? (lastSent?.sessionId ? [lastSent.sessionId] : []);
+      for (const sid of sidsToCancel) {
+        await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sid)).run();
+      }
       const reply = await composeReply({
         firstName,
         history: historyWithReply,
         scenario: { type: "skip_week" },
       });
-      await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+      await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
       return twiml();
     }
 
-    if (interpretation === "cancellation" && lastSent?.sessionId) {
-      await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, lastSent.sessionId)).run();
-      const session = await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get();
+    if (interpretation === "cancellation") {
+      const groupIds = await getGroupedSessionIds(lastSent?.outreachGroupId ?? null);
+      const sidsToCancel = groupIds ?? (lastSent?.sessionId ? [lastSent.sessionId] : []);
+      for (const sid of sidsToCancel) {
+        await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sid)).run();
+      }
+      const session = lastSent?.sessionId
+        ? await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get()
+        : null;
       const dayLabel = session ? new Date(session.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" }) : "your session";
       const reply = await composeReply({
         firstName,
         history: historyWithReply,
         scenario: { type: "cancellation", day: dayLabel, slot: session?.slot ?? "" },
       });
-      await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+      await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
       return twiml();
     }
 

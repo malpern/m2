@@ -239,7 +239,7 @@ describe("session.status fallback", () => {
       id: 10, clientId: 1, sessionId: 1, weekOf: "2026-05-25",
       direction: "sent" as const, messageText: "Hey...",
       interpretation: null, status: "awaiting_reply" as const,
-      sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null,
+      sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null, outreachGroupId: null,
     }];
     const queue = buildOutreachQueue(sessions, sentOutreach);
     expect(queue[0].status).toBe("confirmed");

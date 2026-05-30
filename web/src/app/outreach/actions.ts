@@ -35,6 +35,7 @@ export async function overrideStatus(sessionId: number, newStatus: string) {
 export async function sendOutreachBatch(sessionIds: number[], weekOf: string) {
   const results: { sessionId: number; success: boolean; error?: string }[] = [];
 
+  const allSessions = [];
   for (const sessionId of sessionIds) {
     const session = await db.select({
       id: sessions.id,
@@ -50,53 +51,84 @@ export async function sendOutreachBatch(sessionIds: number[], weekOf: string) {
     .where(eq(sessions.id, sessionId))
     .get();
 
-    if (!session) continue;
+    if (session) allSessions.push(session);
+  }
 
-    const firstName = session.clientName.split(" ")[0];
-    const dayLabel = formatDay(session.scheduledDate);
+  const byClient = new Map<number, typeof allSessions>();
+  for (const s of allSessions) {
+    const group = byClient.get(s.clientId) ?? [];
+    group.push(s);
+    byClient.set(s.clientId, group);
+  }
 
-    const lastSession = await db.select({
-      scheduledDate: sessions.scheduledDate,
-      slot: sessions.slot,
-    })
-    .from(sessions)
-    .where(and(
-      eq(sessions.clientId, session.clientId),
-      eq(sessions.status, "completed"),
-    ))
-    .orderBy(desc(sessions.scheduledDate))
-    .limit(1)
-    .get();
+  for (const [, clientSessions] of byClient) {
+    const first = clientSessions[0];
+    const firstName = first.clientName.split(" ")[0];
+    const groupId = clientSessions.length > 1
+      ? `og_${first.clientId}_${Date.now()}`
+      : null;
 
-    const isSameAsLastWeek = lastSession
-      && formatDay(lastSession.scheduledDate) === dayLabel
-      && lastSession.slot === session.slot;
+    let message: string;
+    if (clientSessions.length === 1) {
+      const dayLabel = formatDay(first.scheduledDate);
+      const lastCompleted = await db.select({ scheduledDate: sessions.scheduledDate, slot: sessions.slot })
+        .from(sessions)
+        .where(and(eq(sessions.clientId, first.clientId), eq(sessions.status, "completed")))
+        .orderBy(desc(sessions.scheduledDate))
+        .limit(1)
+        .get();
 
-    const message = isSameAsLastWeek
-      ? `Hey ${firstName}, same time as last week — ${dayLabel} at ${session.slot}?`
-      : `Hey ${firstName}, are you free ${dayLabel} at ${session.slot} for a session?`;
+      const isSameAsLastWeek = lastCompleted
+        && formatDay(lastCompleted.scheduledDate) === dayLabel
+        && lastCompleted.slot === first.slot;
 
-    const row = await db.insert(outreach).values({
-      clientId: session.clientId,
-      sessionId: session.id,
-      weekOf,
-      direction: "sent",
-      messageText: message,
-      status: "awaiting_reply",
-      sentAt: new Date().toISOString(),
-    }).returning().get();
+      message = isSameAsLastWeek
+        ? `Hey ${firstName}, same time as last week — ${dayLabel} at ${first.slot}?`
+        : `Hey ${firstName}, are you free ${dayLabel} at ${first.slot} for a session?`;
+    } else {
+      const sorted = [...clientSessions].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+      const slotList = sorted.map((s) => `${formatDay(s.scheduledDate)} at ${s.slot}`);
+      const lastItem = slotList.pop()!;
+      const listText = slotList.length > 0
+        ? `${slotList.join(", ")}, and ${lastItem}`
+        : lastItem;
+
+      message = `Hey ${firstName}, here's your schedule this week:\n${sorted.map((s) => `• ${formatDay(s.scheduledDate)} at ${s.slot}`).join("\n")}\nAll good, or need to change anything?`;
+    }
+
+    const now = new Date().toISOString();
+    const outreachRows = [];
+    for (const s of clientSessions) {
+      const row = await db.insert(outreach).values({
+        clientId: s.clientId,
+        sessionId: s.id,
+        weekOf,
+        direction: "sent",
+        messageText: message,
+        status: "awaiting_reply",
+        sentAt: now,
+        outreachGroupId: groupId,
+      }).returning().get();
+      outreachRows.push(row);
+    }
 
     try {
-      await sendSMS(session.clientPhone, message);
-      results.push({ sessionId, success: true });
+      await sendSMS(first.clientPhone, message);
+      for (const s of clientSessions) {
+        results.push({ sessionId: s.id, success: true });
+      }
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
-      console.error(`Failed to send SMS to ${session.clientPhone}:`, e);
-      await db.update(outreach).set({
-        status: "pending",
-        sendError: errorMsg,
-      }).where(eq(outreach.id, row.id)).run();
-      results.push({ sessionId, success: false, error: errorMsg });
+      console.error(`Failed to send SMS to ${first.clientPhone}:`, e);
+      for (const row of outreachRows) {
+        await db.update(outreach).set({
+          status: "pending",
+          sendError: errorMsg,
+        }).where(eq(outreach.id, row.id)).run();
+      }
+      for (const s of clientSessions) {
+        results.push({ sessionId: s.id, success: false, error: errorMsg });
+      }
     }
   }
 
