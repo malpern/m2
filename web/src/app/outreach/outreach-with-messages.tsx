@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { OutreachDashboard } from "./outreach-dashboard";
 import { MessagesView } from "../messages/messages-view";
 import type { OutreachItem } from "@/lib/outreach-engine";
@@ -32,6 +33,12 @@ export function OutreachWithMessages({
   messages: Message[];
 }) {
   const [tab, setTab] = useState<"outreach" | "messages">("outreach");
+  const router = useRouter();
+
+  useEffect(() => {
+    const interval = setInterval(() => router.refresh(), 30_000);
+    return () => clearInterval(interval);
+  }, [router]);
 
   return (
     <div>

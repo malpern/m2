@@ -230,6 +230,30 @@ describe("getNeedsMattAttention", () => {
   });
 });
 
+describe("session.status fallback", () => {
+  it("shows confirmed when session is confirmed but no reply record exists", () => {
+    const sessions = [
+      makeSession({ id: 1, status: "confirmed" as const }),
+    ];
+    const sentOutreach = [{
+      id: 10, clientId: 1, sessionId: 1, weekOf: "2026-05-25",
+      direction: "sent" as const, messageText: "Hey...",
+      interpretation: null, status: "awaiting_reply" as const,
+      sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null,
+    }];
+    const queue = buildOutreachQueue(sessions, sentOutreach);
+    expect(queue[0].status).toBe("confirmed");
+  });
+
+  it("shows confirmed when session confirmed with no outreach at all", () => {
+    const sessions = [
+      makeSession({ id: 1, status: "confirmed" as const }),
+    ];
+    const queue = buildOutreachQueue(sessions, []);
+    expect(queue[0].status).toBe("confirmed");
+  });
+});
+
 describe("getOutreachSummary", () => {
   it("counts all statuses", () => {
     const items = [

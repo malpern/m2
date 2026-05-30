@@ -387,6 +387,7 @@ export function ScheduleCalendar({
           eventClick={handleEventClick}
           events={allEvents}
           height="auto"
+          firstDay={1}
           hiddenDays={[6]}
           dayHeaderFormat={{ weekday: "short", month: "numeric", day: "numeric" }}
           eventTimeFormat={{ hour: "numeric", minute: "2-digit", meridiem: "short" }}
