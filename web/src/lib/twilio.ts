@@ -17,7 +17,18 @@ function getClient() {
 const USE_WHATSAPP = process.env.TWILIO_USE_WHATSAPP === "true";
 const WHATSAPP_SANDBOX = "whatsapp:+14155238886";
 
+const DEV_ALLOWED_PHONES = new Set(["+14082099509"]);
+
+export function isDevAllowed(phone: string): boolean {
+  if (process.env.NODE_ENV === "production" && process.env.OUTREACH_LIVE === "true") return true;
+  return DEV_ALLOWED_PHONES.has(phone);
+}
+
 export async function sendSMS(to: string, body: string): Promise<string> {
+  if (!isDevAllowed(to)) {
+    console.log(`[DEV GUARD] Would send to ${to}: "${body.slice(0, 80)}..."`);
+    return "DEV_SKIPPED";
+  }
   const from = USE_WHATSAPP
     ? WHATSAPP_SANDBOX
     : process.env.TWILIO_PHONE_NUMBER;

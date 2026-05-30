@@ -6,6 +6,7 @@ import { classifyReply, composeReply, ClassifyBillingError, type ConversationMes
 import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, diversifyAcrossDays, isSlotStillOpen, tagOfferedSlots, whySlotUnavailable } from "@/lib/suggest-alternatives";
 import { sendSMS } from "@/lib/twilio";
 import { getMonday } from "@/lib/scheduler";
+import { autoFillCancelledSlot } from "@/lib/auto-fill";
 import twilio from "twilio";
 
 function escapeXml(text: string): string {
@@ -173,6 +174,9 @@ export async function POST(request: NextRequest) {
             scenario: { type: "cancellation", day: dayLabel, slot },
           });
           await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
+          if (session) {
+            autoFillCancelledSlot(session.scheduledDate, session.slot, client.id).catch(() => {});
+          }
           return twiml();
         }
 
@@ -488,8 +492,11 @@ export async function POST(request: NextRequest) {
     if (interpretation === "declined_skip_week") {
       const groupIds = await getGroupedSessionIds(lastSent?.outreachGroupId ?? null);
       const sidsToCancel = groupIds ?? (lastSent?.sessionId ? [lastSent.sessionId] : []);
+      const cancelledSlots: { date: string; slot: string; clientId: number }[] = [];
       for (const sid of sidsToCancel) {
+        const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
         await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sid)).run();
+        if (s) cancelledSlots.push({ date: s.scheduledDate, slot: s.slot, clientId: client.id });
       }
       const reply = await composeReply({
         firstName,
@@ -497,25 +504,32 @@ export async function POST(request: NextRequest) {
         scenario: { type: "skip_week" },
       });
       await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+      for (const cs of cancelledSlots) {
+        autoFillCancelledSlot(cs.date, cs.slot, cs.clientId).catch(() => {});
+      }
       return twiml();
     }
 
     if (interpretation === "cancellation") {
       const groupIds = await getGroupedSessionIds(lastSent?.outreachGroupId ?? null);
       const sidsToCancel = groupIds ?? (lastSent?.sessionId ? [lastSent.sessionId] : []);
+      const cancelledSlots: { date: string; slot: string; clientId: number }[] = [];
       for (const sid of sidsToCancel) {
+        const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
         await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sid)).run();
+        if (s) cancelledSlots.push({ date: s.scheduledDate, slot: s.slot, clientId: client.id });
       }
-      const session = lastSent?.sessionId
-        ? await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get()
-        : null;
-      const dayLabel = session ? new Date(session.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }) : "your session";
+      const session = cancelledSlots[0];
+      const dayLabel = session ? new Date(session.date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }) : "your session";
       const reply = await composeReply({
         firstName,
         history: historyWithReply,
         scenario: { type: "cancellation", day: dayLabel, slot: session?.slot ?? "" },
       });
       await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+      for (const cs of cancelledSlots) {
+        autoFillCancelledSlot(cs.date, cs.slot, cs.clientId).catch(() => {});
+      }
       return twiml();
     }
 
