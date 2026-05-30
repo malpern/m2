@@ -168,6 +168,32 @@ export async function getOpenSlots(
   return open;
 }
 
+export type SlotUnavailableReason = "not_a_slot" | "not_available" | "booked" | "gcal_conflict" | "already_offered";
+
+export async function whySlotUnavailable(
+  weekOf: string,
+  day: string | null,
+  time: string | null,
+): Promise<SlotUnavailableReason> {
+  if (!time || !SLOTS.includes(time as TimeSlot)) return "not_a_slot";
+
+  const slot = time as TimeSlot;
+  if (!day) return "not_a_slot";
+
+  const monday = getMondayOfWeek(weekOf);
+
+  const defaults = await db.select().from(defaultAvailability).all();
+  const overrides = await db.select().from(weeklyOverrides).where(eq(weeklyOverrides.weekOf, monday)).all();
+  const availMap = new Map<string, boolean>();
+  for (const d of defaults) availMap.set(`${d.day}:${d.slot}`, d.enabled);
+  for (const o of overrides) availMap.set(`${o.day}:${o.slot}`, o.enabled);
+
+  const availKey = `${day}:${slot}`;
+  if (availMap.has(availKey) && !availMap.get(availKey)) return "not_available";
+
+  return "booked";
+}
+
 export async function rankSlotsForClient(
   clientId: number,
   openSlots: { day: string; date: string; slot: TimeSlot; time: string }[],

@@ -3,7 +3,7 @@ import { outreach, clients, sessions } from "@/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { classifyReply, ClassifyBillingError, type ReplyInterpretation } from "@/lib/classify-reply";
-import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, diversifyAcrossDays, isSlotStillOpen, tagOfferedSlots } from "@/lib/suggest-alternatives";
+import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, diversifyAcrossDays, isSlotStillOpen, tagOfferedSlots, whySlotUnavailable } from "@/lib/suggest-alternatives";
 import { sendSMS } from "@/lib/twilio";
 import { getMonday } from "@/lib/scheduler";
 import twilio from "twilio";
@@ -202,8 +202,13 @@ export async function POST(request: NextRequest) {
         const requestedTime = result.extractedTime ?? null;
         const requestLabel = [requestedDay, requestedTime].filter(Boolean).join(" at ");
 
+        const reason = await whySlotUnavailable(weekOf, result.extractedDay ?? null, result.extractedTime ?? null);
+        const reasonText = reason === "not_a_slot" || reason === "not_available"
+          ? `I don't have ${requestLabel} this week`
+          : `${requestLabel} is already booked this week`;
+
         const ranked = await rankSlotsForClient(client.id, open);
-        const msg = `Sorry, ${requestLabel} isn't available this week.\n\n${formatAlternativesMessage(firstName, ranked)}`;
+        const msg = `Sorry, ${reasonText}.\n\n${formatAlternativesMessage(firstName, ranked)}`;
         const reply = tagOfferedSlots(msg, diversifyAcrossDays(ranked, 3));
         await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
         await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
