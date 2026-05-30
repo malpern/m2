@@ -9,6 +9,7 @@ import { getMonday } from "@/lib/scheduler";
 import { autoFillCancelledSlot } from "@/lib/auto-fill";
 import { syslog } from "@/lib/logger";
 import { syncSessionToCalendar } from "@/lib/gcal-sync";
+import { getInvitePrompt } from "@/lib/invite-prompt";
 import twilio from "twilio";
 
 function escapeXml(text: string): string {
@@ -235,6 +236,85 @@ export async function POST(request: NextRequest) {
         repliedAt: new Date().toISOString(),
       }).run();
       return twiml("Hey! I'll pass this along to Matt and he'll get back to you.");
+    }
+
+    const lastSentText = (lastSent?.messageText ?? "").toLowerCase();
+    const isInviteFlow = lastSentText.includes("calendar invite") || lastSentText.includes("email address");
+
+    if (isInviteFlow) {
+      const emailMatch = body.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+      const lowerBody = body.toLowerCase().trim();
+
+      if (emailMatch) {
+        const email = emailMatch[0];
+        await db.update(clients).set({ email, calendarInviteOptIn: true }).where(eq(clients.id, client.id)).run();
+        await db.insert(outreach).values({
+          clientId: client.id, sessionId: lastSent?.sessionId ?? null, weekOf,
+          direction: "received" as const, messageText: body,
+          status: "confirmed" as const, repliedAt: new Date().toISOString(),
+        }).run();
+
+        if (lastSent?.sessionId) {
+          const session = await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get();
+          if (session?.gcalEventId) {
+            try {
+              const { updateCalendarEventAttendee } = await import("@/lib/google-calendar");
+              await updateCalendarEventAttendee(session.gcalEventId, email);
+            } catch { /* will get it next time */ }
+          }
+        }
+
+        await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone,
+          `Got it, ${email} — invite sent! You'll get calendar invites for future sessions too.`);
+        syslog.info("outreach", `${firstName} opted in to calendar invites (${email})`, `Client ${client.id} email set to ${email}, calendarInviteOptIn=true`, { clientId: client.id });
+        return twiml();
+      }
+
+      if (lowerBody === "no" || lowerBody === "nah" || lowerBody === "no thanks" || lowerBody.includes("don't") || lowerBody.includes("opt out")) {
+        await db.update(clients).set({ calendarInviteOptIn: false }).where(eq(clients.id, client.id)).run();
+        await db.insert(outreach).values({
+          clientId: client.id, sessionId: lastSent?.sessionId ?? null, weekOf,
+          direction: "received" as const, messageText: body,
+          status: "confirmed" as const, repliedAt: new Date().toISOString(),
+        }).run();
+        await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone,
+          "No problem! You won't get calendar invites.");
+        return twiml();
+      }
+
+      if (lowerBody === "yes" || lowerBody === "yeah" || lowerBody === "sure" || lowerBody === "yep") {
+        if (client.email) {
+          await db.update(clients).set({ calendarInviteOptIn: true }).where(eq(clients.id, client.id)).run();
+          await db.insert(outreach).values({
+            clientId: client.id, sessionId: lastSent?.sessionId ?? null, weekOf,
+            direction: "received" as const, messageText: body,
+            status: "confirmed" as const, repliedAt: new Date().toISOString(),
+          }).run();
+
+          if (lastSent?.sessionId) {
+            const session = await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get();
+            if (session?.gcalEventId) {
+              try {
+                const { updateCalendarEventAttendee } = await import("@/lib/google-calendar");
+                await updateCalendarEventAttendee(session.gcalEventId, client.email);
+              } catch { /* will get it next time */ }
+            }
+          }
+
+          await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone,
+            `Invite sent to ${client.email}!`);
+          return twiml();
+        }
+
+        await db.insert(outreach).values({
+          clientId: client.id, sessionId: lastSent?.sessionId ?? null, weekOf,
+          direction: "received" as const, messageText: body,
+          status: "awaiting_reply" as const, repliedAt: new Date().toISOString(),
+        }).run();
+        await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone,
+          "What's your email address?");
+        return twiml();
+      }
     }
 
     const history = buildConversationHistory(recentOutreach);
@@ -574,10 +654,12 @@ export async function POST(request: NextRequest) {
         if (confirmedSessions.length === 1) {
           const s = confirmedSessions[0];
           const dayLabel = new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });
-          const reply = await composeReply({
+          let reply = await composeReply({
             firstName, history: historyWithReply,
             scenario: { type: "confirmed", day: dayLabel, slot: s.slot },
           });
+          const invitePrompt = await getInvitePrompt(client.id);
+          if (invitePrompt) reply += invitePrompt;
           await logAndSend(client.id, lastSent!.sessionId, weekOf, client.phone, reply);
         } else if (confirmedSessions.length > 1) {
           const sorted = confirmedSessions.sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
@@ -585,10 +667,12 @@ export async function POST(request: NextRequest) {
             const d = new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });
             return `${d} at ${s.slot}`;
           }).join(", ");
-          const reply = await composeReply({
+          let reply = await composeReply({
             firstName, history: historyWithReply,
             scenario: { type: "confirmed", day: slotList, slot: "" },
           });
+          const invitePrompt = await getInvitePrompt(client.id);
+          if (invitePrompt) reply += invitePrompt;
           await logAndSend(client.id, lastSent!.sessionId, weekOf, client.phone, reply);
         } else {
           await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone,

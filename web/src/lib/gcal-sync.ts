@@ -11,6 +11,8 @@ export async function syncSessionToCalendar(sessionId: number): Promise<void> {
   const session = await db.select({
     id: sessions.id,
     clientName: clients.name,
+    clientEmail: clients.email,
+    calendarInviteOptIn: clients.calendarInviteOptIn,
     scheduledDate: sessions.scheduledDate,
     scheduledTime: sessions.scheduledTime,
     slot: sessions.slot,
@@ -26,14 +28,17 @@ export async function syncSessionToCalendar(sessionId: number): Promise<void> {
 
   if (session.status === "confirmed" && !session.gcalEventId) {
     try {
+      const attendeeEmail = (session.calendarInviteOptIn && session.clientEmail) ? session.clientEmail : undefined;
       const eventId = await createCalendarEvent(
         session.clientName,
         session.scheduledDate,
         session.scheduledTime,
+        { attendeeEmail },
       );
       if (eventId) {
         await db.update(sessions).set({ gcalEventId: eventId }).where(eq(sessions.id, sessionId)).run();
-        syslog.info("system", `Added ${session.clientName}'s session to Google Calendar`, `GCal event created: ${eventId} for session ${sessionId}`, { sessionId, clientId: undefined });
+        const inviteNote = attendeeEmail ? ` (invite sent to ${attendeeEmail})` : "";
+        syslog.info("system", `Added ${session.clientName}'s session to Google Calendar${inviteNote}`, `GCal event created: ${eventId} for session ${sessionId}`, { sessionId });
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

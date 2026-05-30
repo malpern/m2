@@ -18,6 +18,7 @@ CREATE TABLE clients (
     session_type TEXT,
     parent_guardian TEXT,
     email TEXT,
+    calendar_invite_opt_in INTEGER,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );

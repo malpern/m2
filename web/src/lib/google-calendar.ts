@@ -134,25 +134,49 @@ export async function createCalendarEvent(
   clientName: string,
   date: string,
   startTime: string,
-  durationMinutes: number = 60,
+  opts?: { durationMinutes?: number; attendeeEmail?: string },
 ): Promise<string | null> {
   const auth = await getAuthenticatedClient();
   if (!auth) return null;
 
+  const durationMinutes = opts?.durationMinutes ?? 60;
   const calendar = google.calendar({ version: "v3", auth });
   const start = new Date(`${date}T${startTime}:00`);
   const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
 
+  const attendees = opts?.attendeeEmail ? [{ email: opts.attendeeEmail }] : undefined;
+
   const res = await calendar.events.insert({
     calendarId: CALENDAR_ID,
+    sendUpdates: opts?.attendeeEmail ? "all" : "none",
     requestBody: {
       summary: `${EVENT_PREFIX}${clientName}${TEST_SUFFIX}`,
       start: { dateTime: start.toISOString(), timeZone: "America/Los_Angeles" },
       end: { dateTime: end.toISOString(), timeZone: "America/Los_Angeles" },
+      ...(attendees && { attendees }),
     },
   });
 
   return res.data.id ?? null;
+}
+
+export async function updateCalendarEventAttendee(eventId: string, email: string): Promise<boolean> {
+  const auth = await getAuthenticatedClient();
+  if (!auth) return false;
+
+  const calendar = google.calendar({ version: "v3", auth });
+  const existing = await calendar.events.get({ calendarId: CALENDAR_ID, eventId });
+  const attendees = existing.data.attendees ?? [];
+  if (!attendees.some((a) => a.email === email)) {
+    attendees.push({ email });
+  }
+  await calendar.events.patch({
+    calendarId: CALENDAR_ID,
+    eventId,
+    sendUpdates: "all",
+    requestBody: { attendees },
+  });
+  return true;
 }
 
 export async function deleteCalendarEvent(eventId: string): Promise<boolean> {
