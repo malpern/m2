@@ -2,7 +2,7 @@ import { db } from "@/db";
 import { outreach, clients, sessions } from "@/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { NextRequest } from "next/server";
-import { classifyReply, type ReplyInterpretation } from "@/lib/classify-reply";
+import { classifyReply, ClassifyBillingError, type ReplyInterpretation } from "@/lib/classify-reply";
 import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, isSlotStillOpen, tagOfferedSlots } from "@/lib/suggest-alternatives";
 import { sendSMS } from "@/lib/twilio";
 import twilio from "twilio";
@@ -76,7 +76,25 @@ export async function POST(request: NextRequest) {
       .sort((a, b) => (b.sentAt ?? "").localeCompare(a.sentAt ?? ""))[0];
 
     const outreachMessage = lastSent?.messageText ?? "";
-    const result = await classifyReply(outreachMessage, body);
+    let result;
+    try {
+      result = await classifyReply(outreachMessage, body);
+    } catch (e) {
+      if (e instanceof ClassifyBillingError) {
+        await db.insert(outreach).values({
+          clientId: client.id,
+          sessionId: lastSent?.sessionId ?? null,
+          weekOf: new Date().toISOString().split("T")[0],
+          direction: "received" as const,
+          messageText: body,
+          status: "needs_matt" as const,
+          repliedAt: new Date().toISOString(),
+          sendError: "ai_billing_exhausted",
+        }).run();
+        return twiml();
+      }
+      throw e;
+    }
     const interpretation = result.interpretation;
 
     type OutreachStatus = "pending" | "awaiting_reply" | "confirmed" | "needs_matt" | "expired";

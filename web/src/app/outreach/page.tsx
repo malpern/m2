@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { clients, sessions, outreach } from "@/db/schema";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, isNotNull } from "drizzle-orm";
 import { getMonday } from "@/lib/scheduler";
 import {
   buildOutreachQueue,
@@ -53,6 +53,13 @@ export default async function OutreachPage() {
   const nextBatch = getNextBatchToSend(items);
   const needsAttention = getNeedsMattAttention(items);
 
+  const billingErrors = await db
+    .select({ id: outreach.id })
+    .from(outreach)
+    .where(eq(outreach.sendError, "ai_billing_exhausted"))
+    .all();
+  const hasAiBillingError = billingErrors.length > 0;
+
   // All messages for the Messages tab
   const allMessages = await db
     .select({
@@ -79,6 +86,7 @@ export default async function OutreachPage() {
           nextBatch,
           needsAttention,
           weekOf: weekStart,
+          hasAiBillingError,
         }}
         messages={allMessages}
       />

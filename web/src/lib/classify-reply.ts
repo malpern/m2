@@ -35,29 +35,44 @@ If no specific day/time is mentioned, omit those fields:
 
 Context matters: if the original message offered alternatives and the client picks one, that's "selecting_offered_slot" or "confirmed", not a new reschedule request.`;
 
+export class ClassifyBillingError extends Error {
+  constructor() {
+    super("Anthropic API credits exhausted");
+    this.name = "ClassifyBillingError";
+  }
+}
+
 export async function classifyReply(
   outreachMessage: string,
   clientReply: string,
 ): Promise<ClassifyResult> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  const response = await client.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 128,
-    system: SYSTEM_PROMPT,
-    messages: [{
-      role: "user",
-      content: `Original message sent to client: "${outreachMessage}"\nClient's reply: "${clientReply}"`,
-    }],
-  });
+  try {
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 128,
+      system: SYSTEM_PROMPT,
+      messages: [{
+        role: "user",
+        content: `Original message sent to client: "${outreachMessage}"\nClient's reply: "${clientReply}"`,
+      }],
+    });
 
-  const raw = response.content[0].type === "text" ? response.content[0].text : "";
-  const cleaned = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
-  const parsed = JSON.parse(cleaned);
-  return {
-    interpretation: parsed.interpretation ?? "ambiguous",
-    confidence: parsed.confidence ?? 0.5,
-    extractedDay: parsed.extractedDay ?? undefined,
-    extractedTime: parsed.extractedTime ?? undefined,
-  };
+    const raw = response.content[0].type === "text" ? response.content[0].text : "";
+    const cleaned = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+    return {
+      interpretation: parsed.interpretation ?? "ambiguous",
+      confidence: parsed.confidence ?? 0.5,
+      extractedDay: parsed.extractedDay ?? undefined,
+      extractedTime: parsed.extractedTime ?? undefined,
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("credit balance") || msg.includes("billing")) {
+      throw new ClassifyBillingError();
+    }
+    throw e;
+  }
 }
