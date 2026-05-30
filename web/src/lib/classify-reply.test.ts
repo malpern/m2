@@ -143,23 +143,22 @@ describe("classifyReply", () => {
     await expect(classifyReply([], "hey")).rejects.toThrow(ClassifyBillingError);
   });
 
-  it("re-throws non-billing errors", async () => {
+  it("returns ambiguous on non-billing errors instead of throwing", async () => {
     mockCreate.mockRejectedValue(new Error("network timeout"));
 
-    await expect(classifyReply([], "hey")).rejects.toThrow("network timeout");
+    const result = await classifyReply([], "hey");
+    expect(result.interpretation).toBe("ambiguous");
+    expect(result.confidence).toBe(0.3);
   });
 
-  it("re-throws non-billing errors without wrapping", async () => {
-    const original = new Error("server error");
-    mockCreate.mockRejectedValue(original);
+  it("returns ambiguous on JSON parse errors", async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: "text", text: "this is not json" }],
+    });
 
-    try {
-      await classifyReply([], "hey");
-      expect.unreachable("should have thrown");
-    } catch (e) {
-      expect(e).toBe(original);
-      expect(e).not.toBeInstanceOf(ClassifyBillingError);
-    }
+    const result = await classifyReply([], "hey");
+    expect(result.interpretation).toBe("ambiguous");
+    expect(result.confidence).toBe(0.3);
   });
 });
 

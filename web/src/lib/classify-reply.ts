@@ -17,6 +17,19 @@ export type ClassifyResult = {
   extractedTime?: string;
 };
 
+export type SessionAction = {
+  day: string;
+  slot: string;
+  action: "confirm" | "cancel" | "reschedule";
+  requestedDay?: string;
+  requestedTime?: string;
+};
+
+export type MultiSessionClassifyResult = {
+  actions: SessionAction[];
+  confidence: number;
+};
+
 export interface ConversationMessage {
   direction: "sent" | "received";
   text: string;
@@ -44,6 +57,25 @@ If no specific day/time is mentioned, omit those fields:
 
 Context matters: if the previous message offered alternatives and the client picks one, that's "selecting_offered_slot" or "confirmed", not a new reschedule request.`;
 
+const MULTI_SESSION_CLASSIFY_SYSTEM = `You classify text message replies for a sports training scheduler. The client was offered MULTIPLE sessions for the week and is responding to all of them at once.
+
+Respond with ONLY a JSON object containing an "actions" array. Each action corresponds to one of the offered sessions.
+
+For each session, determine what the client wants:
+- "confirm": They accept this session as-is
+- "cancel": They want to skip/cancel this session
+- "reschedule": They want a different time for this session (extract requestedDay/requestedTime if mentioned)
+
+Example — client was offered Monday 3pm, Wednesday 3pm, Friday 3pm and says "Monday's good, skip Wednesday, can we do Friday at 5 instead?":
+{"actions":[{"day":"monday","slot":"3pm","action":"confirm"},{"day":"wednesday","slot":"3pm","action":"cancel"},{"day":"friday","slot":"3pm","action":"reschedule","requestedTime":"5pm"}],"confidence":0.9}
+
+Example — client says "all good":
+{"actions":[{"day":"monday","slot":"3pm","action":"confirm"},{"day":"wednesday","slot":"3pm","action":"confirm"},{"day":"friday","slot":"3pm","action":"confirm"}],"confidence":0.95}
+
+If a session isn't mentioned, assume "confirm" (the client only calls out changes).
+Always include ALL offered sessions in the actions array.
+Respond with ONLY the JSON object, no other text.`;
+
 const COMPOSE_SYSTEM = `You write brief, friendly text messages for Matt, a sports performance trainer. You're texting his clients about scheduling sessions.
 
 Rules:
@@ -68,6 +100,13 @@ function formatConversation(history: ConversationMessage[]): string {
   }).join("\n");
 }
 
+function checkBillingError(e: unknown): void {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes("credit balance") || msg.includes("billing")) {
+    throw new ClassifyBillingError();
+  }
+}
+
 export async function classifyReply(
   history: ConversationMessage[],
   clientReply: string,
@@ -81,7 +120,7 @@ export async function classifyReply(
   try {
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 128,
+      max_tokens: 256,
       system: CLASSIFY_SYSTEM,
       messages: [{ role: "user", content: conversationText }],
     });
@@ -96,11 +135,54 @@ export async function classifyReply(
       extractedTime: parsed.extractedTime ?? undefined,
     };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes("credit balance") || msg.includes("billing")) {
-      throw new ClassifyBillingError();
+    checkBillingError(e);
+    console.error("Classification parse/API error, returning ambiguous:", e);
+    return { interpretation: "ambiguous", confidence: 0.3 };
+  }
+}
+
+export async function classifyMultiSessionReply(
+  history: ConversationMessage[],
+  clientReply: string,
+  offeredSessions: { day: string; slot: string }[],
+): Promise<MultiSessionClassifyResult> {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  const sessionList = offeredSessions.map((s) => `${s.day} at ${s.slot}`).join(", ");
+  const conversationText = history.length > 0
+    ? `Conversation so far:\n${formatConversation(history)}\n\nSessions offered: ${sessionList}\n\nClient's latest reply: "${clientReply}"`
+    : `Sessions offered: ${sessionList}\n\nClient's reply: "${clientReply}"`;
+
+  try {
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 512,
+      system: MULTI_SESSION_CLASSIFY_SYSTEM,
+      messages: [{ role: "user", content: conversationText }],
+    });
+
+    const raw = response.content[0].type === "text" ? response.content[0].text : "";
+    const cleaned = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+
+    if (!parsed.actions || !Array.isArray(parsed.actions)) {
+      return { actions: offeredSessions.map((s) => ({ ...s, action: "confirm" as const })), confidence: 0.3 };
     }
-    throw e;
+
+    return {
+      actions: parsed.actions.map((a: Record<string, string>) => ({
+        day: a.day ?? "",
+        slot: a.slot ?? "",
+        action: (a.action === "confirm" || a.action === "cancel" || a.action === "reschedule") ? a.action : "confirm",
+        requestedDay: a.requestedDay ?? undefined,
+        requestedTime: a.requestedTime ?? undefined,
+      })),
+      confidence: parsed.confidence ?? 0.7,
+    };
+  } catch (e) {
+    checkBillingError(e);
+    console.error("Multi-session classification failed, confirming all:", e);
+    return { actions: offeredSessions.map((s) => ({ ...s, action: "confirm" as const })), confidence: 0.3 };
   }
 }
 
@@ -118,7 +200,8 @@ export type ComposeContext = {
     | { type: "cancellation"; day: string; slot: string }
     | { type: "late_reply" }
     | { type: "re_engage"; alternatives: string }
-    | { type: "re_engage_full" };
+    | { type: "re_engage_full" }
+    | { type: "multi_session_update"; summary: string };
 };
 
 export async function composeReply(ctx: ComposeContext): Promise<string> {
@@ -158,6 +241,9 @@ export async function composeReply(ctx: ComposeContext): Promise<string> {
       break;
     case "re_engage_full":
       instructions = `The client was previously moved on but is now responding. Unfortunately the week is fully booked now. Let them know and tell them they'll be first up next week.`;
+      break;
+    case "multi_session_update":
+      instructions = `Summarize the scheduling update for the client. ${ctx.scenario.summary} Keep it natural and brief.`;
       break;
   }
 
@@ -207,5 +293,7 @@ function fallbackMessage(ctx: ComposeContext): string {
       return `Hey ${ctx.firstName}, glad to hear from you! I still have ${ctx.scenario.alternatives} open this week if you want to get in.`;
     case "re_engage_full":
       return `Hey ${ctx.firstName}! Unfortunately this week is fully booked now, but I'll make sure you're first up next week.`;
+    case "multi_session_update":
+      return ctx.scenario.summary;
   }
 }
