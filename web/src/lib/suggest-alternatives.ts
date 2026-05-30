@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { sessions, clients, outreach } from "@/db/schema";
+import { sessions, clients, outreach, defaultAvailability, weeklyOverrides } from "@/db/schema";
 import { and, gte, lte, eq, ne } from "drizzle-orm";
 import { listEvents, isConnected } from "@/lib/google-calendar";
 import { OUTREACH_DEFAULTS } from "./outreach-config";
@@ -142,12 +142,21 @@ export async function getOpenSlots(
 
   const pendingOffers = await getPendingOfferKeys(weekOf, excludeClientId);
 
+  const defaults = await db.select().from(defaultAvailability).all();
+  const overrides = await db.select().from(weeklyOverrides).where(eq(weeklyOverrides.weekOf, monday)).all();
+  const availMap = new Map<string, boolean>();
+  for (const d of defaults) availMap.set(`${d.day}:${d.slot}`, d.enabled);
+  for (const o of overrides) availMap.set(`${o.day}:${o.slot}`, o.enabled);
+
   const today = new Date().toISOString().split("T")[0];
   const open: { day: string; date: string; slot: TimeSlot; time: string }[] = [];
 
   for (const { day, date } of weekDates) {
     if (date < today) continue;
     for (const slot of SLOTS) {
+      const availKey = `${day}:${slot}`;
+      if (availMap.has(availKey) && !availMap.get(availKey)) continue;
+
       const time = SLOT_TIMES[slot];
       const key = `${date}|${time}`;
       if (!bookedKeys.has(key) && !gcalKeys.has(key) && !pendingOffers.has(`${date}|${slot}`)) {
