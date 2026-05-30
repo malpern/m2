@@ -373,6 +373,51 @@ export async function POST(request: NextRequest) {
          interpretation === "declined_with_alternative" ||
          interpretation === "reschedule_request") && lastSent?.sessionId) {
 
+      const groupIds = await getGroupedSessionIds(lastSent.outreachGroupId ?? null);
+
+      if (groupIds && groupIds.length > 1 && result.extractedDay) {
+        const allGroupSessions = [];
+        for (const sid of groupIds) {
+          const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
+          if (s) allGroupSessions.push(s);
+        }
+
+        const rejectedDay = result.extractedDay.toLowerCase().slice(0, 3);
+        const rejected = allGroupSessions.filter((s) => {
+          const d = new Date(s.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+          return d.startsWith(rejectedDay);
+        });
+        const accepted = allGroupSessions.filter((s) => !rejected.includes(s));
+
+        if (rejected.length > 0 && accepted.length > 0) {
+          for (const s of accepted) {
+            await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, s.id)).run();
+          }
+          await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
+
+          const confirmedList = accepted.map((s) => {
+            const d = new Date(s.scheduledDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" });
+            return `${d} at ${s.slot}`;
+          }).join(" and ");
+
+          const open = await getOpenSlots(weekOf, client.id);
+          const ranked = await rankSlotsForClient(client.id, open);
+          const diverse = diversifyAcrossDays(ranked, 3);
+          const altText = formatSlotsText(diverse);
+
+          const rejectedDay_ = result.extractedDay.charAt(0).toUpperCase() + result.extractedDay.slice(1);
+          const reply = await composeReply({
+            firstName, history: historyWithReply,
+            scenario: { type: "not_available", requestLabel: rejectedDay_, alternatives: altText },
+          });
+
+          const prefixed = `Got it, ${confirmedList} confirmed. ${reply}`;
+          const tagged = tagOfferedSlots(prefixed, diverse);
+          await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, tagged);
+          return twiml();
+        }
+      }
+
       const open = await getOpenSlots(weekOf, client.id);
 
       if (result.extractedDay || result.extractedTime) {
