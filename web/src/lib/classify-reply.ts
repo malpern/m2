@@ -16,7 +16,14 @@ export type ClassifyResult = {
   extractedTime?: string;
 };
 
-const SYSTEM_PROMPT = `You classify text message replies for a sports training scheduler. Respond with ONLY a JSON object, no other text.
+export interface ConversationMessage {
+  direction: "sent" | "received";
+  text: string;
+}
+
+const CLASSIFY_SYSTEM = `You classify text message replies for a sports training scheduler. Respond with ONLY a JSON object, no other text.
+
+You will be given the full conversation history between the scheduler and the client. Classify the client's MOST RECENT reply.
 
 Categories:
 - "confirmed": Client agrees to the proposed time or picks from offered alternatives ("yeah sounds good", "see you then", "Monday works", "I'll take the 3pm")
@@ -33,7 +40,17 @@ If the client mentions a specific day or time, extract it:
 If no specific day/time is mentioned, omit those fields:
 {"interpretation":"declined_wants_options","confidence":0.85}
 
-Context matters: if the original message offered alternatives and the client picks one, that's "selecting_offered_slot" or "confirmed", not a new reschedule request.`;
+Context matters: if the previous message offered alternatives and the client picks one, that's "selecting_offered_slot" or "confirmed", not a new reschedule request.`;
+
+const COMPOSE_SYSTEM = `You write brief, friendly text messages for Matt, a sports performance trainer. You're texting his clients about scheduling sessions.
+
+Rules:
+- Keep messages SHORT — 1-2 sentences max, like a real text
+- Sound natural and casual, like Matt texting a client he knows
+- Use the client's first name occasionally but not every message
+- Never make up or guess available times — only mention the specific slots provided to you
+- Don't be overly formal or use exclamation marks excessively
+- Vary your phrasing — don't use the same structure every time`;
 
 export class ClassifyBillingError extends Error {
   constructor() {
@@ -42,21 +59,29 @@ export class ClassifyBillingError extends Error {
   }
 }
 
+function formatConversation(history: ConversationMessage[]): string {
+  return history.map((m) => {
+    const label = m.direction === "sent" ? "Matt (scheduler)" : "Client";
+    return `${label}: ${m.text}`;
+  }).join("\n");
+}
+
 export async function classifyReply(
-  outreachMessage: string,
+  history: ConversationMessage[],
   clientReply: string,
 ): Promise<ClassifyResult> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  const conversationText = history.length > 0
+    ? `Conversation so far:\n${formatConversation(history)}\n\nClient's latest reply: "${clientReply}"`
+    : `Client's reply: "${clientReply}"`;
 
   try {
     const response = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 128,
-      system: SYSTEM_PROMPT,
-      messages: [{
-        role: "user",
-        content: `Original message sent to client: "${outreachMessage}"\nClient's reply: "${clientReply}"`,
-      }],
+      system: CLASSIFY_SYSTEM,
+      messages: [{ role: "user", content: conversationText }],
     });
 
     const raw = response.content[0].type === "text" ? response.content[0].text : "";
@@ -74,5 +99,87 @@ export async function classifyReply(
       throw new ClassifyBillingError();
     }
     throw e;
+  }
+}
+
+export type ComposeContext = {
+  firstName: string;
+  history: ConversationMessage[];
+  scenario:
+    | { type: "confirmed"; day: string; slot: string }
+    | { type: "counter_offer"; day: string; slot: string }
+    | { type: "not_available"; requestLabel: string; alternatives: string }
+    | { type: "already_booked"; requestLabel: string; alternatives: string }
+    | { type: "alternatives"; alternatives: string }
+    | { type: "skip_week" }
+    | { type: "slot_taken"; alternatives: string };
+};
+
+export async function composeReply(ctx: ComposeContext): Promise<string> {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  let instructions: string;
+  switch (ctx.scenario.type) {
+    case "confirmed":
+      instructions = `The client confirmed ${ctx.scenario.day} at ${ctx.scenario.slot}. Send a brief confirmation. Don't repeat unnecessary details.`;
+      break;
+    case "counter_offer":
+      instructions = `The client asked for a different time. ${ctx.scenario.day} at ${ctx.scenario.slot} IS available. Offer it to them and ask if it works.`;
+      break;
+    case "not_available":
+      instructions = `The client asked for ${ctx.scenario.requestLabel}, but Matt doesn't have that time slot. Available alternatives: ${ctx.scenario.alternatives}. Let them know that time doesn't work and offer the alternatives.`;
+      break;
+    case "already_booked":
+      instructions = `The client asked for ${ctx.scenario.requestLabel}, but it's already booked. Available alternatives: ${ctx.scenario.alternatives}. Let them know it's taken and offer the alternatives.`;
+      break;
+    case "alternatives":
+      instructions = `The client wants to see other options. Available alternatives: ${ctx.scenario.alternatives}. Offer them these times.`;
+      break;
+    case "skip_week":
+      instructions = `The client is skipping this week. Acknowledge it briefly and let them know you'll get them in next week.`;
+      break;
+    case "slot_taken":
+      instructions = `The slot the client picked just got booked by someone else. Available alternatives: ${ctx.scenario.alternatives}. Let them know and offer other options.`;
+      break;
+  }
+
+  const conversationText = ctx.history.length > 0
+    ? `\n\nConversation so far:\n${formatConversation(ctx.history)}`
+    : "";
+
+  try {
+    const response = await client.messages.create({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 200,
+      system: COMPOSE_SYSTEM,
+      messages: [{
+        role: "user",
+        content: `Client name: ${ctx.firstName}${conversationText}\n\nWrite Matt's next text message. ${instructions}\n\nRespond with ONLY the text message, nothing else.`,
+      }],
+    });
+
+    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    return text.replace(/^["']|["']$/g, "").trim();
+  } catch {
+    return fallbackMessage(ctx);
+  }
+}
+
+function fallbackMessage(ctx: ComposeContext): string {
+  switch (ctx.scenario.type) {
+    case "confirmed":
+      return `${ctx.scenario.day} at ${ctx.scenario.slot} — you're confirmed! See you then.`;
+    case "counter_offer":
+      return `I have ${ctx.scenario.day} at ${ctx.scenario.slot} open — does that work?`;
+    case "not_available":
+      return `Sorry, I don't have ${ctx.scenario.requestLabel} this week. ${ctx.scenario.alternatives}`;
+    case "already_booked":
+      return `Sorry, ${ctx.scenario.requestLabel} is already booked. ${ctx.scenario.alternatives}`;
+    case "alternatives":
+      return ctx.scenario.alternatives;
+    case "skip_week":
+      return `No problem, ${ctx.firstName}. We'll get you in next week!`;
+    case "slot_taken":
+      return `Sorry, that slot just got booked! ${ctx.scenario.alternatives}`;
   }
 }
