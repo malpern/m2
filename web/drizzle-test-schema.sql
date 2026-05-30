@@ -87,3 +87,15 @@ CREATE TABLE weekly_overrides (
     enabled INTEGER NOT NULL DEFAULT 1,
     note TEXT
 );
+
+CREATE TABLE system_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    severity TEXT NOT NULL,
+    category TEXT NOT NULL,
+    matt_message TEXT NOT NULL,
+    technical_message TEXT NOT NULL,
+    metadata TEXT,
+    client_id INTEGER,
+    session_id INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);

@@ -3,6 +3,7 @@ import { clients, sessions, outreach } from "@/db/schema";
 import { eq, and, gte, lte, ne } from "drizzle-orm";
 import { sortByPriority, isSchedulable } from "./priority";
 import { sendSMS, isDevAllowed } from "./twilio";
+import { syslog } from "./logger";
 import { getMonday } from "./scheduler";
 
 export async function autoFillCancelledSlot(
@@ -34,7 +35,10 @@ export async function autoFillCancelledSlot(
     !bookedClientIds.has(c.id)
   );
 
-  if (eligible.length === 0) return { offered: false };
+  if (eligible.length === 0) {
+    syslog.info("auto_fill", `No one to offer the open ${cancelledSlot} slot on ${cancelledDate}`, `Auto-fill: no eligible clients for ${cancelledDate} ${cancelledSlot}`);
+    return { offered: false };
+  }
 
   const sorted = sortByPriority(eligible);
   const topClient = sorted[0];
@@ -73,8 +77,10 @@ export async function autoFillCancelledSlot(
 
   try {
     await sendSMS(topClient.phone, message);
+    syslog.info("auto_fill", `Offered open ${dayLabel} ${cancelledSlot} slot to ${topClient.name}`, `Auto-fill: offered ${cancelledDate} ${cancelledSlot} to client ${topClient.id} (${topClient.name})`, { clientId: topClient.id, sessionId: newSession.id });
   } catch (e) {
-    console.error(`Auto-fill send failed for ${topClient.name}:`, e);
+    const errorMsg = e instanceof Error ? e.message : String(e);
+    syslog.error("auto_fill", `Couldn't send auto-fill offer to ${topClient.name}`, `Auto-fill SMS failed for ${topClient.name}: ${errorMsg}`, { clientId: topClient.id });
   }
 
   return { offered: true, clientName: topClient.name };

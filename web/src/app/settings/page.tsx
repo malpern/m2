@@ -46,6 +46,14 @@ export default async function SettingsPage({
             </CardContent>
           </Card>
         </Link>
+        <Link href="/settings/logs">
+          <Card className="hover:border-foreground/20 transition-colors cursor-pointer h-full">
+            <CardContent className="pt-5 pb-4">
+              <div className="font-semibold text-sm">System Logs</div>
+              <div className="text-xs text-muted-foreground mt-0.5">View activity feed and technical logs</div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="mb-4">

@@ -166,6 +166,20 @@ export const googleTokens = sqliteTable("google_tokens", {
   updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const systemLogs = sqliteTable("system_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  severity: text("severity", { enum: ["info", "warn", "error"] }).notNull(),
+  category: text("category", {
+    enum: ["classifier", "twilio", "outreach", "auto_fill", "cron", "webhook", "system"],
+  }).notNull(),
+  mattMessage: text("matt_message").notNull(),
+  technicalMessage: text("technical_message").notNull(),
+  metadata: text("metadata"),
+  clientId: integer("client_id"),
+  sessionId: integer("session_id"),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type Client = typeof clients.$inferSelect;
 export type PrioritySettingsRow = typeof prioritySettings.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
