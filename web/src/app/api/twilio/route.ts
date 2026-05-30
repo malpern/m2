@@ -423,6 +423,7 @@ export async function POST(request: NextRequest) {
       }
 
       const pendingParts: string[] = [];
+      let offeredAlternatives: { day: string; date: string; slot: string; time: string }[] = [];
 
       if (rescheduleNeeded.length > 0) {
         const open = await getOpenSlots(weekOf, client.id);
@@ -443,17 +444,20 @@ export async function POST(request: NextRequest) {
               }).where(eq(sessions.id, rSession.id)).run();
               const mDayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
               pendingParts.push(`For ${rDayLabel}, how about ${mDayLabel} at ${matched.slot}?`);
+              offeredAlternatives.push(matched);
             } else {
               const ranked = await rankSlotsForClient(client.id, open);
               const diverse = diversifyAcrossDays(ranked, 3);
               const altText = formatSlotsText(diverse);
               pendingParts.push(`For ${rDayLabel}, I don't have that time but I can do ${altText}.`);
+              offeredAlternatives.push(...diverse);
             }
           } else {
             const ranked = await rankSlotsForClient(client.id, open);
             const diverse = diversifyAcrossDays(ranked, 3);
             const altText = formatSlotsText(diverse);
             pendingParts.push(`For ${rDayLabel}, I have ${altText} available.`);
+            offeredAlternatives.push(...diverse);
           }
         }
       }
@@ -470,7 +474,8 @@ export async function POST(request: NextRequest) {
           firstName, history: historyWithReply,
           scenario: { type: "multi_session_update", summary: intermediateParts.join(" ") },
         });
-        await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+        const tagged = offeredAlternatives.length > 0 ? tagOfferedSlots(reply, offeredAlternatives) : reply;
+        await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, tagged);
       } else {
         const allResolved = allGroupSessions.every((s) => {
           const current = confirmed.some((c) => c.includes(
