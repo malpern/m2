@@ -39,58 +39,25 @@ export async function classifyReply(
   outreachMessage: string,
   clientReply: string,
 ): Promise<ClassifyResult> {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return keywordClassify(clientReply, outreachMessage);
-  }
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  try {
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const response = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 128,
+    system: SYSTEM_PROMPT,
+    messages: [{
+      role: "user",
+      content: `Original message sent to client: "${outreachMessage}"\nClient's reply: "${clientReply}"`,
+    }],
+  });
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 128,
-      system: SYSTEM_PROMPT,
-      messages: [{
-        role: "user",
-        content: `Original message sent to client: "${outreachMessage}"\nClient's reply: "${clientReply}"`,
-      }],
-    });
-
-    const raw = response.content[0].type === "text" ? response.content[0].text : "";
-    const cleaned = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
-    return {
-      interpretation: parsed.interpretation ?? "ambiguous",
-      confidence: parsed.confidence ?? 0.5,
-      extractedDay: parsed.extractedDay ?? undefined,
-      extractedTime: parsed.extractedTime ?? undefined,
-    };
-  } catch (e) {
-    console.error("Claude classification failed, using keyword fallback:", e);
-    return keywordClassify(clientReply, outreachMessage);
-  }
-}
-
-function keywordClassify(reply: string, _outreach: string): ClassifyResult {
-  const lower = reply.toLowerCase().trim();
-
-  if (/^(yes|yeah|yep|yup|sure|sounds good|see you|perfect|ok|okay|i'm in|let's do it|confirmed|down|bet|absolutely|for sure|works for me|i'll be there)/i.test(lower)) {
-    return { interpretation: "confirmed", confidence: 0.8 };
-  }
-  if (/not this week|skip|i'm out|i'm away|next week|pass this week/i.test(lower)) {
-    return { interpretation: "declined_skip_week", confidence: 0.8 };
-  }
-  if (/what else|what other|other times|any other|what do you have|what's available|available/i.test(lower)) {
-    return { interpretation: "declined_wants_options", confidence: 0.7 };
-  }
-  if (/instead|how about|what about|can we do|can i do/i.test(lower)) {
-    return { interpretation: "declined_with_alternative", confidence: 0.7 };
-  }
-  if (/^(no|nah|can't|cant|busy|won't make it|doesn't work|doesn't work)/i.test(lower)) {
-    return { interpretation: "declined_wants_options", confidence: 0.6 };
-  }
-  if (/move|reschedule|change|switch|different/i.test(lower)) {
-    return { interpretation: "reschedule_request", confidence: 0.7 };
-  }
-  return { interpretation: "ambiguous", confidence: 0.3 };
+  const raw = response.content[0].type === "text" ? response.content[0].text : "";
+  const cleaned = raw.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+  const parsed = JSON.parse(cleaned);
+  return {
+    interpretation: parsed.interpretation ?? "ambiguous",
+    confidence: parsed.confidence ?? 0.5,
+    extractedDay: parsed.extractedDay ?? undefined,
+    extractedTime: parsed.extractedTime ?? undefined,
+  };
 }
