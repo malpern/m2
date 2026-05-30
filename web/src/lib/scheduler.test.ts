@@ -21,6 +21,7 @@ function makeClient(overrides: Partial<Client> & { id: number; name: string }): 
     sessionType: null,
     parentGuardian: null,
     email: null,
+    calendarInviteOptIn: null,
     createdAt: null,
     updatedAt: null,
     ...overrides,

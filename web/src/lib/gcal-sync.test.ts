@@ -58,8 +58,8 @@ describe("syncSessionToCalendar", () => {
         innerJoin: () => ({
           where: () => ({
             get: () => ({
-              id: 1, clientName: "John Smith", scheduledDate: "2026-06-05",
-              scheduledTime: "15:00", slot: "3pm", status: "confirmed", gcalEventId: null,
+              id: 1, clientName: "John Smith", clientEmail: null, calendarInviteOptIn: null,
+              scheduledDate: "2026-06-05", scheduledTime: "15:00", slot: "3pm", status: "confirmed", gcalEventId: null,
             }),
           }),
         }),
@@ -69,7 +69,7 @@ describe("syncSessionToCalendar", () => {
 
     await syncSessionToCalendar(1);
 
-    expect(mockCreateEvent).toHaveBeenCalledWith("John Smith", "2026-06-05", "15:00");
+    expect(mockCreateEvent).toHaveBeenCalledWith("John Smith", "2026-06-05", "15:00", { attendeeEmail: undefined });
     expect(mockSyslog.info).toHaveBeenCalled();
   });
 
@@ -80,8 +80,8 @@ describe("syncSessionToCalendar", () => {
         innerJoin: () => ({
           where: () => ({
             get: () => ({
-              id: 1, clientName: "John Smith", scheduledDate: "2026-06-05",
-              scheduledTime: "15:00", slot: "3pm", status: "confirmed", gcalEventId: "existing_evt",
+              id: 1, clientName: "John Smith", clientEmail: null, calendarInviteOptIn: null,
+              scheduledDate: "2026-06-05", scheduledTime: "15:00", slot: "3pm", status: "confirmed", gcalEventId: "existing_evt",
             }),
           }),
         }),
@@ -100,8 +100,8 @@ describe("syncSessionToCalendar", () => {
         innerJoin: () => ({
           where: () => ({
             get: () => ({
-              id: 1, clientName: "John Smith", scheduledDate: "2026-06-05",
-              scheduledTime: "15:00", slot: "3pm", status: "cancelled", gcalEventId: "evt_to_delete",
+              id: 1, clientName: "John Smith", clientEmail: null, calendarInviteOptIn: null,
+              scheduledDate: "2026-06-05", scheduledTime: "15:00", slot: "3pm", status: "cancelled", gcalEventId: "evt_to_delete",
             }),
           }),
         }),
@@ -122,8 +122,8 @@ describe("syncSessionToCalendar", () => {
         innerJoin: () => ({
           where: () => ({
             get: () => ({
-              id: 1, clientName: "John Smith", scheduledDate: "2026-06-05",
-              scheduledTime: "15:00", slot: "3pm", status: "cancelled", gcalEventId: null,
+              id: 1, clientName: "John Smith", clientEmail: null, calendarInviteOptIn: null,
+              scheduledDate: "2026-06-05", scheduledTime: "15:00", slot: "3pm", status: "cancelled", gcalEventId: null,
             }),
           }),
         }),
@@ -142,8 +142,8 @@ describe("syncSessionToCalendar", () => {
         innerJoin: () => ({
           where: () => ({
             get: () => ({
-              id: 1, clientName: "John Smith", scheduledDate: "2026-06-05",
-              scheduledTime: "15:00", slot: "3pm", status: "confirmed", gcalEventId: null,
+              id: 1, clientName: "John Smith", clientEmail: null, calendarInviteOptIn: null,
+              scheduledDate: "2026-06-05", scheduledTime: "15:00", slot: "3pm", status: "confirmed", gcalEventId: null,
             }),
           }),
         }),

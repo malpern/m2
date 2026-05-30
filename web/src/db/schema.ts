@@ -31,6 +31,7 @@ export const clients = sqliteTable("clients", {
   }),
   parentGuardian: text("parent_guardian"),
   email: text("email"),
+  calendarInviteOptIn: integer("calendar_invite_opt_in", { mode: "boolean" }),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
 });
