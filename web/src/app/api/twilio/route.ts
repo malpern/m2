@@ -97,6 +97,22 @@ export async function POST(request: NextRequest) {
       .filter((o) => o.direction === "sent")
       .sort((a, b) => (b.sentAt ?? "").localeCompare(a.sentAt ?? ""))[0];
 
+    const weekOf = getMonday().toISOString().split("T")[0];
+    const hasActiveOutreach = lastSent && lastSent.status === "awaiting_reply";
+
+    if (!hasActiveOutreach) {
+      await db.insert(outreach).values({
+        clientId: client.id,
+        sessionId: null,
+        weekOf,
+        direction: "received" as const,
+        messageText: body,
+        status: "needs_matt" as const,
+        repliedAt: new Date().toISOString(),
+      }).run();
+      return twiml("Hey! I'll pass this along to Matt and he'll get back to you.");
+    }
+
     const history = buildConversationHistory(recentOutreach);
 
     let result;
@@ -143,7 +159,6 @@ export async function POST(request: NextRequest) {
     }).returning().get();
 
     const firstName = client.name.split(" ")[0];
-    const weekOf = getMonday().toISOString().split("T")[0];
     const historyWithReply = [...history, { direction: "received" as const, text: body }];
 
     if (interpretation === "confirmed" && lastSent?.sessionId) {
@@ -297,6 +312,10 @@ export async function POST(request: NextRequest) {
       await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
       return twiml();
     }
+  }
+
+  if (!client) {
+    return twiml("This number is for M2 Performance scheduling. If you're a client, contact Matt at (408) 599-1777 to get set up.");
   }
 
   return twiml();
