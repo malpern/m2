@@ -62,7 +62,7 @@ function FollowUpCancelButton({ sessionId }: { sessionId: number }) {
     <Button
       size="sm"
       variant="ghost"
-      className="h-7 text-xs text-red-400 hover:text-red-300"
+      className="h-9 text-xs text-red-400 hover:text-red-300"
       disabled={isPending}
       onClick={() =>
         startTransition(async () => {
@@ -127,11 +127,11 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 ml-16 sm:ml-0">
+      <div className="flex items-center gap-2">
         {statusBadge(item.status)}
 
         {item.isAutoFill && (
-          <Badge className="border-0 bg-cyan-500/15 text-cyan-400 text-[10px] px-1.5 py-0">
+          <Badge className="border-0 bg-cyan-500/15 text-cyan-400 text-xs px-1.5 py-0">
             Auto-fill
           </Badge>
         )}
@@ -145,7 +145,7 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 text-xs text-emerald-400 hover:text-emerald-300"
+              className="h-9 text-xs text-emerald-400 hover:text-emerald-300"
               onClick={() =>
                 startTransition(async () => {
                   await markConfirmed(item.sessionId);
@@ -158,7 +158,7 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 text-xs text-red-400 hover:text-red-300"
+              className="h-9 text-xs text-red-400 hover:text-red-300"
               onClick={() =>
                 startTransition(async () => {
                   await markDeclined(item.sessionId);
@@ -175,7 +175,7 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
           <Button
             size="sm"
             variant="outline"
-            className="h-7 text-xs text-red-400 hover:text-red-300"
+            className="h-9 text-xs text-red-400 hover:text-red-300"
             onClick={() =>
               startTransition(async () => {
                 await retrySend(item.outreachId!);
@@ -192,7 +192,7 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
             <Button
               size="sm"
               variant="outline"
-              className="h-7 text-xs"
+              className="h-9 text-xs"
               onClick={() =>
                 startTransition(async () => {
                   await markConfirmed(item.sessionId);
@@ -205,7 +205,7 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 text-xs text-red-400"
+              className="h-9 text-xs text-red-400"
               onClick={() =>
                 startTransition(async () => {
                   await markDeclined(item.sessionId);
@@ -574,7 +574,7 @@ export function OutreachDashboard({
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 ml-16 sm:ml-0">
+                <div className="flex items-center gap-2">
                   <Badge className="border-0 bg-amber-500/15 text-amber-400">Awaiting reply</Badge>
                   <FollowUpCancelButton sessionId={item.sessionId} />
                 </div>

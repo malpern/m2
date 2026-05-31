@@ -68,7 +68,7 @@ export function Nav() {
 
         <button
           onClick={() => document.dispatchEvent(new Event("open-search"))}
-          className="sm:hidden flex items-center justify-center w-8 h-8 text-muted-foreground hover:text-foreground transition-colors mr-1"
+          className="sm:hidden flex items-center justify-center w-9 h-9 text-muted-foreground hover:text-foreground transition-colors mr-1"
           aria-label="Search"
         >
           <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -77,7 +77,7 @@ export function Nav() {
         </button>
 
         <button
-          className="sm:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5"
+          className="sm:hidden flex flex-col justify-center items-center w-9 h-9 gap-1.5"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle navigation menu"
         >
@@ -95,7 +95,7 @@ export function Nav() {
               href={link.href}
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "block rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "block rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive(link.href)
                   ? "bg-accent/15 text-accent-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent/8"
