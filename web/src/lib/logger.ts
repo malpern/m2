@@ -43,6 +43,11 @@ export const syslog = {
   warn: (category: Category, matt: string, technical: string, opts?: Partial<LogEntry>) =>
     log({ severity: "warn", category, matt, technical, ...opts }),
 
-  error: (category: Category, matt: string, technical: string, opts?: Partial<LogEntry>) =>
-    log({ severity: "error", category, matt, technical, ...opts }),
+  error: (category: Category, matt: string, technical: string, opts?: Partial<LogEntry>) => {
+    const promise = log({ severity: "error", category, matt, technical, ...opts });
+    promise.then(() => {
+      import("./alerting").then(({ checkAndAlert }) => checkAndAlert(matt, technical)).catch(() => {});
+    });
+    return promise;
+  },
 };
