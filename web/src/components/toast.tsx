@@ -11,15 +11,28 @@ import {
 
 type ToastType = "success" | "error" | "info";
 
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
+interface ToastOptions {
+  type?: ToastType;
+  action?: ToastAction;
+  duration?: number;
+}
+
 interface Toast {
   id: number;
   message: string;
   type: ToastType;
   exiting: boolean;
+  action?: ToastAction;
 }
 
 interface ToastContextValue {
-  toast: (message: string, type?: ToastType) => void;
+  toast: (message: string, typeOrOptions?: ToastType | ToastOptions) => number;
+  dismiss: (id: number) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -42,15 +55,31 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toast = useCallback(
-    (message: string, type: ToastType = "success") => {
+    (message: string, typeOrOptions: ToastType | ToastOptions = "success") => {
       const id = ++nextId;
-      setToasts((prev) => [...prev, { id, message, type, exiting: false }]);
+      let type: ToastType;
+      let action: ToastAction | undefined;
+      let duration: number;
+
+      if (typeof typeOrOptions === "string") {
+        type = typeOrOptions;
+        action = undefined;
+        duration = 3000;
+      } else {
+        type = typeOrOptions.type ?? "success";
+        action = typeOrOptions.action;
+        duration = typeOrOptions.duration ?? 3000;
+      }
+
+      setToasts((prev) => [...prev, { id, message, type, exiting: false, action }]);
 
       const timer = setTimeout(() => {
         dismiss(id);
         timersRef.current.delete(id);
-      }, 3000);
+      }, duration);
       timersRef.current.set(id, timer);
+
+      return id;
     },
     [dismiss]
   );
@@ -63,7 +92,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ToastContext value={{ toast }}>
+    <ToastContext value={{ toast, dismiss }}>
       {children}
       <div className="fixed bottom-4 right-4 z-[300] flex flex-col-reverse gap-2 pointer-events-none">
         {toasts.map((t) => (
@@ -133,6 +162,17 @@ function ToastItem({
     >
       {TYPE_ICONS[toast.type]}
       <span>{toast.message}</span>
+      {toast.action && (
+        <button
+          onClick={() => {
+            toast.action!.onClick();
+            onDismiss();
+          }}
+          className="ml-1 font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity"
+        >
+          {toast.action.label}
+        </button>
+      )}
       <button
         onClick={onDismiss}
         className="ml-2 opacity-60 hover:opacity-100 transition-opacity"
@@ -156,10 +196,20 @@ function ToastItem({
   );
 }
 
-export function useToast(): (message: string, type?: ToastType) => void {
+export function useToast(): (message: string, typeOrOptions?: ToastType | ToastOptions) => number {
   const ctx = useContext(ToastContext);
   if (!ctx) {
     throw new Error("useToast must be used within a ToastProvider");
   }
   return ctx.toast;
 }
+
+export function useToastDismiss(): (id: number) => void {
+  const ctx = useContext(ToastContext);
+  if (!ctx) {
+    throw new Error("useToastDismiss must be used within a ToastProvider");
+  }
+  return ctx.dismiss;
+}
+
+export type { ToastAction, ToastOptions };
