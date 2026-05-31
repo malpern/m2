@@ -37,6 +37,7 @@ export default async function ClientsPage() {
       parentGuardian: clients.parentGuardian,
       email: clients.email,
       calendarInviteOptIn: clients.calendarInviteOptIn,
+      sessionReminders: clients.sessionReminders,
       noShowCount: clients.noShowCount,
       createdAt: clients.createdAt,
       updatedAt: clients.updatedAt,

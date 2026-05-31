@@ -13,6 +13,7 @@ export type OutreachSettings = {
   moveOnAfterMinutes: number;
   outreachDay: string;
   outreachHour: number;
+  sessionRemindersGlobal: boolean;
 };
 
 const DEFAULTS: OutreachSettings = {
@@ -23,6 +24,7 @@ const DEFAULTS: OutreachSettings = {
   moveOnAfterMinutes: 180,
   outreachDay: "saturday",
   outreachHour: 9,
+  sessionRemindersGlobal: false,
 };
 
 export async function getOutreachSettings(): Promise<OutreachSettings> {
@@ -39,6 +41,7 @@ export async function getOutreachSettings(): Promise<OutreachSettings> {
     moveOnAfterMinutes: row.moveOnAfterMinutes,
     outreachDay: row.outreachDay,
     outreachHour: row.outreachHour,
+    sessionRemindersGlobal: row.sessionRemindersGlobal,
   };
 }
 
@@ -54,6 +57,7 @@ export async function saveOutreachSettings(settings: OutreachSettings) {
         moveOnAfterMinutes: settings.moveOnAfterMinutes,
         outreachDay: settings.outreachDay,
         outreachHour: settings.outreachHour,
+        sessionRemindersGlobal: settings.sessionRemindersGlobal,
       })
       .where(eq(outreachSettings.id, existing.id))
       .run();
@@ -67,6 +71,7 @@ export async function saveOutreachSettings(settings: OutreachSettings) {
         moveOnAfterMinutes: settings.moveOnAfterMinutes,
         outreachDay: settings.outreachDay,
         outreachHour: settings.outreachHour,
+        sessionRemindersGlobal: settings.sessionRemindersGlobal,
       })
       .run();
   }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { toggleDefaultSlot, setWeeklyOverride } from "./actions";
+import { useToast } from "@/components/toast";
+import { toggleDefaultSlot, setWeeklyOverride, sendVacationNotice } from "./actions";
 
 type SlotData = {
   id: number;
@@ -122,10 +123,43 @@ export function WeeklyOverrideGrid({
       })),
   }));
 
+  const allDisabled = slotsByDay.every(({ slots }) => slots.every((s) => !s.enabled));
+  const [notifySending, startNotify] = useTransition();
+  const [notified, setNotified] = useState(false);
+  const toast = useToast();
+
   return (
     <div>
       <h2 className="text-lg font-bold mb-1">Week of {weekLabel}</h2>
-      <p className="text-sm text-muted-foreground mb-6">Adjust for this specific week. Changes here don't affect your default schedule. Orange ring = overridden.</p>
+      <p className="text-sm text-muted-foreground mb-6">Adjust for this specific week. Changes here don&apos;t affect your default schedule. Orange ring = overridden.</p>
+
+      {allDisabled && !notified && (
+        <div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 flex items-center justify-between">
+          <div>
+            <div className="text-sm font-semibold text-amber-400">Vacation week detected</div>
+            <div className="text-xs text-muted-foreground">All slots are off. Want to let your clients know?</div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={notifySending}
+            onClick={() => {
+              startNotify(async () => {
+                const result = await sendVacationNotice(weekOf, weekLabel);
+                setNotified(true);
+                toast(`Notified ${result.sent} clients`);
+              });
+            }}
+          >
+            {notifySending ? "Sending..." : "Notify clients"}
+          </Button>
+        </div>
+      )}
+      {notified && (
+        <div className="mb-6 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400">
+          Clients have been notified about this vacation week.
+        </div>
+      )}
 
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
         {slotsByDay.map(({ day, slots }) => (

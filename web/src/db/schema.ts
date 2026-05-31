@@ -32,6 +32,7 @@ export const clients = sqliteTable("clients", {
   parentGuardian: text("parent_guardian"),
   email: text("email"),
   calendarInviteOptIn: integer("calendar_invite_opt_in", { mode: "boolean" }),
+  sessionReminders: integer("session_reminders", { mode: "boolean" }),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
 });
@@ -171,6 +172,7 @@ export const outreachSettings = sqliteTable("outreach_settings", {
   moveOnAfterMinutes: integer("move_on_after_minutes").notNull().default(180),
   outreachDay: text("outreach_day").notNull().default("saturday"),
   outreachHour: integer("outreach_hour").notNull().default(9),
+  sessionRemindersGlobal: integer("session_reminders_global", { mode: "boolean" }).notNull().default(false),
   updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
 });
 

@@ -167,6 +167,19 @@ export function ClientForm({
         </div>
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="sessionReminders"
+            name="sessionReminders"
+            defaultChecked={client?.sessionReminders ?? false}
+            className="h-4 w-4 rounded border-border"
+          />
+          <Label htmlFor="sessionReminders">Day-of session reminders</Label>
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label>Preferred Days</Label>
         <div className="flex flex-wrap gap-2">

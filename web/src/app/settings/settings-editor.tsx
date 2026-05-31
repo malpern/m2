@@ -182,6 +182,21 @@ export function SettingsEditor() {
               suffix="minutes"
             />
           </div>
+          <Separator />
+
+          <div>
+            <h3 className="font-semibold text-sm mb-1">Day-of session reminders</h3>
+            <p className="text-xs text-muted-foreground mb-3">Send a &ldquo;See you today!&rdquo; text at 9am Pacific on session day. You can also enable this per-client on their profile.</p>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.sessionRemindersGlobal}
+                onChange={(e) => update("sessionRemindersGlobal", e.target.checked ? 1 : 0)}
+                className="h-4 w-4 rounded border-border"
+              />
+              <span className="text-sm">Enable for all active clients</span>
+            </label>
+          </div>
         </CardContent>
       </Card>
 

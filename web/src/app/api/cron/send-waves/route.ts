@@ -5,6 +5,7 @@ import { getMonday } from "@/lib/scheduler";
 import { buildOutreachQueue, getNextWaveToSend } from "@/lib/outreach-engine";
 import { sendSMS, isDevAllowed } from "@/lib/twilio";
 import { syslog } from "@/lib/logger";
+import { isVacationWeek } from "@/lib/vacation-detect";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -15,6 +16,11 @@ export async function GET(request: NextRequest) {
 
   const monday = getMonday();
   const weekStart = monday.toISOString().split("T")[0];
+
+  if (await isVacationWeek(weekStart)) {
+    syslog.info("cron", "Skipping outreach — vacation week detected", `All slots disabled for week of ${weekStart}`, {});
+    return Response.json({ skipped: true, reason: "vacation_week" });
+  }
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
   const weekEnd = sunday.toISOString().split("T")[0];
