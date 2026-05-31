@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { clients, packages, sessions } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { clients, packages, sessions, packageTransactions } from "@/db/schema";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { ReportsWithPackages } from "./reports-with-packages";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +43,25 @@ export default async function ReportsPage() {
     .all()
   ).map((p) => ({ ...p, remaining: p.totalSessions - p.sessionsUsed }));
 
+  const recentTransactions = await db
+    .select({
+      id: packageTransactions.id,
+      delta: packageTransactions.delta,
+      reason: packageTransactions.reason,
+      note: packageTransactions.note,
+      previousBalance: packageTransactions.previousBalance,
+      newBalance: packageTransactions.newBalance,
+      createdAt: packageTransactions.createdAt,
+      clientName: clients.name,
+      clientId: clients.id,
+    })
+    .from(packageTransactions)
+    .innerJoin(packages, eq(packages.id, packageTransactions.packageId))
+    .innerJoin(clients, eq(clients.id, packages.clientId))
+    .orderBy(desc(packageTransactions.id))
+    .limit(20)
+    .all();
+
   const unreconciledSessions = await db
     .select({
       sessionId: sessions.id,
@@ -71,6 +90,7 @@ export default async function ReportsPage() {
           weeklyAvg,
         }}
         clientPackages={clientPackages}
+        recentTransactions={recentTransactions}
         unreconciledSessions={unreconciledSessions}
       />
     </div>
