@@ -161,6 +161,29 @@ describe("classifyReply", () => {
     expect(result.confidence).toBe(0.3);
   });
 
+  it("classifies account balance inquiries", async () => {
+    mockCreate.mockResolvedValue(
+      apiResponse('{"interpretation":"account_inquiry","confidence":0.95}'),
+    );
+
+    const result = await classifyReply([], "how many sessions do I have left?");
+
+    expect(result.interpretation).toBe("account_inquiry");
+    expect(result.confidence).toBe(0.95);
+  });
+
+  it("includes account_inquiry in the system prompt", async () => {
+    mockCreate.mockResolvedValue(
+      apiResponse('{"interpretation":"confirmed","confidence":0.9}'),
+    );
+
+    await classifyReply([], "sounds good");
+
+    const systemPrompt = mockCreate.mock.calls[0][0].system;
+    expect(systemPrompt).toContain("account_inquiry");
+    expect(systemPrompt).toContain("sessions remaining");
+  });
+
   it("includes punctuation guidance in the system prompt", async () => {
     mockCreate.mockResolvedValue(
       apiResponse('{"interpretation":"ambiguous","confidence":0.7}'),

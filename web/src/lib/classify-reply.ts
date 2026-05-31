@@ -8,7 +8,8 @@ export type ReplyInterpretation =
   | "reschedule_request"
   | "ambiguous"
   | "selecting_offered_slot"
-  | "cancellation";
+  | "cancellation"
+  | "account_inquiry";
 
 export type ClassifyResult = {
   interpretation: ReplyInterpretation;
@@ -47,6 +48,7 @@ Categories:
 - "reschedule_request": Client wants to change but is vague about what they want ("can we move it?", "need to reschedule")
 - "selecting_offered_slot": Client is picking from alternatives that were already offered ("Monday", "the 3pm one", "first option", "Wednesday at 5")
 - "cancellation": Client wants to cancel an already-confirmed session ("something came up", "I can't make it", "need to cancel", "actually I won't be able to come")
+- "account_inquiry": Client is asking about their account, package balance, or sessions remaining ("how many sessions do I have left?", "what's my balance?", "how many do I have?", "sessions remaining?")
 - "ambiguous": Unclear or noncommittal ("let me check", "maybe", "idk")
 
 Punctuation matters:
