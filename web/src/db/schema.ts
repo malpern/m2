@@ -54,6 +54,21 @@ export const packages = sqliteTable("packages", {
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const packageTransactions = sqliteTable("package_transactions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  packageId: integer("package_id")
+    .notNull()
+    .references(() => packages.id),
+  sessionId: integer("session_id").references(() => sessions.id),
+  delta: integer("delta").notNull(),
+  reason: text("reason", {
+    enum: ["completed", "cancelled", "manual_adjustment"],
+  }).notNull(),
+  previousBalance: integer("previous_balance").notNull(),
+  newBalance: integer("new_balance").notNull(),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const sessions = sqliteTable("sessions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   clientId: integer("client_id")

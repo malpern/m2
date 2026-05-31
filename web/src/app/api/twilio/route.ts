@@ -10,6 +10,7 @@ import { autoFillCancelledSlot } from "@/lib/auto-fill";
 import { syslog } from "@/lib/logger";
 import { syncSessionToCalendar } from "@/lib/gcal-sync";
 import { getInvitePrompt } from "@/lib/invite-prompt";
+import { creditCancellation } from "@/lib/package-accounting";
 import twilio from "twilio";
 
 function escapeXml(text: string): string {
@@ -182,6 +183,7 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
 
         if (result.interpretation === "cancellation") {
           await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, lastSent.sessionId)).run();
+          creditCancellation(lastSent.sessionId).catch(() => {});
           syncSessionToCalendar(lastSent.sessionId).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: lastSent.sessionId }));
           const session = await db.select().from(sessions).where(eq(sessions.id, lastSent.sessionId)).get();
           const dayLabel = session ? new Date(session.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }) : "your session";
@@ -616,6 +618,7 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
           sessionOutcomes.push({ originalDay: dayLabel, originalSlot: matchedSession.slot, result: `${dayLabel} at ${matchedSession.slot} — confirmed`, sessionId: matchedSession.id });
         } else if (action.action === "cancel") {
           await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, matchedSession.id)).run();
+          creditCancellation(matchedSession.id).catch(() => {});
           syncSessionToCalendar(matchedSession.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: matchedSession.id }));
           cancelledDays.add(dayLabel.toLowerCase());
           sessionOutcomes.push({ originalDay: dayLabel, originalSlot: matchedSession.slot, result: `${dayLabel} — cancelled`, sessionId: matchedSession.id });
@@ -943,6 +946,7 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
       for (const sid of sidsToCancel) {
         const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
         await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sid)).run();
+          creditCancellation(sid).catch(() => {});
         syncSessionToCalendar(sid).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: sid }));
         if (s) cancelledSlots.push({ date: s.scheduledDate, slot: s.slot, clientId: client.id });
       }
@@ -965,6 +969,7 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
       for (const sid of sidsToCancel) {
         const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
         await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sid)).run();
+          creditCancellation(sid).catch(() => {});
         syncSessionToCalendar(sid).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: sid }));
         if (s) cancelledSlots.push({ date: s.scheduledDate, slot: s.slot, clientId: client.id });
       }

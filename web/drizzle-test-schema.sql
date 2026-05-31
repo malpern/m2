@@ -35,6 +35,17 @@ CREATE TABLE packages (
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE package_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    package_id INTEGER NOT NULL REFERENCES packages(id),
+    session_id INTEGER REFERENCES sessions(id),
+    delta INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    previous_balance INTEGER NOT NULL,
+    new_balance INTEGER NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     client_id INTEGER NOT NULL REFERENCES clients(id),
