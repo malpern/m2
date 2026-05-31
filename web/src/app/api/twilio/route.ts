@@ -3,7 +3,7 @@ import { outreach, clients, sessions } from "@/db/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { classifyReply, classifyMultiSessionReply, composeReply, ClassifyBillingError, type ConversationMessage } from "@/lib/classify-reply";
-import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, diversifyAcrossDays, isSlotStillOpen, tagOfferedSlots, whySlotUnavailable } from "@/lib/suggest-alternatives";
+import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, diversifyAcrossDays, isSlotStillOpen, tryBookSlot, tagOfferedSlots, whySlotUnavailable } from "@/lib/suggest-alternatives";
 import { sendSMS } from "@/lib/twilio";
 import { getMonday } from "@/lib/scheduler";
 import { autoFillCancelledSlot } from "@/lib/auto-fill";
@@ -549,11 +549,7 @@ export async function POST(request: NextRequest) {
               (!requestedTime || s.slot === requestedTime.toLowerCase())
             );
 
-            if (matched && await isSlotStillOpen(matched.date, matched.time)) {
-              await db.update(sessions).set({
-                scheduledDate: matched.date, scheduledTime: matched.time,
-                slot: matched.slot, status: "proposed",
-              }).where(eq(sessions.id, rSession.id)).run();
+            if (matched && await tryBookSlot(rSession.id, matched.date, matched.time, matched.slot, "proposed")) {
               const mDayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
               pendingParts.push(`For ${originalDay}, how about ${mDayLabel} at ${matched.slot}?`);
               offeredAlternatives.push(matched);
@@ -714,13 +710,7 @@ export async function POST(request: NextRequest) {
           matched = ranked.find((s) => s.day.startsWith(result.extractedDay!.toLowerCase().slice(0, 3)));
         }
 
-        if (matched && await isSlotStillOpen(matched.date, matched.time)) {
-          await db.update(sessions).set({
-            scheduledDate: matched.date,
-            scheduledTime: matched.time,
-            slot: matched.slot,
-            status: "confirmed",
-          }).where(eq(sessions.id, lastSent.sessionId)).run();
+        if (matched && await tryBookSlot(lastSent.sessionId, matched.date, matched.time, matched.slot, "confirmed")) {
           await db.update(outreach).set({ status: "confirmed" }).where(eq(outreach.id, replyRecord.id)).run();
 
           const dayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
@@ -807,13 +797,7 @@ export async function POST(request: NextRequest) {
           (!result.extractedTime || s.slot === result.extractedTime.toLowerCase())
         );
 
-        if (matched && await isSlotStillOpen(matched.date, matched.time)) {
-          await db.update(sessions).set({
-            scheduledDate: matched.date,
-            scheduledTime: matched.time,
-            slot: matched.slot,
-            status: "proposed",
-          }).where(eq(sessions.id, lastSent.sessionId)).run();
+        if (matched && await tryBookSlot(lastSent.sessionId, matched.date, matched.time, matched.slot, "proposed")) {
           await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecord.id)).run();
 
           const dayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
