@@ -347,7 +347,7 @@ export async function POST(request: NextRequest) {
       if (pendingSessions.length > 0 && pendingSessions.length < allGroupSessions.length) {
         const lastSentText = lastSent?.messageText ?? "";
         const offeredMatch = lastSentText.match(/\[offered:([^\]]+)\]/);
-        const offeredSlots = offeredMatch
+        const parsedOfferedSlots = offeredMatch
           ? offeredMatch[1].split(",").map((s) => {
               const [date, slot] = s.split("|");
               const day = new Date(date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }).toLowerCase();
@@ -355,12 +355,84 @@ export async function POST(request: NextRequest) {
             })
           : [];
 
+        // Re-validate offered slots — filter out any that got booked since we offered them
+        const SLOT_TIMES_MAP: Record<string, string> = { "3pm": "15:00", "4pm": "16:00", "5pm": "17:00", "6pm": "18:00", "7pm": "19:00" };
+        const offeredSlots: typeof parsedOfferedSlots = [];
+        for (const slot of parsedOfferedSlots) {
+          const time = SLOT_TIMES_MAP[slot.slot];
+          if (time && await isSlotStillOpen(slot.date, time)) {
+            offeredSlots.push(slot);
+          }
+        }
+
+        // If all previously offered slots got booked, offer fresh alternatives
+        if (offeredSlots.length === 0 && parsedOfferedSlots.length > 0) {
+          const historyWithReply = [...history, { direction: "received" as const, text: body }];
+          await db.insert(outreach).values({
+            clientId: client.id, sessionId: lastSent?.sessionId ?? null, weekOf,
+            direction: "received" as const, messageText: body,
+            status: "awaiting_reply" as const, repliedAt: new Date().toISOString(),
+          }).run();
+          const freshOpen = await getOpenSlots(weekOf, client.id);
+          const freshRanked = await rankSlotsForClient(client.id, freshOpen);
+          const freshDiverse = diversifyAcrossDays(freshRanked, 3);
+          if (freshDiverse.length > 0) {
+            const altText = formatSlotsText(freshDiverse);
+            const reply = await composeReply({
+              firstName, history: historyWithReply,
+              scenario: { type: "slot_taken", alternatives: altText },
+            });
+            const tagged = tagOfferedSlots(reply, freshDiverse);
+            await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, tagged);
+          } else {
+            const reply = await composeReply({
+              firstName, history: historyWithReply,
+              scenario: { type: "re_engage_full" },
+            });
+            await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+          }
+          return twiml();
+        }
+
         if (offeredSlots.length > 0) {
           const lower = body.toLowerCase().trim();
           let matchedSlots = offeredSlots.filter((s) => lower.includes(s.slot) || lower.includes(s.day.slice(0, 3)));
 
           if (matchedSlots.length === 0) {
             matchedSlots = offeredSlots.filter((s) => lower.includes(s.day));
+          }
+
+          // Check if user selected a slot that was offered but is now taken
+          if (matchedSlots.length === 0) {
+            const matchedStale = parsedOfferedSlots.filter((s) => lower.includes(s.slot) || lower.includes(s.day.slice(0, 3)) || lower.includes(s.day));
+            if (matchedStale.length > 0) {
+              // The user picked a slot that just got booked — apologize and offer fresh alternatives
+              const historyWithReply = [...history, { direction: "received" as const, text: body }];
+              await db.insert(outreach).values({
+                clientId: client.id, sessionId: lastSent?.sessionId ?? null, weekOf,
+                direction: "received" as const, messageText: body,
+                status: "awaiting_reply" as const, repliedAt: new Date().toISOString(),
+              }).run();
+              const freshOpen = await getOpenSlots(weekOf, client.id);
+              const freshRanked = await rankSlotsForClient(client.id, freshOpen);
+              const freshDiverse = diversifyAcrossDays(freshRanked, 3);
+              if (freshDiverse.length > 0) {
+                const altText = formatSlotsText(freshDiverse);
+                const reply = await composeReply({
+                  firstName, history: historyWithReply,
+                  scenario: { type: "slot_taken", alternatives: altText },
+                });
+                const tagged = tagOfferedSlots(reply, freshDiverse);
+                await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, tagged);
+              } else {
+                const reply = await composeReply({
+                  firstName, history: historyWithReply,
+                  scenario: { type: "re_engage_full" },
+                });
+                await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+              }
+              return twiml();
+            }
           }
 
           const historyWithReply = [...history, { direction: "received" as const, text: body }];

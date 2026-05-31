@@ -62,6 +62,7 @@ export function OutreachWithMessages({
     nextBatch: OutreachItem[];
     needsAttention: OutreachItem[];
     followUpItems?: OutreachItem[];
+    skippedItems?: OutreachItem[];
     weekOf: string;
     currentWeekOf: string;
     hasAiBillingError?: boolean;
