@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { outreach, clients, sessions } from "@/db/schema";
-import { eq, and, ne } from "drizzle-orm";
+import { eq, and, ne, desc } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { classifyReply, classifyMultiSessionReply, composeReply, ClassifyBillingError, type ConversationMessage } from "@/lib/classify-reply";
 import { getOpenSlots, rankSlotsForClient, formatAlternativesMessage, diversifyAcrossDays, isSlotStillOpen, tryBookSlot, tagOfferedSlots, whySlotUnavailable } from "@/lib/suggest-alternatives";
@@ -127,6 +127,8 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
       .select()
       .from(outreach)
       .where(eq(outreach.clientId, client.id))
+      .orderBy(desc(outreach.id))
+      .limit(50)
       .all();
 
     const lastSent = recentOutreach

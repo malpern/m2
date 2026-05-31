@@ -107,6 +107,13 @@ function checkBillingError(e: unknown): void {
   }
 }
 
+// TIMEOUT RISK: classifyReply and classifyMultiSessionReply are called from the
+// Twilio webhook handler (POST /api/twilio). Twilio enforces a 15-second response
+// timeout. Multi-session flows may invoke both classifyMultiSessionReply AND
+// composeReply sequentially, meaning two Haiku API round-trips. If Anthropic
+// latency spikes, the webhook could time out and the client gets no reply.
+// A structural fix would require background processing with async status callbacks.
+
 export async function classifyReply(
   history: ConversationMessage[],
   clientReply: string,

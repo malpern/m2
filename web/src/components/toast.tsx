@@ -71,7 +71,20 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         duration = typeOrOptions.duration ?? 3000;
       }
 
-      setToasts((prev) => [...prev, { id, message, type, exiting: false, action }]);
+      setToasts((prev) => {
+        let next = [...prev, { id, message, type, exiting: false, action }];
+        // Cap at 5 visible toasts — dismiss the oldest if over limit
+        while (next.filter((t) => !t.exiting).length > 5) {
+          const oldest = next.find((t) => !t.exiting);
+          if (oldest) {
+            dismiss(oldest.id);
+            next = next.filter((t) => t.id !== oldest.id);
+          } else {
+            break;
+          }
+        }
+        return next;
+      });
 
       const timer = setTimeout(() => {
         dismiss(id);
