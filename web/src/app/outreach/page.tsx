@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { clients, sessions, outreach } from "@/db/schema";
+import { clients, sessions, outreach, weeklySkips } from "@/db/schema";
 import { eq, and, gte, lte, isNotNull } from "drizzle-orm";
 import { getMonday } from "@/lib/scheduler";
 import {
@@ -56,7 +56,23 @@ export default async function OutreachPage({
     .where(eq(outreach.weekOf, weekStart))
     .all();
 
-  const items = buildOutreachQueue(weekSessions, weekOutreach);
+  const skips = await db
+    .select({
+      id: weeklySkips.id,
+      clientId: weeklySkips.clientId,
+      clientName: clients.name,
+      reason: weeklySkips.reason,
+    })
+    .from(weeklySkips)
+    .innerJoin(clients, eq(clients.id, weeklySkips.clientId))
+    .where(eq(weeklySkips.weekOf, weekStart))
+    .all();
+
+  const skippedClientIds = new Set(skips.map((s) => s.clientId));
+
+  const allItems = buildOutreachQueue(weekSessions, weekOutreach);
+  const items = allItems.filter((i) => !skippedClientIds.has(i.clientId));
+  const skippedItems = allItems.filter((i) => skippedClientIds.has(i.clientId));
   const summary = getOutreachSummary(items);
   const nextBatch = getNextBatchToSend(items);
   const needsAttention = getNeedsMattAttention(items);
@@ -98,6 +114,7 @@ export default async function OutreachPage({
           nextBatch,
           needsAttention,
           followUpItems,
+          skippedItems,
           weekOf: weekStart,
           currentWeekOf,
           hasAiBillingError,

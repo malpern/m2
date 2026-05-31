@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { outreach, sessions, clients } from "@/db/schema";
+import { outreach, sessions, clients, weeklySkips } from "@/db/schema";
 import { sendSMS } from "@/lib/twilio";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -38,6 +38,13 @@ export async function overrideStatus(sessionId: number, newStatus: string) {
 export async function sendOutreachBatch(sessionIds: number[], weekOf: string) {
   const results: { sessionId: number; success: boolean; error?: string }[] = [];
 
+  // Filter out skipped clients
+  const skips = await db.select({ clientId: weeklySkips.clientId })
+    .from(weeklySkips)
+    .where(eq(weeklySkips.weekOf, weekOf))
+    .all();
+  const skippedClientIds = new Set(skips.map((s) => s.clientId));
+
   const allSessions = [];
   for (const sessionId of sessionIds) {
     const session = await db.select({
@@ -54,7 +61,9 @@ export async function sendOutreachBatch(sessionIds: number[], weekOf: string) {
     .where(eq(sessions.id, sessionId))
     .get();
 
-    if (session) allSessions.push(session);
+    if (session && !skippedClientIds.has(session.clientId)) {
+      allSessions.push(session);
+    }
   }
 
   const byClient = new Map<number, typeof allSessions>();
@@ -169,6 +178,22 @@ export async function retrySend(outreachId: number) {
     revalidatePath("/outreach");
     return { success: false, error: errorMsg };
   }
+}
+
+export async function skipClientThisWeek(clientId: number, weekOf: string, reason?: string) {
+  await db.insert(weeklySkips).values({
+    clientId,
+    weekOf,
+    reason: reason ?? null,
+  }).run();
+  revalidatePath("/outreach");
+}
+
+export async function unskipClientThisWeek(clientId: number, weekOf: string) {
+  await db.delete(weeklySkips).where(
+    and(eq(weeklySkips.clientId, clientId), eq(weeklySkips.weekOf, weekOf))
+  ).run();
+  revalidatePath("/outreach");
 }
 
 function formatDay(dateStr: string): string {

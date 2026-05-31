@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { markConfirmed, markDeclined, overrideStatus, sendOutreachBatch, retrySend } from "./actions";
+import { markConfirmed, markDeclined, overrideStatus, sendOutreachBatch, retrySend, skipClientThisWeek, unskipClientThisWeek } from "./actions";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/components/toast";
 import type { OutreachItem } from "@/lib/outreach-engine";
@@ -131,11 +131,13 @@ function OutreachRow({
   weekOf,
   onDecline,
   isPendingDecline,
+  onSkip,
 }: {
   item: OutreachItem;
   weekOf: string;
   onDecline: (sessionId: number) => void;
   isPendingDecline: boolean;
+  onSkip?: (clientId: number) => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
@@ -269,6 +271,17 @@ function OutreachRow({
             </Button>
           </div>
         )}
+
+        {item.status === "pending" && onSkip && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-9 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => onSkip(item.clientId)}
+          >
+            Skip
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -286,6 +299,7 @@ export function OutreachDashboard({
   nextBatch,
   needsAttention,
   followUpItems = [],
+  skippedItems = [],
   weekOf,
   currentWeekOf,
   hasAiBillingError,
@@ -295,6 +309,7 @@ export function OutreachDashboard({
   nextBatch: OutreachItem[];
   needsAttention: OutreachItem[];
   followUpItems?: OutreachItem[];
+  skippedItems?: OutreachItem[];
   weekOf: string;
   currentWeekOf: string;
   hasAiBillingError?: boolean;
@@ -303,6 +318,30 @@ export function OutreachDashboard({
   const [search, setSearch] = useState("");
   const toast = useToast();
   const { decline, pendingDeclines } = useUndoableDecline();
+
+  const handleSkip = useCallback(
+    (clientId: number) => {
+      const item = items.find((i) => i.clientId === clientId);
+      const name = item?.clientName ?? "Client";
+      startTransition(async () => {
+        await skipClientThisWeek(clientId, weekOf);
+        toast(`Skipped ${name} this week`);
+      });
+    },
+    [items, weekOf, toast, startTransition]
+  );
+
+  const handleUnskip = useCallback(
+    (clientId: number) => {
+      const item = skippedItems.find((i) => i.clientId === clientId);
+      const name = item?.clientName ?? "Client";
+      startTransition(async () => {
+        await unskipClientThisWeek(clientId, weekOf);
+        toast(`${name} added back to queue`);
+      });
+    },
+    [skippedItems, weekOf, toast, startTransition]
+  );
 
   const query = search.toLowerCase().trim();
 
@@ -328,6 +367,14 @@ export function OutreachDashboard({
         (i) => !query || i.clientName.toLowerCase().includes(query)
       ),
     [followUpItems, query]
+  );
+
+  const filteredSkipped = useMemo(
+    () =>
+      skippedItems.filter(
+        (i) => !query || i.clientName.toLowerCase().includes(query)
+      ),
+    [skippedItems, query]
   );
 
   const weekLabel = new Date(weekOf + "T12:00:00").toLocaleDateString("en-US", {
@@ -596,7 +643,7 @@ export function OutreachDashboard({
           </CardHeader>
           <CardContent>
             {filteredItems.filter((i) => i.status === "send_failed").map((item) => (
-              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} />
+              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} onSkip={handleSkip} />
             ))}
           </CardContent>
         </Card>
@@ -645,7 +692,7 @@ export function OutreachDashboard({
           </CardHeader>
           <CardContent>
             {filteredNeedsAttention.map((item) => (
-              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} />
+              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} onSkip={handleSkip} />
             ))}
           </CardContent>
         </Card>
@@ -659,7 +706,7 @@ export function OutreachDashboard({
           </CardHeader>
           <CardContent>
             {filteredItems.filter((i) => i.status === "standing").map((item) => (
-              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} />
+              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} onSkip={handleSkip} />
             ))}
           </CardContent>
         </Card>
@@ -673,7 +720,7 @@ export function OutreachDashboard({
         <CardContent>
           {filteredItems.filter((i) => i.status !== "standing").length > 0 ? (
             filteredItems.filter((i) => i.status !== "standing").map((item) => (
-              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} />
+              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} onSkip={handleSkip} />
             ))
           ) : (
             <div className="text-sm text-muted-foreground py-4">
@@ -684,6 +731,43 @@ export function OutreachDashboard({
           )}
         </CardContent>
       </Card>
+
+      {/* Skipped this week */}
+      {filteredSkipped.length > 0 && (
+        <Card className="mt-4 border-muted">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Skipped This Week</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredSkipped.map((item) => (
+              <div key={item.sessionId} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 border-b border-border last:border-0 opacity-50">
+                <div className="flex items-center gap-3 sm:contents">
+                  <div className="w-16 shrink-0 text-xs text-muted-foreground">
+                    <div className="font-semibold text-foreground">
+                      {new Date(item.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short" })}
+                    </div>
+                    <div>{item.slot}</div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Link href={`/clients/${item.clientId}`} className="font-semibold text-sm hover:underline">{item.clientName}</Link>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="border-0 bg-muted text-muted-foreground">Skipped</Badge>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-9 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => handleUnskip(item.clientId)}
+                  >
+                    Undo
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -181,9 +181,20 @@ export const systemLogs = sqliteTable("system_logs", {
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const weeklySkips = sqliteTable("weekly_skips", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
+  weekOf: text("week_of").notNull(),
+  reason: text("reason"),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
 export type Client = typeof clients.$inferSelect;
 export type PrioritySettingsRow = typeof prioritySettings.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
 export type Package = typeof packages.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Outreach = typeof outreach.$inferSelect;
+export type WeeklySkip = typeof weeklySkips.$inferSelect;

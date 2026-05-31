@@ -89,6 +89,14 @@ CREATE TABLE weekly_overrides (
     note TEXT
 );
 
+CREATE TABLE weekly_skips (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id),
+    week_of TEXT NOT NULL,
+    reason TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE system_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     severity TEXT NOT NULL,

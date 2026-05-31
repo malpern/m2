@@ -6,6 +6,16 @@ const mockSendSMS = vi.fn();
 const mockRevalidatePath = vi.fn();
 
 // Mock chain builder helpers
+function chainAll(values: unknown[]) {
+  return {
+    from: () => ({
+      where: () => ({
+        all: () => values,
+      }),
+    }),
+  };
+}
+
 function chainGet(value: unknown) {
   const terminalWhere = {
     get: () => value,
@@ -64,6 +74,7 @@ vi.mock("@/db/schema", () => ({
   outreach: { id: "id", clientId: "client_id", sessionId: "session_id", messageText: "message_text" },
   sessions: { id: "id", clientId: "client_id", scheduledDate: "scheduled_date", scheduledTime: "scheduled_time", slot: "slot", status: "status" },
   clients: { id: "id", name: "name", phone: "phone" },
+  weeklySkips: { clientId: "client_id", weekOf: "week_of" },
 }));
 
 vi.mock("@/lib/twilio", () => ({
@@ -95,8 +106,10 @@ describe("sendOutreachBatch", () => {
   };
 
   function setupForSuccess() {
-    // db.select() for session lookup
-    mockDbSelect.mockReturnValue(chainGet(fakeSession));
+    // First db.select() is for weeklySkips, then for session lookup
+    mockDbSelect
+      .mockReturnValueOnce(chainAll([]))  // weeklySkips query → no skips
+      .mockReturnValue(chainGet(fakeSession));
     // db.insert() for outreach record
     mockDbInsert.mockReturnValue(
       chainReturningGet({ id: 100, clientId: 10, sessionId: 1 }),
@@ -131,7 +144,9 @@ describe("sendOutreachBatch", () => {
   });
 
   it("records error in DB when sendSMS fails", async () => {
-    mockDbSelect.mockReturnValue(chainGet(fakeSession));
+    mockDbSelect
+      .mockReturnValueOnce(chainAll([]))
+      .mockReturnValue(chainGet(fakeSession));
     mockDbInsert.mockReturnValue(
       chainReturningGet({ id: 100, clientId: 10, sessionId: 1 }),
     );
@@ -152,7 +167,8 @@ describe("sendOutreachBatch", () => {
     let selectCallCount = 0;
     mockDbSelect.mockImplementation(() => {
       selectCallCount++;
-      return chainGet(selectCallCount === 1 ? fakeSession : session2);
+      if (selectCallCount === 1) return chainAll([]); // weeklySkips
+      return chainGet(selectCallCount === 2 ? fakeSession : session2);
     });
 
     mockDbInsert.mockImplementation(() => {
@@ -174,7 +190,9 @@ describe("sendOutreachBatch", () => {
   });
 
   it("skips sessions that don't exist in DB", async () => {
-    mockDbSelect.mockReturnValue(chainGet(undefined));
+    mockDbSelect
+      .mockReturnValueOnce(chainAll([]))
+      .mockReturnValue(chainGet(undefined));
 
     const results = await sendOutreachBatch([999], "2026-06-01");
 
@@ -218,7 +236,9 @@ describe("sendOutreachBatch — multi-session", () => {
     let selectCall = 0;
     mockDbSelect.mockImplementation(() => {
       selectCall++;
-      return chainGet(selectCall <= 2 ? (selectCall === 1 ? session1 : session2) : null);
+      if (selectCall === 1) return chainAll([]); // weeklySkips
+      const idx = selectCall - 1;
+      return chainGet(idx <= 2 ? (idx === 1 ? session1 : session2) : null);
     });
     mockDbInsert.mockReturnValue(
       chainReturningGet({ id: 100, clientId: 10, sessionId: 1 }),
@@ -235,7 +255,9 @@ describe("sendOutreachBatch — multi-session", () => {
     let selectCall = 0;
     mockDbSelect.mockImplementation(() => {
       selectCall++;
-      return chainGet(selectCall <= 2 ? (selectCall === 1 ? session1 : session2) : null);
+      if (selectCall === 1) return chainAll([]); // weeklySkips
+      const idx = selectCall - 1;
+      return chainGet(idx <= 2 ? (idx === 1 ? session1 : session2) : null);
     });
     mockDbInsert.mockReturnValue(
       chainReturningGet({ id: 100, clientId: 10, sessionId: 1 }),
@@ -256,7 +278,9 @@ describe("sendOutreachBatch — multi-session", () => {
     let selectCall = 0;
     mockDbSelect.mockImplementation(() => {
       selectCall++;
-      return chainGet(selectCall <= 2 ? (selectCall === 1 ? session1 : session2) : null);
+      if (selectCall === 1) return chainAll([]); // weeklySkips
+      const idx = selectCall - 1;
+      return chainGet(idx <= 2 ? (idx === 1 ? session1 : session2) : null);
     });
 
     const insertCalls: unknown[] = [];
@@ -276,7 +300,9 @@ describe("sendOutreachBatch — multi-session", () => {
     let selectCall = 0;
     mockDbSelect.mockImplementation(() => {
       selectCall++;
-      return chainGet(selectCall <= 2 ? (selectCall === 1 ? session1 : session2) : null);
+      if (selectCall === 1) return chainAll([]); // weeklySkips
+      const idx = selectCall - 1;
+      return chainGet(idx <= 2 ? (idx === 1 ? session1 : session2) : null);
     });
     mockDbInsert.mockReturnValue(
       chainReturningGet({ id: 100, clientId: 10, sessionId: 1 }),
@@ -300,7 +326,9 @@ describe("sendOutreachBatch — multi-session", () => {
     let selectCall = 0;
     mockDbSelect.mockImplementation(() => {
       selectCall++;
-      return chainGet(selectCall <= 2 ? (selectCall === 1 ? session1 : otherClientSession) : null);
+      if (selectCall === 1) return chainAll([]); // weeklySkips
+      const idx = selectCall - 1;
+      return chainGet(idx <= 2 ? (idx === 1 ? session1 : otherClientSession) : null);
     });
     mockDbInsert.mockReturnValue(
       chainReturningGet({ id: 100, clientId: 10, sessionId: 1 }),
@@ -314,7 +342,9 @@ describe("sendOutreachBatch — multi-session", () => {
   });
 
   it("single-session client still works without groupId", async () => {
-    mockDbSelect.mockReturnValue(chainGet(session1));
+    mockDbSelect
+      .mockReturnValueOnce(chainAll([]))
+      .mockReturnValue(chainGet(session1));
     mockDbInsert.mockReturnValue(
       chainReturningGet({ id: 100, clientId: 10, sessionId: 1 }),
     );
