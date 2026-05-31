@@ -436,6 +436,20 @@ export default async function ClientDetailPage({
             </div>
             <Separator />
             <div>
+              <div className="text-sm text-muted-foreground mb-1">Calendar Invites</div>
+              <EditableSelect
+                clientId={clientId}
+                field="calendarInviteOptIn"
+                value={client.calendarInviteOptIn === null ? "not_asked" : client.calendarInviteOptIn ? "opted_in" : "opted_out"}
+                options={[
+                  { value: "not_asked", label: "Not asked yet", className: "text-muted-foreground" },
+                  { value: "opted_in", label: "Opted in", className: "text-emerald-400" },
+                  { value: "opted_out", label: "Opted out", className: "text-red-400" },
+                ]}
+              />
+            </div>
+            <Separator />
+            <div>
               <div className="text-sm text-muted-foreground mb-1">Notes</div>
               <EditableText
                 clientId={clientId}
