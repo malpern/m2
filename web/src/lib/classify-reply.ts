@@ -9,13 +9,15 @@ export type ReplyInterpretation =
   | "ambiguous"
   | "selecting_offered_slot"
   | "cancellation"
-  | "account_inquiry";
+  | "account_inquiry"
+  | "deferred";
 
 export type ClassifyResult = {
   interpretation: ReplyInterpretation;
   confidence: number;
   extractedDay?: string;
   extractedTime?: string;
+  extractedDelayMinutes?: number;
 };
 
 export type SessionAction = {
@@ -49,6 +51,7 @@ Categories:
 - "selecting_offered_slot": Client is picking from alternatives that were already offered ("Monday", "the 3pm one", "first option", "Wednesday at 5")
 - "cancellation": Client wants to cancel an already-confirmed session ("something came up", "I can't make it", "need to cancel", "actually I won't be able to come")
 - "account_inquiry": Client is asking about their account, package balance, or sessions remaining ("how many sessions do I have left?", "what's my balance?", "how many do I have?", "sessions remaining?")
+- "deferred": Client wants to decide later, asks to be checked back on ("check with me in an hour", "let me think about it, text me later", "ask me again tomorrow", "I'll let you know in a bit", "remind me later")
 - "ambiguous": Unclear or noncommittal ("let me check", "maybe", "idk")
 
 Punctuation matters:
@@ -62,6 +65,10 @@ If the client mentions a specific day or time, extract it:
 
 If no specific day/time is mentioned, omit those fields:
 {"interpretation":"declined_wants_options","confidence":0.85}
+
+For deferred requests, extract the delay in minutes as "extractedDelayMinutes":
+{"interpretation":"deferred","confidence":0.9,"extractedDelayMinutes":60}
+Common delays: "in an hour" = 60, "in 30 minutes" = 30, "in a couple hours" = 120, "later today" = 180, "tonight" = 240, "tomorrow" = 720. If no specific time is mentioned, default to 60.
 
 Context matters: if the previous message offered alternatives and the client picks one, that's "selecting_offered_slot" or "confirmed", not a new reschedule request.`;
 
@@ -154,6 +161,7 @@ export async function classifyReply(
       confidence: parsed.confidence ?? 0.5,
       extractedDay: parsed.extractedDay ?? undefined,
       extractedTime: parsed.extractedTime ?? undefined,
+      extractedDelayMinutes: parsed.extractedDelayMinutes ?? undefined,
     };
   } catch (e) {
     checkBillingError(e);

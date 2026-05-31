@@ -74,7 +74,8 @@ CREATE TABLE outreach (
     sent_at TEXT,
     replied_at TEXT,
     send_error TEXT,
-    outreach_group_id TEXT
+    outreach_group_id TEXT,
+    follow_up_at TEXT
 );
 
 CREATE TABLE priority_settings (

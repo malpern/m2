@@ -248,7 +248,7 @@ describe("session.status fallback", () => {
       id: 10, clientId: 1, sessionId: 1, weekOf: "2026-05-25",
       direction: "sent" as const, messageText: "Hey...",
       interpretation: null, status: "awaiting_reply" as const,
-      sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null, outreachGroupId: null,
+      sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null, outreachGroupId: null, followUpAt: null,
     }];
     const queue = buildOutreachQueue(sessions, sentOutreach);
     expect(queue[0].status).toBe("confirmed");
@@ -296,7 +296,7 @@ describe("new OutreachItem fields", () => {
       id: 10, clientId: 1, sessionId: 1, weekOf: "2026-05-25",
       direction: "sent" as const, messageText: "Hey, a slot just opened up for Tuesday at 3pm!",
       interpretation: null, status: "awaiting_reply" as const,
-      sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null, outreachGroupId: null,
+      sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null, outreachGroupId: null, followUpAt: null,
     }];
     const queue = buildOutreachQueue(sessions, outreachRecords);
     expect(queue[0].isAutoFill).toBe(true);
@@ -308,7 +308,7 @@ describe("new OutreachItem fields", () => {
       id: 10, clientId: 1, sessionId: 1, weekOf: "2026-05-25",
       direction: "sent" as const, messageText: "Hey, are you free Monday at 3pm?",
       interpretation: null, status: "awaiting_reply" as const,
-      sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null, outreachGroupId: null,
+      sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null, outreachGroupId: null, followUpAt: null,
     }];
     const queue = buildOutreachQueue(sessions, outreachRecords);
     expect(queue[0].isAutoFill).toBe(false);
@@ -321,13 +321,13 @@ describe("new OutreachItem fields", () => {
         id: 10, clientId: 1, sessionId: 1, weekOf: "2026-05-25",
         direction: "sent" as const, messageText: "Hey, Monday at 3pm?",
         interpretation: null, status: "awaiting_reply" as const,
-        sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null, outreachGroupId: null,
+        sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null, outreachGroupId: null, followUpAt: null,
       },
       {
         id: 11, clientId: 1, sessionId: 1, weekOf: "2026-05-25",
         direction: "received" as const, messageText: "Yes!",
         interpretation: "confirmed" as const, status: "confirmed" as const,
-        sentAt: null, repliedAt: "2026-05-24T11:00:00Z", sendError: null, outreachGroupId: null,
+        sentAt: null, repliedAt: "2026-05-24T11:00:00Z", sendError: null, outreachGroupId: null, followUpAt: null,
       },
     ];
     const queue = buildOutreachQueue(sessions, outreachRecords);
@@ -347,7 +347,7 @@ describe("new OutreachItem fields", () => {
       direction: "sent" as const, messageText: "Hey, Monday at 3pm?",
       interpretation: null, status: "awaiting_reply" as const,
       sentAt: "2026-05-24T10:00:00Z", repliedAt: null, sendError: null,
-      outreachGroupId: "og_1_12345",
+      outreachGroupId: "og_1_12345", followUpAt: null,
     }];
     const queue = buildOutreachQueue(sessions, outreachRecords);
     expect(queue[0].outreachGroupId).toBe("og_1_12345");

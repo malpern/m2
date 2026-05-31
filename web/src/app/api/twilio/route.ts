@@ -774,6 +774,25 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
       return twiml();
     }
 
+    if (interpretation === "deferred") {
+      const delayMinutes = result.extractedDelayMinutes ?? 60;
+      const followUpAt = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
+      await db.insert(outreach).values({
+        clientId: client.id, sessionId: lastSent?.sessionId ?? null, weekOf,
+        direction: "received" as const, messageText: body,
+        interpretation: "deferred", status: "awaiting_reply" as const,
+        repliedAt: new Date().toISOString(),
+      }).run();
+
+      const delayLabel = delayMinutes >= 120 ? `${Math.round(delayMinutes / 60)} hours`
+        : delayMinutes === 60 ? "an hour"
+        : `${delayMinutes} minutes`;
+      const deferredReply = `No problem, ${firstName}! I'll check back in ${delayLabel}.`;
+      await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, deferredReply, followUpAt);
+      syslog.info("outreach", `${firstName} deferred — will follow up in ${delayLabel}`, `followUpAt: ${followUpAt}`, { clientId: client.id });
+      return twiml();
+    }
+
     type OutreachStatus = "pending" | "awaiting_reply" | "confirmed" | "needs_matt" | "expired";
     const statusMap: Record<string, OutreachStatus> = {
       confirmed: "confirmed",
@@ -784,6 +803,7 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
       reschedule_request: "needs_matt",
       cancellation: "expired",
       account_inquiry: "confirmed",
+      deferred: "awaiting_reply",
       ambiguous: "needs_matt",
     };
 
@@ -1077,7 +1097,7 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
   return twiml();
 }
 
-async function logAndSend(clientId: number, sessionId: number | null, weekOf: string, phone: string, message: string) {
+async function logAndSend(clientId: number, sessionId: number | null, weekOf: string, phone: string, message: string, followUpAt?: string) {
   const row = await db.insert(outreach).values({
     clientId,
     sessionId,
@@ -1086,6 +1106,7 @@ async function logAndSend(clientId: number, sessionId: number | null, weekOf: st
     messageText: message,
     status: "awaiting_reply",
     sentAt: new Date().toISOString(),
+    followUpAt: followUpAt ?? null,
   }).returning().get();
 
   const smsText = message.replace(/\n\[offered:[^\]]+\]/, "");
