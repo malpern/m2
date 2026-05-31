@@ -1,7 +1,8 @@
 import { db } from "@/db";
 import { clients, packages, sessions } from "@/db/schema";
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, sql, desc, and } from "drizzle-orm";
 import { ClientTable } from "./client-table";
+import Link from "next/link";
 
 const GRADE_RANK: Record<string, number> = {
   adult: 0,
@@ -86,8 +87,35 @@ export default async function ClientsPage() {
     (c) => c.category !== "active" && c.category !== "in_season"
   );
 
+  const lowPackages = (await db
+    .select({
+      clientId: clients.id,
+      clientName: clients.name,
+      remaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`.as("remaining"),
+      totalSessions: packages.totalSessions,
+      sessionsUsed: packages.sessionsUsed,
+    })
+    .from(packages)
+    .innerJoin(clients, eq(clients.id, packages.clientId))
+    .where(eq(packages.status, "active"))
+    .all()
+  ).filter((p) => p.remaining <= 2);
+
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
+      {lowPackages.length > 0 && (
+        <div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+          <div className="text-sm font-semibold text-amber-400 mb-2">Package Alerts</div>
+          {lowPackages.map((p) => (
+            <div key={p.clientId} className="flex items-center justify-between py-1.5">
+              <Link href={`/clients/${p.clientId}`} className="text-sm hover:underline">{p.clientName}</Link>
+              <span className={`text-xs font-medium ${p.remaining <= 0 ? "text-red-400" : "text-amber-400"}`}>
+                {p.remaining <= 0 ? "Package used up" : `${p.remaining} session${p.remaining === 1 ? "" : "s"} left`}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       <ClientTable activeClients={active} inactiveClients={inactive} sessionsByClient={Object.fromEntries(sessionsByClient)} />
     </div>
   );
