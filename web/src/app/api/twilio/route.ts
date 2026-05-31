@@ -73,6 +73,17 @@ async function getGroupedSessionIds(outreachGroupId: string | null): Promise<num
 }
 
 export async function POST(request: NextRequest) {
+  try {
+    return await handleWebhook(request);
+  } catch (e) {
+    syslog.error("webhook", "Webhook crashed — client got no reply", `Unhandled error: ${e instanceof Error ? e.message : String(e)}`, {
+      metadata: { stack: e instanceof Error ? e.stack : undefined },
+    });
+    return twiml();
+  }
+}
+
+async function handleWebhook(request: NextRequest): Promise<Response> {
   const formData = await request.formData();
   const params: Record<string, string> = {};
   formData.forEach((value, key) => { params[key] = value.toString(); });
@@ -188,7 +199,7 @@ export async function POST(request: NextRequest) {
           });
           await logAndSend(client.id, lastSent.sessionId, weekOf, client.phone, reply);
           if (session) {
-            autoFillCancelledSlot(session.scheduledDate, session.slot, client.id).catch(() => {});
+            autoFillCancelledSlot(session.scheduledDate, session.slot, client.id).catch((e) => syslog.error("auto_fill", "Auto-fill failed after cancellation", String(e)));
           }
           return twiml();
         }
@@ -255,7 +266,12 @@ export async function POST(request: NextRequest) {
       const lowerBody = body.toLowerCase().trim();
 
       if (emailMatch) {
-        const email = emailMatch[0];
+        const email = emailMatch[0].toLowerCase();
+        if (email.length > 254 || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+          await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone,
+            "That doesn't look like a valid email. Could you double-check and send it again?");
+          return twiml();
+        }
         await db.update(clients).set({ email, calendarInviteOptIn: true }).where(eq(clients.id, client.id)).run();
         await db.insert(outreach).values({
           clientId: client.id, sessionId: lastSent?.sessionId ?? null, weekOf,
@@ -454,17 +470,17 @@ export async function POST(request: NextRequest) {
             const pickedDayLabel = picked.day.charAt(0).toUpperCase() + picked.day.slice(1);
             const SLOT_TIMES: Record<string, string> = { "3pm": "15:00", "4pm": "16:00", "5pm": "17:00", "6pm": "18:00", "7pm": "19:00" };
 
+            const sessionToMove = pendingSessions[0];
             const rescheduledFrom: string[] = [];
-            for (const ps of pendingSessions) {
-              const origDay = new Date(ps.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });
-              rescheduledFrom.push(origDay);
-              await db.update(sessions).set({
-                scheduledDate: picked.date,
-                scheduledTime: SLOT_TIMES[picked.slot] ?? "15:00",
-                slot: picked.slot as "3pm" | "4pm" | "5pm" | "6pm" | "7pm",
-                status: "confirmed",
-              }).where(eq(sessions.id, ps.id)).run();
-            }
+            const origDay = new Date(sessionToMove.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });
+            rescheduledFrom.push(origDay);
+            await db.update(sessions).set({
+              scheduledDate: picked.date,
+              scheduledTime: SLOT_TIMES[picked.slot] ?? "15:00",
+              slot: picked.slot as "3pm" | "4pm" | "5pm" | "6pm" | "7pm",
+              status: "confirmed",
+            }).where(eq(sessions.id, sessionToMove.id)).run();
+            syncSessionToCalendar(sessionToMove.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: sessionToMove.id }));
 
             await db.insert(outreach).values({
               clientId: client.id, sessionId: lastSent?.sessionId ?? null, weekOf,
@@ -601,7 +617,7 @@ export async function POST(request: NextRequest) {
           syncSessionToCalendar(matchedSession.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: matchedSession.id }));
           cancelledDays.add(dayLabel.toLowerCase());
           sessionOutcomes.push({ originalDay: dayLabel, originalSlot: matchedSession.slot, result: `${dayLabel} — cancelled`, sessionId: matchedSession.id });
-          autoFillCancelledSlot(matchedSession.scheduledDate, matchedSession.slot, client.id).catch(() => {});
+          autoFillCancelledSlot(matchedSession.scheduledDate, matchedSession.slot, client.id).catch((e) => syslog.error("auto_fill", "Auto-fill failed after cancellation", String(e)));
         } else if (action.action === "reschedule") {
           rescheduleNeeded.push({ session: matchedSession, originalDay: dayLabel, requestedDay: action.requestedDay, requestedTime: action.requestedTime });
         }
@@ -935,7 +951,7 @@ export async function POST(request: NextRequest) {
       });
       await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
       for (const cs of cancelledSlots) {
-        autoFillCancelledSlot(cs.date, cs.slot, cs.clientId).catch(() => {});
+        autoFillCancelledSlot(cs.date, cs.slot, cs.clientId).catch((e) => syslog.error("auto_fill", "Auto-fill failed after cancellation", String(e)));
       }
       return twiml();
     }
@@ -959,7 +975,7 @@ export async function POST(request: NextRequest) {
       });
       await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
       for (const cs of cancelledSlots) {
-        autoFillCancelledSlot(cs.date, cs.slot, cs.clientId).catch(() => {});
+        autoFillCancelledSlot(cs.date, cs.slot, cs.clientId).catch((e) => syslog.error("auto_fill", "Auto-fill failed after cancellation", String(e)));
       }
       return twiml();
     }
