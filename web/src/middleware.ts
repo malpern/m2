@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/api/twilio", "/api/auth", "/api/feedback", "/api/cron", "/api/migrate", "/login"];
+const PUBLIC_PATHS = ["/api/twilio", "/api/auth", "/api/feedback", "/api/cron", "/login"];
 
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
