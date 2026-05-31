@@ -636,36 +636,54 @@
       <div class="wf-step wf-human">
         <div class="wf-marker"><div class="wf-dot">3</div><div class="wf-line"></div></div>
         <div class="wf-content">
+          <h3>Skip anyone who's out</h3>
+          <p>Know someone's on vacation or injured? Hit "Skip" next to their name. They won't get texted this week.</p>
+          <span class="wf-tag">Optional</span>
+        </div>
+      </div>
+
+      <div class="wf-step wf-human">
+        <div class="wf-marker"><div class="wf-dot">4</div><div class="wf-line"></div></div>
+        <div class="wf-content">
           <h3>Send outreach</h3>
-          <p>Go to Outreach and send texts via WhatsApp. Messages go out from your M2 number through Twilio &mdash; works from any device, anywhere.</p>
+          <p>Hit "Send Next Batch" on the Outreach page. Clients with multiple sessions get one combined message listing all their times. Wave 2 and 3 send automatically after 45 min and 2 hours.</p>
           <span class="wf-tag">Required</span>
         </div>
       </div>
 
       <div class="wf-step wf-auto">
-        <div class="wf-marker"><div class="wf-dot">4</div><div class="wf-line"></div></div>
-        <div class="wf-content">
-          <h3>System handles replies</h3>
-          <p>AI reads each reply. Confirmed &rarr; locked in. Declined &rarr; slot reopens. Reschedule requests get flagged for you. No reply &rarr; follow-up after 1 hour, moved on after 3.</p>
-          <span class="wf-tag">Automatic</span>
-        </div>
-      </div>
-
-      <div class="wf-step wf-human">
         <div class="wf-marker"><div class="wf-dot">5</div><div class="wf-line"></div></div>
         <div class="wf-content">
-          <h3>Handle flagged replies</h3>
-          <p>If someone says "can we do 5 instead?" or is unclear, you decide. Confirm, decline, or suggest a new time.</p>
-          <span class="wf-tag">Only when needed</span>
+          <h3>System handles the conversation</h3>
+          <p>AI reads every reply and responds naturally. "Yeah sounds good" &rarr; confirmed. "Can we do Tuesday instead?" &rarr; checks availability and offers options. "Skip me this week" &rarr; cancelled. Clients with 3 sessions can accept some, reschedule others, and cancel the rest &mdash; all in one conversation.</p>
+          <span class="wf-tag">Automatic</span>
         </div>
       </div>
 
       <div class="wf-step wf-auto">
         <div class="wf-marker"><div class="wf-dot">6</div><div class="wf-line"></div></div>
         <div class="wf-content">
-          <h3>Google Calendar stays in sync</h3>
-          <p>M2 connects directly to your Google Calendar via API &mdash; your existing appointments show on the schedule in orange so you never double-book. Confirmed sessions sync back automatically.</p>
+          <h3>Calendar invites &amp; auto-fill</h3>
+          <p>Confirmed sessions appear on your Google Calendar with a 🤖 icon. Clients get calendar invites to their email. If someone cancels, the system automatically offers the open slot to the next-priority client.</p>
           <span class="wf-tag">Automatic</span>
+        </div>
+      </div>
+
+      <div class="wf-step wf-auto">
+        <div class="wf-marker"><div class="wf-dot">7</div><div class="wf-line"></div></div>
+        <div class="wf-content">
+          <h3>Follow-ups &amp; alerts</h3>
+          <p>No reply after 1 hour? System sends a nudge. After 3 hours, moves on. If anything goes wrong (send failure, AI error), Micah gets alerted via WhatsApp and email. Daily digest summarizes the day's activity.</p>
+          <span class="wf-tag">Automatic</span>
+        </div>
+      </div>
+
+      <div class="wf-step wf-human">
+        <div class="wf-marker"><div class="wf-dot">8</div><div class="wf-line"></div></div>
+        <div class="wf-content">
+          <h3>Handle anything the AI couldn't</h3>
+          <p>If a reply is truly unclear after 3 clarification attempts, it shows up in "Needs Your Decision." Confirm, decline, or respond manually. Undo any decline within 5 seconds if you change your mind.</p>
+          <span class="wf-tag">Only when needed</span>
         </div>
       </div>
     </div>
@@ -708,13 +726,17 @@
         <div class="msg-thread" style="margin:0">
           <div class="msg msg-out" style="font-size:13px">Hey Reggie, Thursday at 3pm?</div>
           <div class="msg msg-in" style="font-size:13px">Yeah see you then</div>
+          <div class="msg msg-out" style="font-size:13px">Locked in 💪</div>
         </div>
       </div>
       <div style="background:var(--surface);border-radius:var(--radius);padding:16px">
-        <div style="font-size:12px;font-weight:600;color:var(--purple);margin-bottom:8px">RESCHEDULE &mdash; you decide</div>
+        <div style="font-size:12px;font-weight:600;color:var(--purple);margin-bottom:8px">RESCHEDULE &mdash; handled automatically</div>
         <div class="msg-thread" style="margin:0">
           <div class="msg msg-out" style="font-size:13px">Hey Johnny, Thursday at 3pm?</div>
-          <div class="msg msg-in" style="font-size:13px">Can we do 5 instead?</div>
+          <div class="msg msg-in" style="font-size:13px">Nope. How about Friday?</div>
+          <div class="msg msg-out" style="font-size:13px">Friday at 3pm works &mdash; does that work for you?</div>
+          <div class="msg msg-in" style="font-size:13px">Perfect</div>
+          <div class="msg msg-out" style="font-size:13px">You're set for Friday at 3 👊</div>
         </div>
       </div>
     </div>
@@ -734,8 +756,9 @@
         <ul style="list-style:none;font-size:14px;color:var(--text-muted);line-height:2">
           <li>Confirm your availability each week</li>
           <li>Review and approve the proposed schedule</li>
-          <li>Hit "Send Outreach" to start texting</li>
-          <li>Decide on reschedule requests and unclear replies</li>
+          <li>Skip clients who are unavailable this week</li>
+          <li>Hit "Send Next Batch" to start texting</li>
+          <li>Decide on anything the AI couldn't handle</li>
         </ul>
       </div>
       <div class="card">
@@ -746,10 +769,14 @@
           <li>Fills standing slots automatically</li>
           <li>Generates schedule using your priority rules</li>
           <li>Sends texts via WhatsApp through Twilio</li>
-          <li>Reads and classifies every reply with AI</li>
+          <li>AI reads and responds to every reply naturally</li>
+          <li>Handles rescheduling, alternatives, and cancellations</li>
+          <li>Groups multi-session clients into one message</li>
           <li>Follows up after 1 hour, moves on after 3</li>
+          <li>Auto-fills cancelled slots with next-priority client</li>
+          <li>Creates 🤖 calendar events and sends invites</li>
           <li>Reads your Google Calendar to avoid conflicts</li>
-          <li>Tracks package balances and flags missed deductions</li>
+          <li>Alerts Micah via WhatsApp + email if anything breaks</li>
         </ul>
       </div>
     </div>
@@ -761,10 +788,12 @@
       <ul style="list-style:none;font-size:14px;color:var(--text-muted);line-height:2">
         <li>Drag-and-drop to rearrange the schedule before sending</li>
         <li>Override any AI classification</li>
+        <li>Undo a decline within 5 seconds</li>
         <li>Tune the priority algorithm &mdash; adjust how much college, grade, and effort matter</li>
-        <li>Pin or unpin clients in the ranking</li>
-        <li>Edit session times right from the dashboard</li>
-        <li>Export .csv to Google Sheets</li>
+        <li>Search anything with &#8984;K &mdash; clients, sessions, messages</li>
+        <li>Browse previous weeks' outreach history</li>
+        <li>View system logs &mdash; activity feed for you, technical view for Micah</li>
+        <li>Manage client email and calendar invite preferences</li>
         <li>Review reports and package reconciliation</li>
       </ul>
     </div>
