@@ -10,7 +10,7 @@ import { autoFillCancelledSlot } from "@/lib/auto-fill";
 import { syslog } from "@/lib/logger";
 import { syncSessionToCalendar } from "@/lib/gcal-sync";
 import { getInvitePrompt } from "@/lib/invite-prompt";
-import { creditCancellation } from "@/lib/package-accounting";
+import { creditCancellation, getPackageBalance } from "@/lib/package-accounting";
 import twilio from "twilio";
 
 function escapeXml(text: string): string {
@@ -138,6 +138,30 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
 
     const weekOf = getMonday().toISOString().split("T")[0];
     const firstName = client.name.split(" ")[0];
+
+    // #52: Balance inquiry — "how many sessions do I have left?"
+    const balanceKeywords = ["how many sessions", "sessions left", "sessions remaining", "session balance", "my balance", "how many do i have", "package balance", "sessions do i have"];
+    if (balanceKeywords.some((kw) => lower.includes(kw))) {
+      const balance = await getPackageBalance(client.id);
+      await db.insert(outreach).values({
+        clientId: client.id, sessionId: null, weekOf,
+        direction: "received" as const, messageText: body,
+        interpretation: "account_inquiry", status: "confirmed" as const,
+        repliedAt: new Date().toISOString(),
+      }).run();
+
+      let reply: string;
+      if (!balance) {
+        reply = `Hey ${firstName}, I don't see an active package on file for you. Want me to check with Matt?`;
+      } else if (balance.remaining <= 0) {
+        reply = `Hey ${firstName}, looks like your package is all used up (${balance.used}/${balance.total} sessions used). Want me to ask Matt about getting more?`;
+      } else {
+        reply = `Hey ${firstName}, you have ${balance.remaining} session${balance.remaining === 1 ? "" : "s"} left on your package (${balance.used}/${balance.total} used).`;
+      }
+      await logAndSend(client.id, null, weekOf, client.phone, reply);
+      syslog.info("outreach", `${firstName} asked about package balance`, `Balance: ${balance ? `${balance.remaining}/${balance.total}` : "no package"}`, { clientId: client.id });
+      return twiml();
+    }
 
     // #59: Late reply — outreach is from a previous week
     if (lastSent && lastSent.weekOf !== weekOf) {
@@ -729,6 +753,27 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
     }
     const interpretation = result.interpretation;
 
+    if (interpretation === "account_inquiry") {
+      const balance = await getPackageBalance(client.id);
+      await db.insert(outreach).values({
+        clientId: client.id, sessionId: null, weekOf,
+        direction: "received" as const, messageText: body,
+        interpretation: "account_inquiry", status: "confirmed" as const,
+        repliedAt: new Date().toISOString(),
+      }).run();
+      let reply: string;
+      if (!balance) {
+        reply = `Hey ${firstName}, I don't see an active package on file for you. Want me to check with Matt?`;
+      } else if (balance.remaining <= 0) {
+        reply = `Hey ${firstName}, looks like your package is all used up (${balance.used}/${balance.total} sessions used). Want me to ask Matt about getting more?`;
+      } else {
+        reply = `Hey ${firstName}, you have ${balance.remaining} session${balance.remaining === 1 ? "" : "s"} left on your package (${balance.used}/${balance.total} used).`;
+      }
+      await logAndSend(client.id, null, weekOf, client.phone, reply);
+      syslog.info("outreach", `${firstName} asked about package balance`, `Balance: ${balance ? `${balance.remaining}/${balance.total}` : "no package"}`, { clientId: client.id });
+      return twiml();
+    }
+
     type OutreachStatus = "pending" | "awaiting_reply" | "confirmed" | "needs_matt" | "expired";
     const statusMap: Record<string, OutreachStatus> = {
       confirmed: "confirmed",
@@ -738,6 +783,7 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
       declined_with_alternative: "needs_matt",
       reschedule_request: "needs_matt",
       cancellation: "expired",
+      account_inquiry: "confirmed",
       ambiguous: "needs_matt",
     };
 
