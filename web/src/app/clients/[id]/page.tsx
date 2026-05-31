@@ -508,9 +508,9 @@ export default async function ClientDetailPage({
 
                 <Separator />
 
-                {transactionHistory.length > 0 && (
-                  <div>
+                <div>
                     <div className="text-sm font-medium mb-2">Recent Transactions</div>
+                    {transactionHistory.length > 0 ? (
                     <div className="space-y-1.5">
                       {transactionHistory.map((tx) => (
                         <div key={tx.id} className="flex items-center justify-between text-sm">
@@ -528,8 +528,10 @@ export default async function ClientDetailPage({
                         </div>
                       ))}
                     </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No package activity yet</p>
+                    )}
                   </div>
-                )}
 
                 <Separator />
 
