@@ -34,6 +34,7 @@ export interface OutreachItem {
   isAutoFill: boolean;
   messageCount: number;
   outreachGroupId: string | null;
+  followUpAt: string | null;
 }
 
 export function buildOutreachQueue(
@@ -122,6 +123,11 @@ export function buildOutreachQueue(
       (o) => o.sessionId === session.id
     ).length;
 
+    const latestSent = existingOutreach
+      .filter((o) => o.sessionId === session.id && o.direction === "sent")
+      .sort((a, b) => (b.sentAt ?? "").localeCompare(a.sentAt ?? ""))[0];
+    const followUpAt = latestSent?.followUpAt ?? null;
+
     items.push({
       sessionId: session.id,
       clientId: session.clientId,
@@ -143,6 +149,7 @@ export function buildOutreachQueue(
       isAutoFill,
       messageCount,
       outreachGroupId,
+      followUpAt,
     });
   }
 
