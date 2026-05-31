@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { packages, packageTransactions, sessions, clients } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { syslog } from "./logger";
 
 export async function deductSession(sessionId: number): Promise<boolean> {
@@ -120,6 +120,45 @@ export async function creditCancellation(sessionId: number): Promise<boolean> {
   return true;
 }
 
+export async function manualAdjustment(
+  clientId: number,
+  delta: number,
+  reason: string
+): Promise<boolean> {
+  const pkg = await db
+    .select()
+    .from(packages)
+    .where(and(eq(packages.clientId, clientId), eq(packages.status, "active")))
+    .get();
+
+  if (!pkg) {
+    syslog.warn("system", `Manual adjustment failed — no active package for client ${clientId}`, `No active package found for client ${clientId}`, { clientId });
+    return false;
+  }
+
+  const previousBalance = pkg.totalSessions - pkg.sessionsUsed;
+  const newUsed = Math.max(0, pkg.sessionsUsed - delta);
+  const newBalance = pkg.totalSessions - newUsed;
+
+  await db.insert(packageTransactions).values({
+    packageId: pkg.id,
+    delta,
+    reason: "manual_adjustment",
+    previousBalance,
+    newBalance,
+    note: reason,
+  }).run();
+
+  await db.update(packages).set({
+    sessionsUsed: newUsed,
+    status: newBalance <= 0 ? "exhausted" : "active",
+  }).where(eq(packages.id, pkg.id)).run();
+
+  syslog.info("system", `Manual adjustment for client ${clientId}: ${delta > 0 ? "+" : ""}${delta} (${reason})`, `Package ${pkg.id}: ${previousBalance} → ${newBalance}`, { clientId });
+
+  return true;
+}
+
 export async function getPackageBalance(clientId: number): Promise<{ remaining: number; total: number; used: number } | null> {
   const pkg = await db.select().from(packages).where(and(eq(packages.clientId, clientId), eq(packages.status, "active"))).get();
   if (!pkg) return null;
@@ -128,4 +167,34 @@ export async function getPackageBalance(clientId: number): Promise<{ remaining: 
     total: pkg.totalSessions,
     used: pkg.sessionsUsed,
   };
+}
+
+export async function getTransactionHistory(clientId: number, limit = 10) {
+  const pkg = await db
+    .select()
+    .from(packages)
+    .where(eq(packages.clientId, clientId))
+    .all();
+
+  if (pkg.length === 0) return [];
+
+  const packageIds = pkg.map((p) => p.id);
+
+  const transactions = await db
+    .select({
+      id: packageTransactions.id,
+      delta: packageTransactions.delta,
+      reason: packageTransactions.reason,
+      note: packageTransactions.note,
+      previousBalance: packageTransactions.previousBalance,
+      newBalance: packageTransactions.newBalance,
+      createdAt: packageTransactions.createdAt,
+    })
+    .from(packageTransactions)
+    .where(inArray(packageTransactions.packageId, packageIds))
+    .orderBy(desc(packageTransactions.id))
+    .limit(limit)
+    .all();
+
+  return transactions;
 }

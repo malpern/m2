@@ -9,6 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { DeleteButton } from "./delete-button";
 import { MessageHistory } from "./message-history";
 import { SessionHistoryCard } from "./session-history-card";
+import { PackageAdjustmentForm } from "./package-adjustment-form";
+import { getTransactionHistory } from "@/lib/package-accounting";
 import {
   EditableText,
   EditableNumber,
@@ -73,6 +75,8 @@ export default async function ClientDetailPage({
     .from(sessions)
     .where(eq(sessions.clientId, clientId))
     .all();
+
+  const transactionHistory = await getTransactionHistory(clientId, 10);
 
   const totalCompleted = allClientSessions.filter((s) => s.status === "completed").length;
   const totalCancelled = allClientSessions.filter((s) => s.status === "cancelled").length;
@@ -501,6 +505,38 @@ export default async function ClientDetailPage({
                 {activePackage.totalSessions - activePackage.sessionsUsed <= 2 && (
                   <div className="text-sm text-red-400 font-medium">Package almost exhausted</div>
                 )}
+
+                <Separator />
+
+                {transactionHistory.length > 0 && (
+                  <div>
+                    <div className="text-sm font-medium mb-2">Recent Transactions</div>
+                    <div className="space-y-1.5">
+                      {transactionHistory.map((tx) => (
+                        <div key={tx.id} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-mono text-xs font-medium ${tx.delta > 0 ? "text-emerald-400" : "text-red-400"}`}>
+                              {tx.delta > 0 ? "+" : ""}{tx.delta}
+                            </span>
+                            <span className="text-muted-foreground capitalize">
+                              {tx.reason === "manual_adjustment" ? (tx.note || "manual") : tx.reason}
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Separator />
+
+                <div>
+                  <div className="text-sm font-medium mb-2">Manual Adjustment</div>
+                  <PackageAdjustmentForm clientId={clientId} />
+                </div>
               </div>
             ) : (
               <div className="text-sm text-muted-foreground py-4">No active package.</div>
