@@ -20,6 +20,27 @@ vi.mock("@/db", () => ({
   },
 }));
 
+function mockSessionLookup(session: Record<string, unknown>) {
+  let callCount = 0;
+  mockDbSelect.mockImplementation(() => {
+    callCount++;
+    if (callCount === 1) {
+      return {
+        from: () => ({
+          innerJoin: () => ({
+            where: () => ({ get: () => session }),
+          }),
+        }),
+      };
+    }
+    return {
+      from: () => ({
+        where: () => ({ get: () => ({ status: session.status }) }),
+      }),
+    };
+  });
+}
+
 vi.mock("@/db/schema", () => ({
   sessions: { id: "id", gcalEventId: "gcal_event_id", clientId: "client_id" },
   clients: { id: "id", name: "name" },
@@ -53,17 +74,9 @@ describe("syncSessionToCalendar", () => {
 
   it("creates event when session is confirmed and has no gcalEventId", async () => {
     mockIsConnected.mockResolvedValue({ connected: true });
-    mockDbSelect.mockReturnValue({
-      from: () => ({
-        innerJoin: () => ({
-          where: () => ({
-            get: () => ({
-              id: 1, clientName: "John Smith", clientEmail: null, calendarInviteOptIn: null,
-              scheduledDate: "2026-06-05", scheduledTime: "15:00", slot: "3pm", status: "confirmed", gcalEventId: null,
-            }),
-          }),
-        }),
-      }),
+    mockSessionLookup({
+      id: 1, clientName: "John Smith", clientEmail: null, calendarInviteOptIn: null,
+      scheduledDate: "2026-06-05", scheduledTime: "15:00", slot: "3pm", status: "confirmed", gcalEventId: null,
     });
     mockCreateEvent.mockResolvedValue("evt_123");
 
@@ -133,6 +146,68 @@ describe("syncSessionToCalendar", () => {
     await syncSessionToCalendar(1);
 
     expect(mockDeleteEvent).not.toHaveBeenCalled();
+  });
+
+  it("deletes event immediately if session was cancelled during creation", async () => {
+    mockIsConnected.mockResolvedValue({ connected: true });
+    let callCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return {
+          from: () => ({
+            innerJoin: () => ({
+              where: () => ({ get: () => ({
+                id: 1, clientName: "John Smith", clientEmail: null, calendarInviteOptIn: null,
+                scheduledDate: "2026-06-05", scheduledTime: "15:00", slot: "3pm", status: "confirmed", gcalEventId: null,
+              }) }),
+            }),
+          }),
+        };
+      }
+      return {
+        from: () => ({
+          where: () => ({ get: () => ({ status: "cancelled" }) }),
+        }),
+      };
+    });
+    mockCreateEvent.mockResolvedValue("evt_race");
+    mockDeleteEvent.mockResolvedValue(true);
+
+    await syncSessionToCalendar(1);
+
+    expect(mockCreateEvent).toHaveBeenCalled();
+    expect(mockDeleteEvent).toHaveBeenCalledWith("evt_race");
+    expect(mockSyslog.info).toHaveBeenCalledWith(
+      "system",
+      expect.stringContaining("cancelled while creating"),
+      expect.any(String),
+      expect.any(Object),
+    );
+  });
+
+  it("logs warning when createCalendarEvent returns null", async () => {
+    mockIsConnected.mockResolvedValue({ connected: true });
+    mockDbSelect.mockReturnValue({
+      from: () => ({
+        innerJoin: () => ({
+          where: () => ({ get: () => ({
+            id: 1, clientName: "John Smith", clientEmail: null, calendarInviteOptIn: null,
+            scheduledDate: "2026-06-05", scheduledTime: "15:00", slot: "3pm", status: "confirmed", gcalEventId: null,
+          }) }),
+        }),
+      }),
+    });
+    mockCreateEvent.mockResolvedValue(null);
+
+    await syncSessionToCalendar(1);
+
+    expect(mockSyslog.warn).toHaveBeenCalledWith(
+      "system",
+      expect.stringContaining("returned empty"),
+      expect.any(String),
+      expect.any(Object),
+    );
   });
 
   it("logs error when create fails", async () => {

@@ -160,6 +160,18 @@ describe("classifyReply", () => {
     expect(result.interpretation).toBe("ambiguous");
     expect(result.confidence).toBe(0.3);
   });
+
+  it("includes punctuation guidance in the system prompt", async () => {
+    mockCreate.mockResolvedValue(
+      apiResponse('{"interpretation":"ambiguous","confidence":0.7}'),
+    );
+
+    await classifyReply([], "Friday? Let's cancel");
+
+    const systemPrompt = mockCreate.mock.calls[0][0].system;
+    expect(systemPrompt).toContain("question mark");
+    expect(systemPrompt).toContain("Punctuation matters");
+  });
 });
 
 /* ------------------------------------------------------------------ */
