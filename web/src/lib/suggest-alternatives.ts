@@ -306,3 +306,33 @@ export async function isSlotStillOpen(date: string, time: string): Promise<boole
 
   return existing.length === 0;
 }
+
+export async function tryBookSlot(
+  sessionId: number,
+  date: string,
+  time: string,
+  slot: string,
+  status: "proposed" | "confirmed" = "proposed",
+): Promise<boolean> {
+  const existing = await db
+    .select({ id: sessions.id })
+    .from(sessions)
+    .where(and(
+      eq(sessions.scheduledDate, date),
+      eq(sessions.scheduledTime, time),
+      ne(sessions.status, "cancelled"),
+      ne(sessions.id, sessionId),
+    ))
+    .all();
+
+  if (existing.length > 0) return false;
+
+  await db.update(sessions).set({
+    scheduledDate: date,
+    scheduledTime: time,
+    slot: slot as "3pm" | "4pm" | "5pm" | "6pm" | "7pm",
+    status,
+  }).where(eq(sessions.id, sessionId)).run();
+
+  return true;
+}

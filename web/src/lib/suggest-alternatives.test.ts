@@ -245,3 +245,46 @@ describe("whySlotUnavailable", () => {
     expect(result).toBe("booked");
   });
 });
+
+describe("tryBookSlot", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("books the slot when no conflicts exist", async () => {
+    mockDbSelect.mockReturnValue({
+      from: () => ({
+        where: () => ({
+          all: () => [],
+        }),
+      }),
+    });
+    mockDbUpdate.mockReturnValue({
+      set: () => ({
+        where: () => ({
+          run: () => {},
+        }),
+      }),
+    });
+
+    const { tryBookSlot } = await import("./suggest-alternatives");
+    const result = await tryBookSlot(1, "2026-06-05", "15:00", "3pm", "confirmed");
+    expect(result).toBe(true);
+    expect(mockDbUpdate).toHaveBeenCalled();
+  });
+
+  it("returns false when slot is already taken", async () => {
+    mockDbSelect.mockReturnValue({
+      from: () => ({
+        where: () => ({
+          all: () => [{ id: 99 }],
+        }),
+      }),
+    });
+
+    const { tryBookSlot } = await import("./suggest-alternatives");
+    const result = await tryBookSlot(1, "2026-06-05", "15:00", "3pm");
+    expect(result).toBe(false);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
+  });
+});
