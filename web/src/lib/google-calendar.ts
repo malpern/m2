@@ -21,6 +21,7 @@ export function getAuthUrl(): { url: string; state: string } {
       "https://www.googleapis.com/auth/calendar",
       "https://www.googleapis.com/auth/spreadsheets.readonly",
       "https://www.googleapis.com/auth/drive.readonly",
+      "https://www.googleapis.com/auth/gmail.send",
     ],
     state,
   });

@@ -1,8 +1,10 @@
 import { NextRequest } from "next/server";
 import { getDailyDigest } from "@/lib/alerting";
 import { sendSMS, isDevAllowed } from "@/lib/twilio";
+import { sendEmail } from "@/lib/email";
 
 const ALERT_PHONE = "+14082099509";
+const ALERT_EMAIL = "malpern@gmail.com";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -11,15 +13,24 @@ export async function GET(request: NextRequest) {
   }
 
   const digest = await getDailyDigest();
+  const results: Record<string, unknown> = { digest };
 
   if (isDevAllowed(ALERT_PHONE)) {
     try {
       await sendSMS(ALERT_PHONE, digest);
-      return Response.json({ sent: true, digest });
+      results.whatsapp = "sent";
     } catch (e) {
-      return Response.json({ sent: false, error: String(e), digest });
+      results.whatsapp = `failed: ${e}`;
     }
   }
 
-  return Response.json({ sent: false, reason: "dev guard", digest });
+  try {
+    const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    await sendEmail(ALERT_EMAIL, `📊 M2 Daily Digest — ${today}`, digest);
+    results.email = "sent";
+  } catch (e) {
+    results.email = `failed: ${e}`;
+  }
+
+  return Response.json(results);
 }

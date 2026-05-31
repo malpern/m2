@@ -2,8 +2,10 @@ import { db } from "@/db";
 import { systemLogs } from "@/db/schema";
 import { gte, eq, and } from "drizzle-orm";
 import { sendSMS, isDevAllowed } from "./twilio";
+import { sendEmail } from "./email";
 
 const ALERT_PHONE = "+14082099509";
+const ALERT_EMAIL = "malpern@gmail.com";
 const THROTTLE_MS = 10 * 60 * 1000;
 
 let lastAlertAt = 0;
@@ -36,7 +38,17 @@ export async function checkAndAlert(mattMessage: string, technicalMessage: strin
   try {
     await sendSMS(ALERT_PHONE, alertMsg);
   } catch (e) {
-    console.error("Failed to send alert:", e);
+    console.error("Failed to send WhatsApp alert:", e);
+  }
+
+  try {
+    await sendEmail(
+      ALERT_EMAIL,
+      `🚨 M2 Alert: ${recentErrors.length} errors in 10 minutes`,
+      `${alertMsg}\n\nTechnical: ${technicalMessage}`,
+    );
+  } catch (e) {
+    console.error("Failed to send email alert:", e);
   }
 }
 
