@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,55 @@ import { markConfirmed, markDeclined, overrideStatus, sendOutreachBatch, retrySe
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/components/toast";
 import type { OutreachItem } from "@/lib/outreach-engine";
+
+const UNDO_DELAY_MS = 5000;
+
+function useUndoableDecline() {
+  const toast = useToast();
+  const [pendingDeclines, setPendingDeclines] = useState<Set<number>>(new Set());
+  const timersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+
+  const decline = useCallback(
+    (sessionId: number) => {
+      setPendingDeclines((prev) => new Set(prev).add(sessionId));
+
+      const timer = setTimeout(async () => {
+        timersRef.current.delete(sessionId);
+        await markDeclined(sessionId);
+        setPendingDeclines((prev) => {
+          const next = new Set(prev);
+          next.delete(sessionId);
+          return next;
+        });
+      }, UNDO_DELAY_MS);
+
+      timersRef.current.set(sessionId, timer);
+
+      toast("Session declined", {
+        type: "info",
+        duration: UNDO_DELAY_MS,
+        action: {
+          label: "Undo",
+          onClick: () => {
+            const existing = timersRef.current.get(sessionId);
+            if (existing) {
+              clearTimeout(existing);
+              timersRef.current.delete(sessionId);
+            }
+            setPendingDeclines((prev) => {
+              const next = new Set(prev);
+              next.delete(sessionId);
+              return next;
+            });
+          },
+        },
+      });
+    },
+    [toast]
+  );
+
+  return { decline, pendingDeclines };
+}
 
 function statusBadge(status: string) {
   const styles: Record<string, string> = {
@@ -55,28 +104,39 @@ function formatElapsed(sentAt: string): { text: string; color: string } {
   return { text, color: "text-muted-foreground" };
 }
 
-function FollowUpCancelButton({ sessionId }: { sessionId: number }) {
-  const [isPending, startTransition] = useTransition();
-  const toast = useToast();
+function FollowUpCancelButton({
+  sessionId,
+  onDecline,
+  isPendingDecline,
+}: {
+  sessionId: number;
+  onDecline: (sessionId: number) => void;
+  isPendingDecline: boolean;
+}) {
   return (
     <Button
       size="sm"
       variant="ghost"
       className="h-9 text-xs text-red-400 hover:text-red-300"
-      disabled={isPending}
-      onClick={() =>
-        startTransition(async () => {
-          await markDeclined(sessionId);
-          toast("Session declined");
-        })
-      }
+      disabled={isPendingDecline}
+      onClick={() => onDecline(sessionId)}
     >
       Cancel
     </Button>
   );
 }
 
-function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
+function OutreachRow({
+  item,
+  weekOf,
+  onDecline,
+  isPendingDecline,
+}: {
+  item: OutreachItem;
+  weekOf: string;
+  onDecline: (sessionId: number) => void;
+  isPendingDecline: boolean;
+}) {
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
 
@@ -87,7 +147,7 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
   const elapsed = item.status === "sent" && item.sentAt ? formatElapsed(item.sentAt) : null;
 
   return (
-    <div className={`group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 border-b border-border last:border-0 transition-all duration-300 ${isPending ? "opacity-50 scale-[0.99]" : "opacity-100 scale-100"}`}>
+    <div className={`group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 border-b border-border last:border-0 transition-all duration-300 ${isPendingDecline ? "opacity-40 line-through" : isPending ? "opacity-50 scale-[0.99]" : "opacity-100 scale-100"}`}>
       <div className="flex items-center gap-3 sm:contents">
         <div className="w-16 shrink-0 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
@@ -159,12 +219,8 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
               size="sm"
               variant="outline"
               className="h-9 text-xs text-red-400 hover:text-red-300"
-              onClick={() =>
-                startTransition(async () => {
-                  await markDeclined(item.sessionId);
-                  toast("Session declined");
-                })
-              }
+              disabled={isPendingDecline}
+              onClick={() => onDecline(item.sessionId)}
             >
               Decline
             </Button>
@@ -206,12 +262,8 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
               size="sm"
               variant="ghost"
               className="h-9 text-xs text-red-400"
-              onClick={() =>
-                startTransition(async () => {
-                  await markDeclined(item.sessionId);
-                  toast("Session declined");
-                })
-              }
+              disabled={isPendingDecline}
+              onClick={() => onDecline(item.sessionId)}
             >
               Decline
             </Button>
@@ -250,6 +302,7 @@ export function OutreachDashboard({
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
   const toast = useToast();
+  const { decline, pendingDeclines } = useUndoableDecline();
 
   const query = search.toLowerCase().trim();
 
@@ -543,7 +596,7 @@ export function OutreachDashboard({
           </CardHeader>
           <CardContent>
             {filteredItems.filter((i) => i.status === "send_failed").map((item) => (
-              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} />
+              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} />
             ))}
           </CardContent>
         </Card>
@@ -557,7 +610,7 @@ export function OutreachDashboard({
           </CardHeader>
           <CardContent>
             {filteredFollowUps.map((item) => (
-              <div key={item.sessionId} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 border-b border-border last:border-0">
+              <div key={item.sessionId} className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 border-b border-border last:border-0 transition-all duration-300 ${pendingDeclines.has(item.sessionId) ? "opacity-40 line-through" : ""}`}>
                 <div className="flex items-center gap-3 sm:contents">
                   <div className="w-16 shrink-0 text-xs text-muted-foreground">
                     <div className="font-semibold text-foreground">
@@ -576,7 +629,7 @@ export function OutreachDashboard({
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge className="border-0 bg-amber-500/15 text-amber-400">Awaiting reply</Badge>
-                  <FollowUpCancelButton sessionId={item.sessionId} />
+                  <FollowUpCancelButton sessionId={item.sessionId} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} />
                 </div>
               </div>
             ))}
@@ -592,7 +645,7 @@ export function OutreachDashboard({
           </CardHeader>
           <CardContent>
             {filteredNeedsAttention.map((item) => (
-              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} />
+              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} />
             ))}
           </CardContent>
         </Card>
@@ -606,7 +659,7 @@ export function OutreachDashboard({
           </CardHeader>
           <CardContent>
             {filteredItems.filter((i) => i.status === "standing").map((item) => (
-              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} />
+              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} />
             ))}
           </CardContent>
         </Card>
@@ -620,7 +673,7 @@ export function OutreachDashboard({
         <CardContent>
           {filteredItems.filter((i) => i.status !== "standing").length > 0 ? (
             filteredItems.filter((i) => i.status !== "standing").map((item) => (
-              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} />
+              <OutreachRow key={item.sessionId} item={item} weekOf={weekOf} onDecline={decline} isPendingDecline={pendingDeclines.has(item.sessionId)} />
             ))
           ) : (
             <div className="text-sm text-muted-foreground py-4">
