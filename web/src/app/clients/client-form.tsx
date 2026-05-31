@@ -143,15 +143,28 @@ export function ClientForm({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <input
-          type="checkbox"
-          id="collegeBound"
-          name="collegeBound"
-          defaultChecked={client?.collegeBound ?? false}
-          className="h-4 w-4 rounded border-border"
-        />
-        <Label htmlFor="collegeBound">College-bound athlete</Label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="collegeBound"
+            name="collegeBound"
+            defaultChecked={client?.collegeBound ?? false}
+            className="h-4 w-4 rounded border-border"
+          />
+          <Label htmlFor="collegeBound">College-bound athlete</Label>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="calendarInviteOptIn">Calendar Invites</Label>
+          <Select name="calendarInviteOptIn" defaultValue={client?.calendarInviteOptIn === null || client?.calendarInviteOptIn === undefined ? "not_asked" : client.calendarInviteOptIn ? "opted_in" : "opted_out"}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="not_asked">Not asked yet</SelectItem>
+              <SelectItem value="opted_in">Opted in</SelectItem>
+              <SelectItem value="opted_out">Opted out</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="space-y-2">

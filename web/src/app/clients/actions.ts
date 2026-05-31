@@ -37,6 +37,7 @@ export async function createClient(formData: FormData) {
     sessionType: ((formData.get("sessionType") as string) || null) as "individual" | "dual" | "group" | null,
     parentGuardian: (formData.get("parentGuardian") as string) || null,
     email: (formData.get("email") as string) || null,
+    calendarInviteOptIn: formData.get("calendarInviteOptIn") === "opted_in" ? true : formData.get("calendarInviteOptIn") === "opted_out" ? false : null,
   };
 
   await db.insert(clients).values(data).run();
@@ -62,6 +63,7 @@ export async function updateClient(id: number, formData: FormData) {
       sessionType: ((formData.get("sessionType") as string) || null) as "individual" | "dual" | "group" | null,
       parentGuardian: (formData.get("parentGuardian") as string) || null,
       email: (formData.get("email") as string) || null,
+      calendarInviteOptIn: formData.get("calendarInviteOptIn") === "opted_in" ? true : formData.get("calendarInviteOptIn") === "opted_out" ? false : null,
     })
     .where(eq(clients.id, id))
     .run();
@@ -83,6 +85,7 @@ const ALLOWED_FIELDS = new Set([
   "name", "phone", "category", "gradeLevel", "collegeBound",
   "behaviorScore", "preferredDays", "preferredTime", "maxSessionsPerWeek",
   "standingSlot", "notes", "sessionRate", "sessionType", "parentGuardian", "email",
+  "calendarInviteOptIn",
 ]);
 
 export async function updateClientField(id: number, field: string, value: string | number | boolean) {
@@ -91,7 +94,13 @@ export async function updateClientField(id: number, field: string, value: string
   }
 
   const updates: Record<string, unknown> = {};
-  if (field === "collegeBound") {
+  if (field === "calendarInviteOptIn") {
+    if (value === "not_asked") {
+      updates[field] = null;
+    } else {
+      updates[field] = value === "opted_in";
+    }
+  } else if (field === "collegeBound") {
     updates[field] = value;
   } else if (field === "sessionRate") {
     updates[field] = typeof value === "number" ? value : parseInt(value as string) || null;

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
+import { formatSecondsAgo } from "@/lib/utils";
 
 interface LogEntry {
   id: number;
@@ -43,9 +46,39 @@ function formatTime(dateStr: string | null): string {
   });
 }
 
+function useAutoRefresh(intervalMs: number) {
+  const router = useRouter();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [secondsAgo, setSecondsAgo] = useState(0);
+  const lastRefreshRef = useRef<Date>(new Date());
+
+  const doRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    router.refresh();
+    lastRefreshRef.current = new Date();
+    setSecondsAgo(0);
+    setTimeout(() => setIsRefreshing(false), 600);
+  }, [router]);
+
+  useEffect(() => {
+    const interval = setInterval(doRefresh, intervalMs);
+    return () => clearInterval(interval);
+  }, [doRefresh, intervalMs]);
+
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setSecondsAgo(Math.floor((Date.now() - lastRefreshRef.current.getTime()) / 1000));
+    }, 1000);
+    return () => clearInterval(tick);
+  }, []);
+
+  return { isRefreshing, secondsAgo, doRefresh };
+}
+
 export function LogViewer({ logs }: { logs: LogEntry[] }) {
   const [view, setView] = useState<"matt" | "technical">("matt");
   const [filter, setFilter] = useState<string>("all");
+  const { isRefreshing, secondsAgo, doRefresh } = useAutoRefresh(30_000);
 
   const filtered = filter === "all" ? logs : logs.filter((l) => l.severity === filter);
 
@@ -66,7 +99,15 @@ export function LogViewer({ logs }: { logs: LogEntry[] }) {
           <h1 className="text-2xl font-bold tracking-tight mt-2">System Logs</h1>
           <p className="text-muted-foreground text-sm mt-1">{filtered.length} entries</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={doRefresh}
+            className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            title="Click to refresh now"
+          >
+            <RefreshCw className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} />
+            <span>Updated {formatSecondsAgo(secondsAgo)}</span>
+          </button>
           <div className="flex rounded-md border border-border overflow-hidden">
             <button
               onClick={() => setView("matt")}

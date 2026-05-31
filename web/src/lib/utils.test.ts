@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { formatSecondsAgo } from "./utils";
 
 function formatPhoneNumber(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -26,5 +27,25 @@ describe("formatPhoneNumber", () => {
 
   it("handles dashes and spaces", () => {
     expect(formatPhoneNumber("408-390-0506")).toBe("(408) 390-0506");
+  });
+});
+
+describe("formatSecondsAgo", () => {
+  it("returns 'just now' for less than 5 seconds", () => {
+    expect(formatSecondsAgo(0)).toBe("just now");
+    expect(formatSecondsAgo(4)).toBe("just now");
+  });
+
+  it("returns seconds for 5-59 seconds", () => {
+    expect(formatSecondsAgo(5)).toBe("5s ago");
+    expect(formatSecondsAgo(30)).toBe("30s ago");
+    expect(formatSecondsAgo(59)).toBe("59s ago");
+  });
+
+  it("returns minutes for 60+ seconds", () => {
+    expect(formatSecondsAgo(60)).toBe("1m ago");
+    expect(formatSecondsAgo(90)).toBe("1m ago");
+    expect(formatSecondsAgo(120)).toBe("2m ago");
+    expect(formatSecondsAgo(300)).toBe("5m ago");
   });
 });
