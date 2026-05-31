@@ -84,12 +84,17 @@ async function getAuthenticatedClient() {
 
   // Refresh if expired
   if (new Date(stored.expiresAt) < new Date()) {
-    const { credentials } = await oauth2.refreshAccessToken();
-    await db.update(googleTokens).set({
-      accessToken: credentials.access_token!,
-      expiresAt: new Date(credentials.expiry_date ?? Date.now() + 3600000).toISOString(),
-    }).where(eq(googleTokens.id, stored.id)).run();
-    oauth2.setCredentials(credentials);
+    try {
+      const { credentials } = await oauth2.refreshAccessToken();
+      await db.update(googleTokens).set({
+        accessToken: credentials.access_token!,
+        expiresAt: new Date(credentials.expiry_date ?? Date.now() + 3600000).toISOString(),
+      }).where(eq(googleTokens.id, stored.id)).run();
+      oauth2.setCredentials(credentials);
+    } catch (e) {
+      console.error("Google OAuth token refresh failed:", e instanceof Error ? e.message : String(e));
+      return null;
+    }
   }
 
   return oauth2;

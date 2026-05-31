@@ -2,8 +2,17 @@ import { db } from "@/db";
 import { clients, sessions, outreach } from "@/db/schema";
 import { eq, like, or, desc } from "drizzle-orm";
 import { NextRequest } from "next/server";
+import { isRateLimited } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    ?? request.headers.get("x-real-ip")
+    ?? "unknown";
+
+  if (isRateLimited(ip)) {
+    return new Response("Too Many Requests", { status: 429 });
+  }
+
   const query = request.nextUrl.searchParams.get("q")?.trim();
   if (!query || query.length < 2) return Response.json({ results: [] });
 

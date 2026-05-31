@@ -119,6 +119,7 @@ function FollowUpCancelButton({
       variant="ghost"
       className="h-9 text-xs text-red-400 hover:text-red-300"
       disabled={isPendingDecline}
+      aria-label="Cancel follow-up session"
       onClick={() => onDecline(sessionId)}
     >
       Cancel
@@ -208,6 +209,7 @@ function OutreachRow({
               size="sm"
               variant="outline"
               className="h-9 text-xs text-emerald-400 hover:text-emerald-300"
+              aria-label={`Confirm session for ${item.clientName}`}
               onClick={() =>
                 startTransition(async () => {
                   await markConfirmed(item.sessionId);
@@ -222,6 +224,7 @@ function OutreachRow({
               variant="outline"
               className="h-9 text-xs text-red-400 hover:text-red-300"
               disabled={isPendingDecline}
+              aria-label={`Decline session for ${item.clientName}`}
               onClick={() => onDecline(item.sessionId)}
             >
               Decline
@@ -234,6 +237,7 @@ function OutreachRow({
             size="sm"
             variant="outline"
             className="h-9 text-xs text-red-400 hover:text-red-300"
+            aria-label={`Retry sending message to ${item.clientName}`}
             onClick={() =>
               startTransition(async () => {
                 await retrySend(item.outreachId!);
@@ -251,6 +255,7 @@ function OutreachRow({
               size="sm"
               variant="outline"
               className="h-9 text-xs"
+              aria-label={`Confirm session for ${item.clientName}`}
               onClick={() =>
                 startTransition(async () => {
                   await markConfirmed(item.sessionId);
@@ -265,6 +270,7 @@ function OutreachRow({
               variant="ghost"
               className="h-9 text-xs text-red-400"
               disabled={isPendingDecline}
+              aria-label={`Decline session for ${item.clientName}`}
               onClick={() => onDecline(item.sessionId)}
             >
               Decline
@@ -277,6 +283,7 @@ function OutreachRow({
             size="sm"
             variant="ghost"
             className="h-9 text-xs text-muted-foreground hover:text-foreground"
+            aria-label={`Skip ${item.clientName} this week`}
             onClick={() => onSkip(item.clientId)}
           >
             Skip
@@ -519,6 +526,7 @@ export function OutreachDashboard({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               autoFocus
+              aria-label="Search outreach by client name"
               className="h-8 w-full sm:w-52 rounded-md border border-border bg-muted/50 pl-8 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring focus:bg-background transition-colors"
             />
           </div>
@@ -532,6 +540,7 @@ export function OutreachDashboard({
               }
               disabled={isPending}
               size="sm"
+              aria-label={`Send next batch of ${nextBatch.length} outreach messages`}
             >
               Send Next Batch ({nextBatch.length})
             </Button>
