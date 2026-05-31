@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
       repliedAt: outreach.repliedAt,
       clientName: clients.name,
       clientPhone: clients.phone,
+      followUpAt: outreach.followUpAt,
     })
     .from(outreach)
     .innerJoin(clients, eq(clients.id, outreach.clientId))
@@ -101,6 +102,47 @@ export async function GET(request: NextRequest) {
       } catch (e) {
         results.push(`follow-up-failed: ${sent.clientName}: ${e instanceof Error ? e.message : String(e)}`);
       }
+    }
+  }
+
+  // Deferred follow-ups: check for items with followUpAt that have passed
+  const nowISO = new Date().toISOString();
+  const deferredItems = allOutreach.filter(
+    (o) => o.direction === "sent" && o.status === "awaiting_reply" && o.followUpAt && o.followUpAt <= nowISO
+  );
+
+  for (const deferred of deferredItems) {
+    const hasReply = allOutreach.some(
+      (o) => o.clientId === deferred.clientId && o.direction === "received" &&
+        (o.repliedAt ?? "") > (deferred.sentAt ?? "")
+    );
+    if (hasReply) continue;
+
+    if (!isDevAllowed(deferred.clientPhone)) {
+      results.push(`deferred-skipped (dev guard): ${deferred.clientName}`);
+      continue;
+    }
+
+    const firstName = deferred.clientName.split(" ")[0];
+    const reply = `Hey ${firstName}, circling back — did you want to keep your session this week?`;
+
+    await db.insert(outreach).values({
+      clientId: deferred.clientId,
+      sessionId: deferred.sessionId,
+      weekOf,
+      direction: "sent",
+      messageText: reply,
+      status: "awaiting_reply",
+      sentAt: new Date().toISOString(),
+    }).run();
+
+    await db.update(outreach).set({ followUpAt: null }).where(eq(outreach.id, deferred.id)).run();
+
+    try {
+      await sendSMS(deferred.clientPhone, reply);
+      results.push(`deferred-follow-up: ${deferred.clientName}`);
+    } catch (e) {
+      results.push(`deferred-failed: ${deferred.clientName}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
