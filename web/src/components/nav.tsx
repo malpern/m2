@@ -55,7 +55,29 @@ export function Nav() {
         <div className="flex-1" />
 
         <button
-          className="ml-auto sm:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5"
+          onClick={() => document.dispatchEvent(new Event("open-search"))}
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/50 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors mr-2"
+          aria-label="Search"
+        >
+          <svg className="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+          <span>Search</span>
+          <kbd className="ml-1 inline-flex h-4 items-center rounded border border-border bg-background px-1 text-[10px] font-medium">{"⌘"}K</kbd>
+        </button>
+
+        <button
+          onClick={() => document.dispatchEvent(new Event("open-search"))}
+          className="sm:hidden flex items-center justify-center w-8 h-8 text-muted-foreground hover:text-foreground transition-colors mr-1"
+          aria-label="Search"
+        >
+          <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+          </svg>
+        </button>
+
+        <button
+          className="sm:hidden flex flex-col justify-center items-center w-8 h-8 gap-1.5"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label="Toggle navigation menu"
         >

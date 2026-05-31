@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { markConfirmed, markDeclined, overrideStatus, sendOutreachBatch, retrySend } from "./actions";
 import { EmptyState } from "@/components/empty-state";
+import { useToast } from "@/components/toast";
 import type { OutreachItem } from "@/lib/outreach-engine";
 
 function statusBadge(status: string) {
@@ -56,13 +57,19 @@ function formatElapsed(sentAt: string): { text: string; color: string } {
 
 function FollowUpCancelButton({ sessionId }: { sessionId: number }) {
   const [isPending, startTransition] = useTransition();
+  const toast = useToast();
   return (
     <Button
       size="sm"
       variant="ghost"
       className="h-7 text-xs text-red-400 hover:text-red-300"
       disabled={isPending}
-      onClick={() => startTransition(() => markDeclined(sessionId))}
+      onClick={() =>
+        startTransition(async () => {
+          await markDeclined(sessionId);
+          toast("Session declined");
+        })
+      }
     >
       Cancel
     </Button>
@@ -71,6 +78,7 @@ function FollowUpCancelButton({ sessionId }: { sessionId: number }) {
 
 function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
   const [isPending, startTransition] = useTransition();
+  const toast = useToast();
 
   const dayLabel = new Date(item.date + "T12:00:00").toLocaleDateString("en-US", {
     weekday: "short",
@@ -79,13 +87,13 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
   const elapsed = item.status === "sent" && item.sentAt ? formatElapsed(item.sentAt) : null;
 
   return (
-    <div className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 border-b border-border last:border-0 transition-all duration-300 ${isPending ? "opacity-50 scale-[0.99]" : "opacity-100 scale-100"}`}>
+    <div className={`group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-3 border-b border-border last:border-0 transition-all duration-300 ${isPending ? "opacity-50 scale-[0.99]" : "opacity-100 scale-100"}`}>
       <div className="flex items-center gap-3 sm:contents">
         <div className="w-16 shrink-0 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <span className="font-semibold text-foreground">{dayLabel}</span>
             {item.wave > 0 && (
-              <span className="text-[10px] text-muted-foreground/60 cursor-default" title={`Wave ${item.wave} — ${item.wave === 1 ? "sent first" : item.wave === 2 ? "sent after ~45min" : "sent after ~2hr"}`}>W{item.wave}</span>
+              <span className="text-[10px] text-muted-foreground/60 cursor-default opacity-0 group-hover:opacity-100 transition-opacity" title={`Wave ${item.wave} — ${item.wave === 1 ? "sent first" : item.wave === 2 ? "sent after ~45min" : "sent after ~2hr"}`}>W{item.wave}</span>
             )}
           </div>
           <div>{item.slot}</div>
@@ -95,7 +103,7 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
           <div className="flex items-center gap-1.5">
             <Link href={`/clients/${item.clientId}`} className="font-semibold text-sm hover:underline">{item.clientName}</Link>
             {item.outreachGroupId && (
-              <svg className="w-3 h-3 text-muted-foreground/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg className="w-2.5 h-2.5 text-muted-foreground/30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
             )}
@@ -104,12 +112,12 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
             <div className="text-xs text-muted-foreground mt-0.5 truncate">
               &ldquo;{item.replyText}&rdquo;
               {item.messageCount > 1 && (
-                <span className="ml-1.5 text-muted-foreground/50">{item.messageCount} msgs</span>
+                <span className="ml-1.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity">{item.messageCount} msgs</span>
               )}
             </div>
           )}
           {!item.replyText && item.messageCount > 1 && (
-            <div className="text-xs text-muted-foreground/50 mt-0.5">{item.messageCount} msgs</div>
+            <div className="text-xs text-muted-foreground/50 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">{item.messageCount} msgs</div>
           )}
           {item.sendError && (
             <div className="text-xs text-red-400 mt-0.5 truncate" title={item.sendError}>
@@ -138,7 +146,12 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
               size="sm"
               variant="outline"
               className="h-7 text-xs text-emerald-400 hover:text-emerald-300"
-              onClick={() => startTransition(() => markConfirmed(item.sessionId))}
+              onClick={() =>
+                startTransition(async () => {
+                  await markConfirmed(item.sessionId);
+                  toast("Session confirmed");
+                })
+              }
             >
               Confirm
             </Button>
@@ -146,7 +159,12 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
               size="sm"
               variant="outline"
               className="h-7 text-xs text-red-400 hover:text-red-300"
-              onClick={() => startTransition(() => markDeclined(item.sessionId))}
+              onClick={() =>
+                startTransition(async () => {
+                  await markDeclined(item.sessionId);
+                  toast("Session declined");
+                })
+              }
             >
               Decline
             </Button>
@@ -158,7 +176,12 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
             size="sm"
             variant="outline"
             className="h-7 text-xs text-red-400 hover:text-red-300"
-            onClick={() => startTransition(() => { retrySend(item.outreachId!); })}
+            onClick={() =>
+              startTransition(async () => {
+                await retrySend(item.outreachId!);
+                toast("Message resent");
+              })
+            }
           >
             Retry
           </Button>
@@ -170,7 +193,12 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
               size="sm"
               variant="outline"
               className="h-7 text-xs"
-              onClick={() => startTransition(() => markConfirmed(item.sessionId))}
+              onClick={() =>
+                startTransition(async () => {
+                  await markConfirmed(item.sessionId);
+                  toast("Session confirmed");
+                })
+              }
             >
               Confirm
             </Button>
@@ -178,7 +206,12 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
               size="sm"
               variant="ghost"
               className="h-7 text-xs text-red-400"
-              onClick={() => startTransition(() => markDeclined(item.sessionId))}
+              onClick={() =>
+                startTransition(async () => {
+                  await markDeclined(item.sessionId);
+                  toast("Session declined");
+                })
+              }
             >
               Decline
             </Button>
@@ -208,6 +241,7 @@ export function OutreachDashboard({
 }) {
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
+  const toast = useToast();
 
   const query = search.toLowerCase().trim();
 
@@ -301,8 +335,9 @@ export function OutreachDashboard({
           {nextBatch.length > 0 && (
             <Button
               onClick={() =>
-                startTransition(() => {
-                  sendOutreachBatch(nextBatch.map((i) => i.sessionId), weekOf);
+                startTransition(async () => {
+                  await sendOutreachBatch(nextBatch.map((i) => i.sessionId), weekOf);
+                  toast("Outreach sent");
                 })
               }
               disabled={isPending}
