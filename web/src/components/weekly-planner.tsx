@@ -84,7 +84,6 @@ export function WeeklyPlanner({ state }: { state: PlannerState }) {
     if (wasDismissed && savedWeek === state.weekLabel) {
       setDismissed(true);
     } else if (wasDismissed && savedWeek !== state.weekLabel) {
-      // New week -- clear the dismissal so it shows again
       localStorage.removeItem(DISMISS_KEY);
       localStorage.removeItem(DISMISS_WEEK_KEY);
     }
@@ -96,28 +95,28 @@ export function WeeklyPlanner({ state }: { state: PlannerState }) {
 
   const steps: Step[] = [
     {
-      label: "1. Availability",
+      label: "Availability",
       description: "Confirm your hours",
       href: "/schedule/availability",
       done: state.hasAvailability,
       active: !state.hasAvailability,
     },
     {
-      label: "2. Generate",
+      label: "Generate",
       description: "Fill the schedule",
       href: "/schedule",
       done: state.hasProposedSessions,
       active: state.hasAvailability && !state.hasProposedSessions,
     },
     {
-      label: "3. Send",
+      label: "Send",
       description: "Text your athletes",
       href: "/outreach",
       done: state.sentCount > 0 || state.confirmedCount > 0,
       active: state.hasProposedSessions && state.sentCount === 0 && state.confirmedCount === 0,
     },
     {
-      label: "4. Book",
+      label: "Book",
       description: state.needsAttentionCount > 0
         ? `${state.needsAttentionCount} need you`
         : bookedCount === totalToBook
@@ -144,11 +143,11 @@ export function WeeklyPlanner({ state }: { state: PlannerState }) {
   return (
     <Card className="mb-6 border-emerald-500/20 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/8 to-transparent" />
-      <CardContent className="relative pt-5 pb-4">
+      <CardContent className="relative px-5 pt-5 pb-5">
         {/* Close button */}
         <button
           onClick={handleDismiss}
-          className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          className="absolute top-3 right-3 w-6 h-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
           aria-label="Dismiss planner"
         >
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -157,21 +156,21 @@ export function WeeklyPlanner({ state }: { state: PlannerState }) {
           </svg>
         </button>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
-            <div className="text-sm font-semibold flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <CalendarIcon className="w-4 h-4 text-emerald-400" />
-              Plan the week
+              <span className="text-sm font-semibold tracking-tight">Plan the week</span>
             </div>
-            <div className="text-xs text-muted-foreground">Week of {state.weekLabel}</div>
+            <div className="text-xs text-muted-foreground mt-0.5 ml-6">Week of {state.weekLabel}</div>
           </div>
           {totalToBook > 0 && (
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <div className="text-lg font-bold">{bookedPct}%</div>
-                <div className="text-[10px] text-muted-foreground">booked</div>
+                <div className="text-lg font-bold tabular-nums">{bookedPct}%</div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">booked</div>
               </div>
-              <div className="w-24 h-2 rounded-full bg-muted overflow-hidden">
+              <div className="w-24 h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full rounded-full bg-emerald-500 transition-all"
                   style={{ width: `${bookedPct}%` }}
@@ -181,28 +180,48 @@ export function WeeklyPlanner({ state }: { state: PlannerState }) {
           )}
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-3">
           {steps.map((step, i) => {
             const StepIcon = stepIcons[i];
+            const stepNum = i + 1;
             return (
               <Link key={step.label} href={step.href}>
-                <div className={`rounded-lg p-2.5 text-center transition-all cursor-pointer ${
+                <div className={`rounded-lg px-3 py-3 transition-all cursor-pointer ${
                   step.done
                     ? "bg-emerald-500/10 border border-emerald-500/20"
                     : step.active
                       ? "bg-emerald-500/10 border border-emerald-500/30 ring-1 ring-emerald-500/20"
-                      : "bg-muted/50 border border-transparent"
+                      : "bg-muted/30 border border-transparent"
                 }`}>
-                  <div className={`flex items-center justify-center gap-1 text-xs font-semibold ${
-                    step.done ? "text-emerald-400" : step.active ? "text-emerald-400" : "text-muted-foreground/60"
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
+                      step.done
+                        ? "bg-emerald-500/20"
+                        : step.active
+                          ? "bg-emerald-500/20"
+                          : "bg-muted"
+                    }`}>
+                      {step.done ? (
+                        <CheckIcon className="w-3 h-3 text-emerald-400" />
+                      ) : (
+                        <span className={`text-[10px] font-semibold ${
+                          step.active ? "text-emerald-400" : "text-muted-foreground/60"
+                        }`}>{stepNum}</span>
+                      )}
+                    </div>
+                    <StepIcon className={`w-3.5 h-3.5 ${
+                      step.done || step.active ? "text-emerald-400" : "text-muted-foreground/40"
+                    }`} />
+                  </div>
+                  <div className={`text-xs font-medium ${
+                    step.done ? "text-emerald-400" : step.active ? "text-foreground" : "text-muted-foreground/50"
                   }`}>
-                    <StepIcon className="w-3.5 h-3.5" />
-                    {step.done ? "✓" : step.label.split(". ")[0] + "."}
+                    {step.label}
                   </div>
                   <div className={`text-[11px] mt-0.5 ${
-                    step.done ? "text-emerald-400/70" : step.active ? "text-foreground" : "text-muted-foreground/40"
+                    step.done ? "text-emerald-400/60" : step.active ? "text-muted-foreground" : "text-muted-foreground/30"
                   }`}>
-                    {step.done ? step.label.split(". ")[1] : step.description}
+                    {step.description}
                   </div>
                 </div>
               </Link>
