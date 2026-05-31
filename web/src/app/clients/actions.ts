@@ -38,6 +38,7 @@ export async function createClient(formData: FormData) {
     parentGuardian: (formData.get("parentGuardian") as string) || null,
     email: (formData.get("email") as string) || null,
     calendarInviteOptIn: formData.get("calendarInviteOptIn") === "opted_in" ? true : formData.get("calendarInviteOptIn") === "opted_out" ? false : null,
+    sessionReminders: formData.get("sessionReminders") === "on" ? true : false,
   };
 
   await db.insert(clients).values(data).run();
@@ -64,6 +65,7 @@ export async function updateClient(id: number, formData: FormData) {
       parentGuardian: (formData.get("parentGuardian") as string) || null,
       email: (formData.get("email") as string) || null,
       calendarInviteOptIn: formData.get("calendarInviteOptIn") === "opted_in" ? true : formData.get("calendarInviteOptIn") === "opted_out" ? false : null,
+      sessionReminders: formData.get("sessionReminders") === "on" ? true : false,
     })
     .where(eq(clients.id, id))
     .run();
@@ -85,7 +87,7 @@ const ALLOWED_FIELDS = new Set([
   "name", "phone", "category", "gradeLevel", "collegeBound",
   "behaviorScore", "preferredDays", "preferredTime", "maxSessionsPerWeek",
   "standingSlot", "notes", "sessionRate", "sessionType", "parentGuardian", "email",
-  "calendarInviteOptIn",
+  "calendarInviteOptIn", "sessionReminders",
 ]);
 
 export async function updateClientField(id: number, field: string, value: string | number | boolean) {

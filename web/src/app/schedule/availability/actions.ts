@@ -1,9 +1,11 @@
 "use server";
 
 import { db } from "@/db";
-import { defaultAvailability, weeklyOverrides } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { clients, defaultAvailability, weeklyOverrides } from "@/db/schema";
+import { eq, and, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { sendSMS, isDevAllowed } from "@/lib/twilio";
+import { syslog } from "@/lib/logger";
 
 type Day = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "sunday";
 
@@ -61,4 +63,36 @@ export async function setWeeklyOverride(
 export async function clearWeeklyOverrides(weekOf: string) {
   await db.delete(weeklyOverrides).where(eq(weeklyOverrides.weekOf, weekOf)).run();
   revalidatePath("/schedule/availability");
+}
+
+export async function sendVacationNotice(weekOf: string, weekLabel: string): Promise<{ sent: number; skipped: number }> {
+  const activeClients = await db
+    .select({ id: clients.id, name: clients.name, phone: clients.phone })
+    .from(clients)
+    .where(sql`${clients.category} IN ('active', 'in_season')`)
+    .all();
+
+  let sent = 0;
+  let skipped = 0;
+
+  for (const client of activeClients) {
+    if (!isDevAllowed(client.phone)) {
+      skipped++;
+      continue;
+    }
+
+    const firstName = client.name.split(" ")[0];
+    const message = `Hey ${firstName}, heads up — no sessions the week of ${weekLabel}. Matt will be out. Back to normal the following week!`;
+
+    try {
+      await sendSMS(client.phone, message);
+      sent++;
+    } catch (e) {
+      syslog.error("outreach", `Failed to send vacation notice to ${client.name}`, `SMS error: ${e instanceof Error ? e.message : String(e)}`, { clientId: client.id });
+      skipped++;
+    }
+  }
+
+  syslog.info("outreach", `Vacation notice sent for week of ${weekLabel}`, `Sent to ${sent} clients, skipped ${skipped}`, {});
+  return { sent, skipped };
 }
