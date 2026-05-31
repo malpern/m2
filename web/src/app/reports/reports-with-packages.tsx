@@ -15,6 +15,18 @@ interface PackageData {
   remaining: number;
 }
 
+interface TransactionData {
+  id: number;
+  delta: number;
+  reason: string;
+  note: string | null;
+  previousBalance: number;
+  newBalance: number;
+  createdAt: string | null;
+  clientName: string;
+  clientId: number;
+}
+
 interface UnreconciledSession {
   sessionId: number;
   clientId: number;
@@ -27,10 +39,12 @@ interface UnreconciledSession {
 export function ReportsWithPackages({
   stats,
   clientPackages,
+  recentTransactions,
   unreconciledSessions,
 }: {
   stats: Parameters<typeof ReportsDashboard>[0]["stats"];
   clientPackages: PackageData[];
+  recentTransactions: TransactionData[];
   unreconciledSessions: UnreconciledSession[];
 }) {
   const [tab, setTab] = useState<"reports" | "packages">("reports");
@@ -63,7 +77,7 @@ export function ReportsWithPackages({
       {tab === "reports" ? (
         <ReportsDashboard stats={stats} />
       ) : (
-        <PackagesTable clientPackages={clientPackages} unreconciled={unreconciledSessions} />
+        <PackagesTable clientPackages={clientPackages} recentTransactions={recentTransactions} unreconciled={unreconciledSessions} />
       )}
     </div>
   );

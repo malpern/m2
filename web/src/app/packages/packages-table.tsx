@@ -76,11 +76,25 @@ function sortPackages(
   return sorted;
 }
 
+export type TransactionRow = {
+  id: number;
+  delta: number;
+  reason: string;
+  note: string | null;
+  previousBalance: number;
+  newBalance: number;
+  createdAt: string | null;
+  clientName: string;
+  clientId: number;
+};
+
 export function PackagesTable({
   clientPackages,
+  recentTransactions = [],
   unreconciled,
 }: {
   clientPackages: PackageRow[];
+  recentTransactions?: TransactionRow[];
   unreconciled: UnreconciledRow[];
 }) {
   const [search, setSearch] = useState("");
@@ -415,6 +429,43 @@ export function PackagesTable({
           </div>
         </CardContent>
       </Card>
+
+      {/* Recent package activity */}
+      {recentTransactions.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Recent Package Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {recentTransactions.map((t) => {
+                const isDeduct = t.delta < 0;
+                const isCredit = t.delta > 0;
+                const dateStr = t.createdAt ? new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+                const reasonLabel = t.reason === "completed" ? "Session completed" : t.reason === "cancelled" ? "Cancellation credited" : t.note ?? "Manual adjustment";
+
+                return (
+                  <div key={t.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-bold ${isDeduct ? "text-red-400" : "text-emerald-400"}`}>
+                        {isCredit ? "+" : ""}{t.delta}
+                      </span>
+                      <div>
+                        <Link href={`/clients/${t.clientId}`} className="text-sm font-medium hover:underline">{t.clientName}</Link>
+                        <div className="text-xs text-muted-foreground">{reasonLabel}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-muted-foreground">{t.previousBalance} → {t.newBalance}</div>
+                      <div className="text-xs text-muted-foreground/60">{dateStr}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Unreconciled sessions */}
       {totalUnreconciled > 0 && (
