@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -33,6 +35,56 @@ export type UnreconciledRow = {
   scheduledTime: string;
   slot: string;
 };
+
+function InlineAdjustForm({ clientId, clientName, onClose }: { clientId: number; clientName: string; onClose: () => void }) {
+  const [delta, setDelta] = useState("");
+  const [reason, setReason] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const toast = useToast();
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center" onClick={onClose}>
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
+      <div className="relative bg-background border border-border rounded-xl p-5 w-full max-w-sm mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold mb-3">Adjust {clientName}&rsquo;s package</h3>
+        <div className="flex gap-2 mb-3">
+          <input
+            type="number"
+            placeholder="+2 or -1"
+            value={delta}
+            onChange={(e) => setDelta(e.target.value)}
+            className="h-9 w-24 rounded-md border border-border bg-muted/50 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            autoFocus
+          />
+          <input
+            type="text"
+            placeholder="Reason"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="h-9 flex-1 rounded-md border border-border bg-muted/50 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button size="sm" variant="ghost" onClick={onClose} disabled={isPending}>Cancel</Button>
+          <Button
+            size="sm"
+            disabled={!delta || !reason || isPending}
+            onClick={() => {
+              startTransition(async () => {
+                const { adjustPackage } = await import("@/app/clients/actions");
+                await adjustPackage(clientId, parseInt(delta), reason);
+                toast(`Package adjusted for ${clientName}`);
+                onClose();
+              });
+            }}
+          >
+            {isPending ? "Saving..." : "Save"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type SortKey = "clientName" | "category" | "sessionsUsed" | "totalSessions" | "remaining";
 type SortDir = "asc" | "desc";
@@ -100,6 +152,7 @@ export function PackagesTable({
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("remaining");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [adjustingClient, setAdjustingClient] = useState<{ id: number; name: string } | null>(null);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -349,11 +402,12 @@ export function PackagesTable({
                     />
                   </TableHead>
                   <TableHead>Progress</TableHead>
+                  <TableHead className="w-0"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPackages.map((p) => (
-                  <TableRow key={p.packageId}>
+                  <TableRow key={p.packageId} className="group">
                     <TableCell>
                       <Link
                         href={`/clients/${p.clientId}`}
@@ -411,6 +465,16 @@ export function PackagesTable({
                           }}
                         />
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setAdjustingClient({ id: p.clientId, name: p.clientName })}
+                      >
+                        Adjust
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -525,6 +589,14 @@ export function PackagesTable({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {adjustingClient && (
+        <InlineAdjustForm
+          clientId={adjustingClient.id}
+          clientName={adjustingClient.name}
+          onClose={() => setAdjustingClient(null)}
+        />
       )}
     </>
   );
