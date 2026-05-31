@@ -7,6 +7,7 @@ import { eq, and, gte, lte, lt, ne } from "drizzle-orm";
 import { generateWeek, getMonday, type LastWeekSession, type AvailabilitySlot, type DayOfWeek, type TimeSlot } from "@/lib/scheduler";
 import { DEFAULT_WEIGHTS } from "@/lib/priority";
 import { revalidatePath } from "next/cache";
+import { deductSession } from "@/lib/package-accounting";
 
 const ALL_DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 
@@ -75,6 +76,7 @@ export async function generateSchedule(weekStartISO: string) {
   if (pastConfirmed.length > 0) {
     for (const s of pastConfirmed) {
       await db.update(sessions).set({ status: "completed" }).where(eq(sessions.id, s.id)).run();
+      deductSession(s.id).catch(() => {});
     }
   }
 
