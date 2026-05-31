@@ -162,7 +162,7 @@ export function GlobalSearch() {
 
                 return (
                   <div key={type}>
-                    <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                    <div className="px-3 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
                       {config.emoji} {config.label}
                     </div>
                     {group.map((result) => {
@@ -184,7 +184,7 @@ export function GlobalSearch() {
                               <div className="text-xs text-muted-foreground truncate">{result.subtitle}</div>
                             )}
                           </div>
-                          <Badge className={`border-0 text-[10px] shrink-0 ${STATUS_BADGE[result.badge] ?? "bg-muted text-muted-foreground"}`}>
+                          <Badge className={`border-0 text-xs shrink-0 ${STATUS_BADGE[result.badge] ?? "bg-muted text-muted-foreground"}`}>
                             {result.badge}
                           </Badge>
                         </button>

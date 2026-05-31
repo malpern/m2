@@ -169,18 +169,18 @@ export function LogViewer({ logs }: { logs: LogEntry[] }) {
                       <div>
                         <div className="text-sm font-mono text-muted-foreground">{entry.technicalMessage}</div>
                         {entry.metadata && (
-                          <pre className="text-[10px] font-mono text-muted-foreground/60 mt-1 bg-muted/30 rounded p-2 overflow-x-auto">
+                          <pre className="text-[11px] font-mono text-muted-foreground/60 mt-1 bg-muted/30 rounded p-2 overflow-x-auto">
                             {JSON.stringify(JSON.parse(entry.metadata), null, 2)}
                           </pre>
                         )}
                       </div>
                     )}
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-[10px] text-muted-foreground">{formatTime(entry.createdAt)}</span>
-                      <Badge className={`border-0 text-[10px] ${sev.badgeClass}`}>{sev.label}</Badge>
-                      <Badge className="border-0 text-[10px] bg-muted text-muted-foreground">{entry.category}</Badge>
+                      <span className="text-xs text-muted-foreground">{formatTime(entry.createdAt)}</span>
+                      <Badge className={`border-0 text-xs ${sev.badgeClass}`}>{sev.label}</Badge>
+                      <Badge className="border-0 text-xs bg-muted text-muted-foreground">{entry.category}</Badge>
                       {entry.clientId && view === "technical" && (
-                        <span className="text-[10px] text-muted-foreground">client:{entry.clientId}</span>
+                        <span className="text-xs text-muted-foreground">client:{entry.clientId}</span>
                       )}
                     </div>
                   </div>

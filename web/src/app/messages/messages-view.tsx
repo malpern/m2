@@ -70,12 +70,12 @@ function MessageBubble({ msg, isFirst }: { msg: Message; isFirst: boolean }) {
       </div>
       <div className="flex items-center gap-2 mt-1 px-1">
         {timestamp && (
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground">
             {formatTimestamp(timestamp, isFirst)}
           </span>
         )}
         {msg.direction === "received" && msg.interpretation && (
-          <span className={`text-[10px] font-medium ${
+          <span className={`text-xs font-medium ${
             msg.interpretation === "confirmed" || msg.interpretation === "selecting_offered_slot"
               ? "text-emerald-400"
             : msg.interpretation === "declined_skip_week"

@@ -361,6 +361,102 @@ function SortableRow({
   );
 }
 
+function MobileClientCard({
+  client,
+  rank,
+  showRank,
+  isInactive,
+  sessions,
+  isExpanded,
+  onToggleExpand,
+}: {
+  client: ClientWithPackage;
+  rank: number;
+  showRank: boolean;
+  isInactive: boolean;
+  sessions: SessionRecord[];
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+}) {
+  const gradeLabel = GRADE_OPTIONS.find((o) => o.value === (client.gradeLevel ?? ""))?.label;
+
+  return (
+    <div className={`rounded-lg border border-border p-3 ${isInactive ? "opacity-50" : ""}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {showRank && !isInactive && (
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-bold text-blue-400 shrink-0">
+              {rank}
+            </span>
+          )}
+          <Link href={`/clients/${client.id}`} className="font-semibold text-sm hover:underline truncate">
+            {client.name}
+          </Link>
+        </div>
+        {categoryBadge(client.category)}
+      </div>
+
+      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
+        {gradeLabel && gradeLabel !== "—" && (
+          <span>{gradeLabel}</span>
+        )}
+        {client.collegeBound && (
+          <Badge variant="default" className="bg-purple-500/15 text-purple-400 border-0 text-xs px-1.5 py-0">College</Badge>
+        )}
+        {client.sessionRate ? (
+          <span className="tabular-nums">${(client.sessionRate / 100).toFixed(0)}/session</span>
+        ) : null}
+        {client.sessionsRemaining != null && (
+          <span className="flex items-center gap-1">
+            {sessionsLeftBadge(client.sessionsRemaining)} left
+          </span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center gap-2">
+          <ScoreBar score={client.behaviorScore} />
+          <span className="text-xs text-muted-foreground">
+            {formatSchedule(client.preferredDays, client.preferredTime)}
+          </span>
+        </div>
+        {sessions.length > 0 && (
+          <button
+            onClick={onToggleExpand}
+            className="text-xs text-muted-foreground/60 hover:text-muted-foreground px-1.5 py-0.5 rounded bg-muted/50 hover:bg-muted transition-colors"
+          >
+            {isExpanded ? "hide" : `${sessions.length} sessions`}
+          </button>
+        )}
+      </div>
+
+      {isExpanded && sessions.length > 0 && (
+        <div className="mt-2 px-2 py-1.5 rounded bg-muted/20 border border-border/30">
+          <div className="grid grid-cols-[80px_50px_60px_70px] gap-x-3 text-xs font-medium text-muted-foreground uppercase tracking-wider pb-1 border-b border-border/30 mb-1">
+            <div>Date</div>
+            <div>Day</div>
+            <div>Time</div>
+            <div>Status</div>
+          </div>
+          <div className="max-h-48 overflow-y-auto space-y-0.5">
+            {sessions.map((s, i) => {
+              const d = new Date(s.date + "T12:00:00");
+              return (
+                <div key={i} className="grid grid-cols-[80px_50px_60px_70px] gap-x-3 text-xs text-muted-foreground py-0.5">
+                  <div className="tabular-nums">{s.date}</div>
+                  <div>{DAY_NAMES[d.getDay()]}</div>
+                  <div className="tabular-nums">{formatSessionTime(s.time)}</div>
+                  <div className="capitalize">{s.status}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ClientTable({
   activeClients,
   inactiveClients,
@@ -468,13 +564,13 @@ export function ClientTable({
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
             <Link href="/clients/new">
-              <Button size="sm" variant="outline" className="h-7 text-xs">+ Add Client</Button>
+              <Button size="sm" variant="outline" className="h-9 text-xs">+ Add Client</Button>
             </Link>
             {localActive.some((c) => c.sortOrder != null) && (
               <Button
                 size="sm"
                 variant="ghost"
-                className="h-7 text-xs text-muted-foreground"
+                className="h-9 text-xs text-muted-foreground"
                 onClick={() => startTransition(() => clearAllSortOrders())}
               >
                 Reset ranking
@@ -510,7 +606,36 @@ export function ClientTable({
         </div>
       </div>
 
-      <div className="rounded-lg border overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+      {/* Mobile card view */}
+      <div className="sm:hidden space-y-2">
+        {[...filteredActive.map((c, i) => ({ client: c, rank: i + 1, isInactive: false })),
+          ...filteredInactive.map((c) => ({ client: c, rank: 0, isInactive: true }))
+        ].map(({ client, rank, isInactive }) => (
+          <MobileClientCard
+            key={client.id}
+            client={client}
+            rank={rank}
+            showRank={sortKey === "rank"}
+            isInactive={isInactive}
+            sessions={sessionsByClient[client.id] ?? []}
+            isExpanded={expandedIds.has(client.id)}
+            onToggleExpand={() => setExpandedIds((prev) => {
+              const next = new Set(prev);
+              if (next.has(client.id)) next.delete(client.id);
+              else next.add(client.id);
+              return next;
+            })}
+          />
+        ))}
+        {totalShown === 0 && (
+          <div className="text-center text-muted-foreground py-8 text-sm">
+            No clients match &ldquo;{search}&rdquo;
+          </div>
+        )}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden sm:block rounded-lg border overflow-x-auto">
         <div className="min-w-[700px]">
         <DndContext
           sensors={sensors}
