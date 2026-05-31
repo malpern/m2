@@ -696,25 +696,33 @@
     <h2>How replies work</h2>
 
     <div style="background:var(--surface);border-radius:var(--radius);padding:28px;margin-bottom:24px">
-      <div style="display:flex;flex-direction:column;gap:16px;font-size:14px;max-width:500px;margin:0 auto">
+      <div style="display:flex;flex-direction:column;gap:16px;font-size:14px;max-width:560px;margin:0 auto">
         <div style="text-align:center;padding:12px;background:var(--accent-dim);border-radius:8px;color:var(--accent);font-weight:600">Text sent to client</div>
         <div style="text-align:center;color:var(--text-muted)">&darr; client replies &darr;</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
           <div style="text-align:center;padding:10px;background:rgba(52,211,153,0.12);border-radius:8px">
             <div style="color:var(--green);font-weight:600;font-size:13px">Confirmed</div>
-            <div style="color:var(--text-muted);font-size:11px;margin-top:2px">Auto-locked on calendar</div>
-          </div>
-          <div style="text-align:center;padding:10px;background:rgba(248,113,113,0.12);border-radius:8px">
-            <div style="color:var(--red);font-weight:600;font-size:13px">Declined</div>
-            <div style="color:var(--text-muted);font-size:11px;margin-top:2px">Slot reopens automatically</div>
+            <div style="color:var(--text-muted);font-size:11px;margin-top:2px">🤖 Calendar event + invite</div>
           </div>
           <div style="text-align:center;padding:10px;background:rgba(167,139,250,0.12);border-radius:8px">
             <div style="color:var(--purple);font-weight:600;font-size:13px">Reschedule</div>
-            <div style="color:var(--text-muted);font-size:11px;margin-top:2px">Flagged &mdash; <strong style="color:var(--text)">you decide</strong></div>
+            <div style="color:var(--text-muted);font-size:11px;margin-top:2px">AI offers alternatives</div>
+          </div>
+          <div style="text-align:center;padding:10px;background:rgba(248,113,113,0.12);border-radius:8px">
+            <div style="color:var(--red);font-weight:600;font-size:13px">Skip week</div>
+            <div style="color:var(--text-muted);font-size:11px;margin-top:2px">Cancelled, slot auto-filled</div>
+          </div>
+          <div style="text-align:center;padding:10px;background:rgba(248,113,113,0.12);border-radius:8px">
+            <div style="color:var(--red);font-weight:600;font-size:13px">Cancellation</div>
+            <div style="color:var(--text-muted);font-size:11px;margin-top:2px">After confirming, changed mind</div>
+          </div>
+          <div style="text-align:center;padding:10px;background:rgba(251,191,36,0.12);border-radius:8px">
+            <div style="color:var(--amber);font-weight:600;font-size:13px">Unclear</div>
+            <div style="color:var(--text-muted);font-size:11px;margin-top:2px">AI asks to clarify (3x)</div>
           </div>
           <div style="text-align:center;padding:10px;background:rgba(251,191,36,0.12);border-radius:8px">
             <div style="color:var(--amber);font-weight:600;font-size:13px">No reply</div>
-            <div style="color:var(--text-muted);font-size:11px;margin-top:2px">Follow up 1hr &rarr; move on 3hr</div>
+            <div style="color:var(--text-muted);font-size:11px;margin-top:2px">Nudge 1hr &rarr; move on 3hr</div>
           </div>
         </div>
       </div>
