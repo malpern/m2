@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { WeeklyPlanner } from "@/components/weekly-planner";
 import { SessionList } from "@/components/session-list";
 import { OutreachMini } from "@/components/outreach-mini";
+import { PackageAlerts } from "@/components/package-alerts";
 import Link from "next/link";
 import { getMonday } from "@/lib/scheduler";
 import {
@@ -36,10 +37,11 @@ export default async function DashboardPage() {
   const activeCount = await db.select({ count: sql<number>`count(*)` }).from(clients).where(sql`${clients.category} IN ('active', 'in_season')`).get();
   const totalActiveClients = activeCount?.count ?? 0;
 
-  const lowPackages = await db.select({
-    name: clients.name, clientId: clients.id,
+  const lowPackages = (await db.select({
+    clientId: clients.id, clientName: clients.name, category: clients.category,
     remaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`,
-  }).from(packages).innerJoin(clients, eq(clients.id, packages.clientId)).where(and(eq(packages.status, "active"), sql`${packages.totalSessions} - ${packages.sessionsUsed} <= 2`)).all();
+    totalSessions: packages.totalSessions, sessionsUsed: packages.sessionsUsed,
+  }).from(packages).innerJoin(clients, eq(clients.id, packages.clientId)).where(and(eq(packages.status, "active"), sql`${packages.totalSessions} - ${packages.sessionsUsed} <= 2`)).all());
 
   const unreconciledCount = await db.select({ count: sql<number>`count(*)` }).from(sessions).where(and(eq(sessions.status, "completed"), eq(sessions.reconciled, false))).get();
   const unreconciled = unreconciledCount?.count ?? 0;
@@ -214,26 +216,7 @@ export default async function DashboardPage() {
       )}
 
       {/* Package alerts — always if any */}
-      {lowPackages.length > 0 && (
-        <Card className="border-amber-500/30">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm text-amber-400">Package Alerts</CardTitle>
-              <Link href="/reports" className="text-xs text-accent hover:underline">All packages &rarr;</Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {lowPackages.map((p) => (
-              <div key={p.name} className="flex items-center justify-between py-2 text-sm border-b border-border last:border-0">
-                <Link href={`/clients/${p.clientId}`} className="font-medium hover:underline">{p.name}</Link>
-                <Badge className={`border-0 ${p.remaining <= 0 ? "bg-red-500/15 text-red-400" : "bg-amber-500/15 text-amber-400"}`}>
-                  {p.remaining} left
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      <PackageAlerts items={lowPackages} />
 
       {/* Weekly recap — show end of week if sessions completed */}
       {completed + cancelled + noShow > 3 && (
