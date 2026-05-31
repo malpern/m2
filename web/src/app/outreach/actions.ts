@@ -196,6 +196,37 @@ export async function unskipClientThisWeek(clientId: number, weekOf: string) {
   revalidatePath("/outreach");
 }
 
+export async function triggerFollowUpNow(outreachId: number) {
+  const record = await db.select({
+    id: outreach.id, clientId: outreach.clientId, sessionId: outreach.sessionId,
+    weekOf: outreach.weekOf, clientName: clients.name, clientPhone: clients.phone,
+  }).from(outreach).innerJoin(clients, eq(clients.id, outreach.clientId)).where(eq(outreach.id, outreachId)).get();
+  if (!record) return;
+
+  const firstName = record.clientName.split(" ")[0];
+  const reply = `Hey ${firstName}, circling back — did you want to keep your session this week?`;
+
+  await db.insert(outreach).values({
+    clientId: record.clientId, sessionId: record.sessionId,
+    weekOf: record.weekOf, direction: "sent",
+    messageText: reply, status: "awaiting_reply",
+    sentAt: new Date().toISOString(),
+  }).run();
+
+  await db.update(outreach).set({ followUpAt: null }).where(eq(outreach.id, outreachId)).run();
+
+  try {
+    await sendSMS(record.clientPhone, reply);
+  } catch { /* logged elsewhere */ }
+
+  revalidatePath("/outreach");
+}
+
+export async function cancelDeferral(outreachId: number) {
+  await db.update(outreach).set({ followUpAt: null }).where(eq(outreach.id, outreachId)).run();
+  revalidatePath("/outreach");
+}
+
 function formatDay(dateStr: string): string {
   const date = new Date(dateStr + "T12:00:00Z");
   return date.toLocaleDateString("en-US", { weekday: "long" });

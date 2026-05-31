@@ -9,7 +9,7 @@ function makeItem(overrides: Partial<OutreachItem>): OutreachItem {
     status: "pending", isStanding: false,
     sentAt: null, repliedAt: null, replyText: null,
     interpretation: null, sendError: null, outreachId: null, wave: 1,
-    isAutoFill: false, messageCount: 0, outreachGroupId: null,
+    isAutoFill: false, messageCount: 0, outreachGroupId: null, followUpAt: null,
     ...overrides,
   };
 }

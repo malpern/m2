@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { markConfirmed, markDeclined, overrideStatus, sendOutreachBatch, retrySend, skipClientThisWeek, unskipClientThisWeek } from "./actions";
+import { markConfirmed, markDeclined, overrideStatus, sendOutreachBatch, retrySend, skipClientThisWeek, unskipClientThisWeek, triggerFollowUpNow, cancelDeferral } from "./actions";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/components/toast";
 import type { OutreachItem } from "@/lib/outreach-engine";
@@ -127,6 +127,51 @@ function FollowUpCancelButton({
   );
 }
 
+function DeferredBadge({ followUpAt, outreachId }: { followUpAt: string; outreachId: number | null }) {
+  const [isPending, startTransition] = useTransition();
+  const toast = useToast();
+  const remaining = new Date(followUpAt).getTime() - Date.now();
+  const minutes = Math.max(0, Math.ceil(remaining / 60_000));
+  const label = minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes}m`;
+  const isReady = minutes <= 0;
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <Badge className={`border-0 ${isReady ? "bg-amber-500/15 text-amber-400" : "bg-blue-500/15 text-blue-400"}`}>
+        {isReady ? "Ready to follow up" : `Follow up in ${label}`}
+      </Badge>
+      {outreachId && (
+        <>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs px-2"
+            disabled={isPending}
+            onClick={() => startTransition(async () => {
+              await triggerFollowUpNow(outreachId);
+              toast("Follow-up sent");
+            })}
+          >
+            {isPending ? "..." : "Send now"}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 text-xs px-2 text-muted-foreground"
+            disabled={isPending}
+            onClick={() => startTransition(async () => {
+              await cancelDeferral(outreachId);
+              toast("Deferral cancelled");
+            })}
+          >
+            Cancel
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function OutreachRow({
   item,
   weekOf,
@@ -199,8 +244,12 @@ function OutreachRow({
           </Badge>
         )}
 
-        {elapsed && (
+        {elapsed && !item.followUpAt && (
           <span className={`text-xs ${elapsed.color}`}>{elapsed.text}</span>
+        )}
+
+        {item.followUpAt && (
+          <DeferredBadge followUpAt={item.followUpAt} outreachId={item.outreachId} />
         )}
 
         {(item.status === "reschedule" || item.status === "ambiguous") && (
