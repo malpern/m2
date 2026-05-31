@@ -147,6 +147,15 @@ export async function sendDirectMessage(clientId: number, message: string) {
   revalidatePath(`/clients/${clientId}`);
 }
 
+export async function adjustPackage(clientId: number, delta: number, reason: string) {
+  const { manualAdjustment } = await import("@/lib/package-accounting");
+  const success = await manualAdjustment(clientId, delta, reason);
+  if (!success) {
+    throw new Error("No active package found for this client");
+  }
+  revalidatePath(`/clients/${clientId}`);
+}
+
 export async function deleteClient(id: number) {
   await db.delete(outreach).where(eq(outreach.clientId, id)).run();
   await db.delete(sessions).where(eq(sessions.clientId, id)).run();

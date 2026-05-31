@@ -66,6 +66,7 @@ export const packageTransactions = sqliteTable("package_transactions", {
   }).notNull(),
   previousBalance: integer("previous_balance").notNull(),
   newBalance: integer("new_balance").notNull(),
+  note: text("note"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
