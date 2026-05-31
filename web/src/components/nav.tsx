@@ -10,7 +10,6 @@ const links = [
   { href: "/schedule", label: "Schedule" },
   { href: "/clients", label: "Clients" },
   { href: "/outreach", label: "Outreach" },
-  { href: "/reports", label: "Reports" },
   { href: "/settings", label: "Settings" },
 ];
 
@@ -20,9 +19,8 @@ export function Nav() {
 
   const isActive = (href: string) => {
     if (href === "/schedule") return pathname === "/schedule" || pathname.startsWith("/schedule/");
-    if (href === "/clients") return pathname.startsWith("/clients");
+    if (href === "/clients") return pathname.startsWith("/clients") || pathname.startsWith("/packages") || pathname.startsWith("/reports");
     if (href === "/outreach") return pathname.startsWith("/outreach") || pathname.startsWith("/messages");
-    if (href === "/reports") return pathname.startsWith("/reports") || pathname.startsWith("/packages");
     if (href === "/settings") return pathname.startsWith("/settings");
     return pathname === href;
   };
