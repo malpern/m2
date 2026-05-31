@@ -524,19 +524,25 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
           }
         }
 
-        // No offered slots or no match — use classifier for the follow-up
-        let singleResult;
+        // No offered slots or no match — use multi-session classifier on pending sessions
+        const pendingOffered = pendingSessions.map((s) => ({
+          day: new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }).toLowerCase(),
+          slot: s.slot,
+        }));
+        let pendingResult;
         try {
-          singleResult = await classifyReply(history, body);
+          pendingResult = await classifyMultiSessionReply(history, body, pendingOffered);
         } catch (e) {
           if (e instanceof ClassifyBillingError) throw e;
-          singleResult = { interpretation: "ambiguous" as const, confidence: 0.3 };
+          pendingResult = null;
         }
 
-        if (singleResult.interpretation === "confirmed") {
+        const allConfirmed = pendingResult && pendingResult.actions.every((a) => a.action === "confirm");
+
+        if (allConfirmed) {
           for (const ps of pendingSessions) {
             await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, ps.id)).run();
-          syncSessionToCalendar(ps.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: ps.id }));
+            syncSessionToCalendar(ps.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: ps.id }));
           }
 
           await db.insert(outreach).values({
@@ -566,6 +572,11 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
           if (invitePrompt) reply += invitePrompt;
           await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
           return twiml();
+        }
+
+        if (pendingResult) {
+          // Partial actions on pending sessions — process them individually
+          // Falls through to the full multi-session handler below
         }
       }
 
@@ -602,12 +613,16 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
       const rescheduleNeeded: { session: typeof allGroupSessions[0]; originalDay: string; requestedDay?: string; requestedTime?: string }[] = [];
 
       for (const action of multiResult.actions) {
+        const actionDay = action.day.toLowerCase().slice(0, 3);
         const matchedSession = allGroupSessions.find((s) => {
           const sDay = new Date(s.scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" }).toLowerCase();
-          return sDay === action.day.toLowerCase();
+          return sDay === action.day.toLowerCase() || sDay.startsWith(actionDay);
         });
 
-        if (!matchedSession) continue;
+        if (!matchedSession) {
+          syslog.warn("classifier", `Multi-session action couldn't match a session`, `Action day "${action.day}" (${action.action}) didn't match any session for client ${client.id}`, { clientId: client.id });
+          continue;
+        }
 
         const dayLabel = new Date(matchedSession.scheduledDate + "T12:00:00Z")
           .toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });

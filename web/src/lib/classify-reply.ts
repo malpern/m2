@@ -49,6 +49,12 @@ Categories:
 - "cancellation": Client wants to cancel an already-confirmed session ("something came up", "I can't make it", "need to cancel", "actually I won't be able to come")
 - "ambiguous": Unclear or noncommittal ("let me check", "maybe", "idk")
 
+Punctuation matters:
+- A question mark after a day/time signals uncertainty or inquiry, NOT a definitive choice. "Friday?" means the client is asking about Friday, not confirming or cancelling it.
+- "Friday? Let's cancel" is ambiguous — the client might be asking about Friday while wanting to cancel something else. Classify as "ambiguous".
+- "Cancel Friday" (no question mark) is a clear cancellation of Friday.
+- When the intent is unclear due to mixed signals, prefer "ambiguous" over guessing.
+
 If the client mentions a specific day or time, extract it:
 {"interpretation":"declined_with_alternative","confidence":0.9,"extractedDay":"monday","extractedTime":"5pm"}
 
@@ -66,12 +72,18 @@ For each session, determine what the client wants:
 - "cancel": They want to skip/cancel this session
 - "reschedule": They want a different time for this session (extract requestedDay/requestedTime if mentioned)
 
+Punctuation matters:
+- A question mark after a day signals the client is asking about it, not deciding. "Friday?" = inquiry about Friday, not cancelling it.
+- "Friday? Let's cancel" is ambiguous — don't assume they're cancelling Friday. Look at conversation context to decide.
+- When intent for a specific session is genuinely unclear, set its action to "confirm" (safe default) and set confidence low.
+
 Example — client was offered Monday 3pm, Wednesday 3pm, Friday 3pm and says "Monday's good, skip Wednesday, can we do Friday at 5 instead?":
 {"actions":[{"day":"monday","slot":"3pm","action":"confirm"},{"day":"wednesday","slot":"3pm","action":"cancel"},{"day":"friday","slot":"3pm","action":"reschedule","requestedTime":"5pm"}],"confidence":0.9}
 
 Example — client says "all good":
 {"actions":[{"day":"monday","slot":"3pm","action":"confirm"},{"day":"wednesday","slot":"3pm","action":"confirm"},{"day":"friday","slot":"3pm","action":"confirm"}],"confidence":0.95}
 
+Always use full lowercase day names in the "day" field (e.g. "monday", "tuesday", "sunday").
 If a session isn't mentioned, assume "confirm" (the client only calls out changes).
 Always include ALL offered sessions in the actions array.
 Respond with ONLY the JSON object, no other text.`;
