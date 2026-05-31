@@ -13,8 +13,15 @@ import { OutreachWithMessages } from "./outreach-with-messages";
 
 export const dynamic = "force-dynamic";
 
-export default async function OutreachPage() {
-  const monday = getMonday();
+export default async function OutreachPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ week?: string }>;
+}) {
+  const params = await searchParams;
+  const monday = params.week
+    ? getMonday(new Date(params.week + "T12:00:00"))
+    : getMonday();
   const weekStart = monday.toISOString().split("T")[0];
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
@@ -79,6 +86,9 @@ export default async function OutreachPage() {
     .innerJoin(clients, eq(clients.id, outreach.clientId))
     .all();
 
+  const currentMonday = getMonday();
+  const currentWeekOf = currentMonday.toISOString().split("T")[0];
+
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
       <OutreachWithMessages
@@ -89,6 +99,7 @@ export default async function OutreachPage() {
           needsAttention,
           followUpItems,
           weekOf: weekStart,
+          currentWeekOf,
           hasAiBillingError,
         }}
         messages={allMessages}

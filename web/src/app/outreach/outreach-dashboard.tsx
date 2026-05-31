@@ -222,6 +222,12 @@ function OutreachRow({ item, weekOf }: { item: OutreachItem; weekOf: string }) {
   );
 }
 
+function getWeekOffset(weekOf: string, offset: number): string {
+  const d = new Date(weekOf + "T12:00:00");
+  d.setDate(d.getDate() + 7 * offset);
+  return d.toISOString().split("T")[0];
+}
+
 export function OutreachDashboard({
   items,
   summary,
@@ -229,6 +235,7 @@ export function OutreachDashboard({
   needsAttention,
   followUpItems = [],
   weekOf,
+  currentWeekOf,
   hasAiBillingError,
 }: {
   items: OutreachItem[];
@@ -237,6 +244,7 @@ export function OutreachDashboard({
   needsAttention: OutreachItem[];
   followUpItems?: OutreachItem[];
   weekOf: string;
+  currentWeekOf: string;
   hasAiBillingError?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -275,18 +283,61 @@ export function OutreachDashboard({
     year: "numeric",
   });
 
+  const isCurrentWeek = weekOf === currentWeekOf;
+  const prevWeek = getWeekOffset(weekOf, -1);
+  const nextWeek = getWeekOffset(weekOf, 1);
+
   if (items.length === 0) {
     return (
       <div>
         <div className="flex items-center gap-3 mb-6">
           <h1 className="text-2xl font-bold tracking-tight">Outreach</h1>
         </div>
+        <div className="flex items-center gap-2 mb-6">
+          <Link
+            href={`/outreach?week=${prevWeek}`}
+            className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            title="Previous week"
+          >
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </Link>
+          <p className="text-muted-foreground text-sm">
+            Week of {weekLabel}
+          </p>
+          {isCurrentWeek ? (
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded text-muted-foreground/30 cursor-not-allowed">
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </span>
+          ) : (
+            <Link
+              href={`/outreach?week=${nextWeek}`}
+              className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Next week"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </Link>
+          )}
+          {!isCurrentWeek && (
+            <Link
+              href="/outreach"
+              className="ml-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-0.5 rounded border border-border hover:bg-muted"
+            >
+              Today
+            </Link>
+          )}
+        </div>
         <EmptyState
           illustration="message"
-          heading="No outreach to send"
-          description="Generate a schedule first, then come back to send outreach."
-          ctaLabel="Go to Schedule"
-          ctaHref="/schedule"
+          heading="No outreach this week"
+          description={isCurrentWeek ? "Generate a schedule first, then come back to send outreach." : "No outreach was sent this week."}
+          ctaLabel={isCurrentWeek ? "Go to Schedule" : "Back to this week"}
+          ctaHref={isCurrentWeek ? "/schedule" : "/outreach"}
         />
       </div>
     );
@@ -297,15 +348,54 @@ export function OutreachDashboard({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Outreach</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Week of {weekLabel}
+          <div className="flex items-center gap-2 mt-1">
+            <Link
+              href={`/outreach?week=${prevWeek}`}
+              className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Previous week"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </Link>
+            <p className="text-muted-foreground text-sm">
+              Week of {weekLabel}
+            </p>
+            {isCurrentWeek ? (
+              <span
+                className="inline-flex items-center justify-center w-6 h-6 rounded text-muted-foreground/30 cursor-not-allowed"
+                title="Already on current week"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </span>
+            ) : (
+              <Link
+                href={`/outreach?week=${nextWeek}`}
+                className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="Next week"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </Link>
+            )}
+            {!isCurrentWeek && (
+              <Link
+                href="/outreach"
+                className="ml-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors px-2 py-0.5 rounded border border-border hover:bg-muted"
+              >
+                Today
+              </Link>
+            )}
             {query && (
-              <span className="ml-2">
+              <span className="text-sm text-muted-foreground ml-1">
                 &middot; Showing {filteredItems.length} of {items.length}
               </span>
             )}
-            {isPending && <span className="ml-2 text-blue-400">Sending...</span>}
-          </p>
+            {isPending && <span className="text-sm text-blue-400 ml-1">Sending...</span>}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <div className="relative">
