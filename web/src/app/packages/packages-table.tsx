@@ -43,9 +43,9 @@ function InlineAdjustForm({ clientId, clientName, onClose }: { clientId: number;
   const toast = useToast();
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center" onClick={onClose}>
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
-      <div className="relative bg-background border border-border rounded-xl p-5 w-full max-w-sm mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-200" onClick={onClose}>
+      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200" />
+      <div className="relative bg-background border border-border rounded-xl p-5 w-full max-w-sm mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-semibold mb-3">Adjust {clientName}&rsquo;s package</h3>
         <div className="flex gap-2 mb-3">
           <input

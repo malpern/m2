@@ -104,7 +104,7 @@ export default async function ClientsPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
       {lowPackages.length > 0 && (
-        <div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+        <div className="mb-6 rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 animate-in fade-in duration-500">
           <div className="text-sm font-semibold text-amber-400 mb-2">Package Alerts</div>
           {lowPackages.map((p) => (
             <div key={p.clientId} className="flex items-center justify-between py-1.5">
