@@ -16,49 +16,66 @@ const GRADE_RANK: Record<string, number> = {
 export const dynamic = "force-dynamic";
 
 export default async function ClientsPage() {
-  const allClients = await db
-    .select({
-      id: clients.id,
-      name: clients.name,
-      phone: clients.phone,
-      category: clients.category,
-      gradeLevel: clients.gradeLevel,
-      collegeBound: clients.collegeBound,
-      behaviorScore: clients.behaviorScore,
-      preferredDays: clients.preferredDays,
-      preferredTime: clients.preferredTime,
-      maxSessionsPerWeek: clients.maxSessionsPerWeek,
-      standingSlot: clients.standingSlot,
-      sortOrder: clients.sortOrder,
-      notes: clients.notes,
-      googleSheetsName: clients.googleSheetsName,
-      sessionRate: clients.sessionRate,
-      sessionType: clients.sessionType,
-      parentGuardian: clients.parentGuardian,
-      email: clients.email,
-      calendarInviteOptIn: clients.calendarInviteOptIn,
-      sessionReminders: clients.sessionReminders,
-      noShowCount: clients.noShowCount,
-      createdAt: clients.createdAt,
-      updatedAt: clients.updatedAt,
-      sessionsRemaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`.as(
-        "sessions_remaining"
-      ),
-    })
-    .from(clients)
-    .leftJoin(packages, eq(packages.clientId, clients.id))
-    .all();
+  // All three queries are independent — run in parallel
+  const [allClients, allSessions, lowPackagesRaw] = await Promise.all([
+    db
+      .select({
+        id: clients.id,
+        name: clients.name,
+        phone: clients.phone,
+        category: clients.category,
+        gradeLevel: clients.gradeLevel,
+        collegeBound: clients.collegeBound,
+        behaviorScore: clients.behaviorScore,
+        preferredDays: clients.preferredDays,
+        preferredTime: clients.preferredTime,
+        maxSessionsPerWeek: clients.maxSessionsPerWeek,
+        standingSlot: clients.standingSlot,
+        sortOrder: clients.sortOrder,
+        notes: clients.notes,
+        googleSheetsName: clients.googleSheetsName,
+        sessionRate: clients.sessionRate,
+        sessionType: clients.sessionType,
+        parentGuardian: clients.parentGuardian,
+        email: clients.email,
+        calendarInviteOptIn: clients.calendarInviteOptIn,
+        sessionReminders: clients.sessionReminders,
+        noShowCount: clients.noShowCount,
+        createdAt: clients.createdAt,
+        updatedAt: clients.updatedAt,
+        sessionsRemaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`.as(
+          "sessions_remaining"
+        ),
+      })
+      .from(clients)
+      .leftJoin(packages, eq(packages.clientId, clients.id))
+      .all(),
+    db
+      .select({
+        clientId: sessions.clientId,
+        date: sessions.scheduledDate,
+        time: sessions.scheduledTime,
+        status: sessions.status,
+      })
+      .from(sessions)
+      .orderBy(desc(sessions.scheduledDate))
+      .all(),
+    db
+      .select({
+        clientId: clients.id,
+        clientName: clients.name,
+        category: clients.category,
+        remaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`.as("remaining"),
+        totalSessions: packages.totalSessions,
+        sessionsUsed: packages.sessionsUsed,
+      })
+      .from(packages)
+      .innerJoin(clients, eq(clients.id, packages.clientId))
+      .where(eq(packages.status, "active"))
+      .all(),
+  ]);
 
-  const allSessions = await db
-    .select({
-      clientId: sessions.clientId,
-      date: sessions.scheduledDate,
-      time: sessions.scheduledTime,
-      status: sessions.status,
-    })
-    .from(sessions)
-    .orderBy(desc(sessions.scheduledDate))
-    .all();
+  const lowPackages = lowPackagesRaw.filter((p) => p.remaining <= 2);
 
   const sessionsByClient = new Map<number, { date: string; time: string; status: string }[]>();
   for (const s of allSessions) {
@@ -87,21 +104,6 @@ export default async function ClientsPage() {
   const inactive = sorted.filter(
     (c) => c.category !== "active" && c.category !== "in_season"
   );
-
-  const lowPackages = (await db
-    .select({
-      clientId: clients.id,
-      clientName: clients.name,
-      category: clients.category,
-      remaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`.as("remaining"),
-      totalSessions: packages.totalSessions,
-      sessionsUsed: packages.sessionsUsed,
-    })
-    .from(packages)
-    .innerJoin(clients, eq(clients.id, packages.clientId))
-    .where(eq(packages.status, "active"))
-    .all()
-  ).filter((p) => p.remaining <= 2);
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">

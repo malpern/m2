@@ -27,46 +27,63 @@ export default async function OutreachPage({
   sunday.setDate(sunday.getDate() + 6);
   const weekEnd = sunday.toISOString().split("T")[0];
 
-  const weekSessions = await db
-    .select({
-      id: sessions.id,
-      clientId: sessions.clientId,
-      clientName: clients.name,
-      clientPhone: clients.phone,
-      standingSlot: clients.standingSlot,
-      packageId: sessions.packageId,
-      scheduledDate: sessions.scheduledDate,
-      scheduledTime: sessions.scheduledTime,
-      slot: sessions.slot,
-      status: sessions.status,
-      sessionType: sessions.sessionType,
-      gcalEventId: sessions.gcalEventId,
-      loggedToSheets: sessions.loggedToSheets,
-      reconciled: sessions.reconciled,
-      createdAt: sessions.createdAt,
-    })
-    .from(sessions)
-    .innerJoin(clients, eq(clients.id, sessions.clientId))
-    .where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd)))
-    .all();
-
-  const weekOutreach = await db
-    .select()
-    .from(outreach)
-    .where(eq(outreach.weekOf, weekStart))
-    .all();
-
-  const skips = await db
-    .select({
-      id: weeklySkips.id,
-      clientId: weeklySkips.clientId,
-      clientName: clients.name,
-      reason: weeklySkips.reason,
-    })
-    .from(weeklySkips)
-    .innerJoin(clients, eq(clients.id, weeklySkips.clientId))
-    .where(eq(weeklySkips.weekOf, weekStart))
-    .all();
+  // All five queries are independent — run in parallel
+  const [weekSessions, weekOutreach, skips, billingErrors, allMessages] = await Promise.all([
+    db
+      .select({
+        id: sessions.id,
+        clientId: sessions.clientId,
+        clientName: clients.name,
+        clientPhone: clients.phone,
+        standingSlot: clients.standingSlot,
+        packageId: sessions.packageId,
+        scheduledDate: sessions.scheduledDate,
+        scheduledTime: sessions.scheduledTime,
+        slot: sessions.slot,
+        status: sessions.status,
+        sessionType: sessions.sessionType,
+        gcalEventId: sessions.gcalEventId,
+        loggedToSheets: sessions.loggedToSheets,
+        reconciled: sessions.reconciled,
+        createdAt: sessions.createdAt,
+      })
+      .from(sessions)
+      .innerJoin(clients, eq(clients.id, sessions.clientId))
+      .where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd)))
+      .all(),
+    db.select().from(outreach).where(eq(outreach.weekOf, weekStart)).all(),
+    db
+      .select({
+        id: weeklySkips.id,
+        clientId: weeklySkips.clientId,
+        clientName: clients.name,
+        reason: weeklySkips.reason,
+      })
+      .from(weeklySkips)
+      .innerJoin(clients, eq(clients.id, weeklySkips.clientId))
+      .where(eq(weeklySkips.weekOf, weekStart))
+      .all(),
+    db
+      .select({ id: outreach.id })
+      .from(outreach)
+      .where(eq(outreach.sendError, "ai_billing_exhausted"))
+      .all(),
+    db
+      .select({
+        id: outreach.id,
+        clientId: outreach.clientId,
+        clientName: clients.name,
+        direction: outreach.direction,
+        messageText: outreach.messageText,
+        interpretation: outreach.interpretation,
+        status: outreach.status,
+        sentAt: outreach.sentAt,
+        repliedAt: outreach.repliedAt,
+      })
+      .from(outreach)
+      .innerJoin(clients, eq(clients.id, outreach.clientId))
+      .all(),
+  ]);
 
   const skippedClientIds = new Set(skips.map((s) => s.clientId));
 
@@ -78,29 +95,7 @@ export default async function OutreachPage({
   const needsAttention = getNeedsMattAttention(items);
   const followUpItems = getNeedsFollowUp(items);
 
-  const billingErrors = await db
-    .select({ id: outreach.id })
-    .from(outreach)
-    .where(eq(outreach.sendError, "ai_billing_exhausted"))
-    .all();
   const hasAiBillingError = billingErrors.length > 0;
-
-  // All messages for the Messages tab
-  const allMessages = await db
-    .select({
-      id: outreach.id,
-      clientId: outreach.clientId,
-      clientName: clients.name,
-      direction: outreach.direction,
-      messageText: outreach.messageText,
-      interpretation: outreach.interpretation,
-      status: outreach.status,
-      sentAt: outreach.sentAt,
-      repliedAt: outreach.repliedAt,
-    })
-    .from(outreach)
-    .innerJoin(clients, eq(clients.id, outreach.clientId))
-    .all();
 
   const currentMonday = getMonday();
   const currentWeekOf = currentMonday.toISOString().split("T")[0];

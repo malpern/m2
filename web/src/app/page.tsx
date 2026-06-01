@@ -33,25 +33,7 @@ export default async function DashboardPage() {
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-  // Queries
-  const activeCount = await db.select({ count: sql<number>`count(*)` }).from(clients).where(sql`${clients.category} IN ('active', 'in_season')`).get();
-  const totalActiveClients = activeCount?.count ?? 0;
-
-  const lowPackages = (await db.select({
-    clientId: clients.id, clientName: clients.name, category: clients.category,
-    remaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`,
-    totalSessions: packages.totalSessions, sessionsUsed: packages.sessionsUsed,
-  }).from(packages).innerJoin(clients, eq(clients.id, packages.clientId)).where(and(eq(packages.status, "active"), sql`${packages.totalSessions} - ${packages.sessionsUsed} <= 2`)).all());
-
-  const unreconciledCount = await db.select({ count: sql<number>`count(*)` }).from(sessions).where(and(eq(sessions.status, "completed"), eq(sessions.reconciled, false))).get();
-  const unreconciled = unreconciledCount?.count ?? 0;
-
-  const thisWeekSessions = await db.select({
-    id: sessions.id, clientId: sessions.clientId, clientName: clients.name,
-    date: sessions.scheduledDate, time: sessions.scheduledTime, slot: sessions.slot, status: sessions.status,
-  }).from(sessions).innerJoin(clients, eq(clients.id, sessions.clientId)).where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd))).all();
-
-  // Next week
+  // Next week date range (needed for queries below)
   const nextMonday = new Date(monday);
   nextMonday.setDate(nextMonday.getDate() + 7);
   const nextWeekStart = nextMonday.toISOString().split("T")[0];
@@ -59,19 +41,45 @@ export default async function DashboardPage() {
   nextSunday.setDate(nextSunday.getDate() + 6);
   const nextWeekEnd = nextSunday.toISOString().split("T")[0];
 
-  const nextWeekSessions = await db.select({ id: sessions.id, status: sessions.status }).from(sessions).where(and(gte(sessions.scheduledDate, nextWeekStart), lte(sessions.scheduledDate, nextWeekEnd))).all();
-  const nextWeekOutreach = await db.select().from(outreach).where(eq(outreach.weekOf, nextWeekStart)).all();
-  const hasAvailability = (await db.select().from(defaultAvailability).all()).some((a) => a.enabled);
+  // All queries are independent — run in parallel
+  const [
+    activeCount,
+    lowPackages,
+    unreconciledCount,
+    thisWeekSessions,
+    nextWeekSessions,
+    nextWeekOutreach,
+    availabilityRows,
+    weekOutreach,
+    currentWeekFullSessions,
+  ] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(clients).where(sql`${clients.category} IN ('active', 'in_season')`).get(),
+    db.select({
+      clientId: clients.id, clientName: clients.name, category: clients.category,
+      remaining: sql<number>`${packages.totalSessions} - ${packages.sessionsUsed}`,
+      totalSessions: packages.totalSessions, sessionsUsed: packages.sessionsUsed,
+    }).from(packages).innerJoin(clients, eq(clients.id, packages.clientId)).where(and(eq(packages.status, "active"), sql`${packages.totalSessions} - ${packages.sessionsUsed} <= 2`)).all(),
+    db.select({ count: sql<number>`count(*)` }).from(sessions).where(and(eq(sessions.status, "completed"), eq(sessions.reconciled, false))).get(),
+    db.select({
+      id: sessions.id, clientId: sessions.clientId, clientName: clients.name,
+      date: sessions.scheduledDate, time: sessions.scheduledTime, slot: sessions.slot, status: sessions.status,
+    }).from(sessions).innerJoin(clients, eq(clients.id, sessions.clientId)).where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd))).all(),
+    db.select({ id: sessions.id, status: sessions.status }).from(sessions).where(and(gte(sessions.scheduledDate, nextWeekStart), lte(sessions.scheduledDate, nextWeekEnd))).all(),
+    db.select().from(outreach).where(eq(outreach.weekOf, nextWeekStart)).all(),
+    db.select().from(defaultAvailability).all(),
+    db.select().from(outreach).where(eq(outreach.weekOf, weekStart)).all(),
+    db.select({
+      id: sessions.id, clientId: sessions.clientId, clientName: clients.name, clientPhone: clients.phone,
+      standingSlot: clients.standingSlot, packageId: sessions.packageId, scheduledDate: sessions.scheduledDate,
+      scheduledTime: sessions.scheduledTime, slot: sessions.slot, status: sessions.status,
+      gcalEventId: sessions.gcalEventId, loggedToSheets: sessions.loggedToSheets, reconciled: sessions.reconciled, createdAt: sessions.createdAt,
+      sessionType: sessions.sessionType,
+    }).from(sessions).innerJoin(clients, eq(clients.id, sessions.clientId)).where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd))).all(),
+  ]);
 
-  // Outreach for current week
-  const weekOutreach = await db.select().from(outreach).where(eq(outreach.weekOf, weekStart)).all();
-  const currentWeekFullSessions = await db.select({
-    id: sessions.id, clientId: sessions.clientId, clientName: clients.name, clientPhone: clients.phone,
-    standingSlot: clients.standingSlot, packageId: sessions.packageId, scheduledDate: sessions.scheduledDate,
-    scheduledTime: sessions.scheduledTime, slot: sessions.slot, status: sessions.status,
-    gcalEventId: sessions.gcalEventId, loggedToSheets: sessions.loggedToSheets, reconciled: sessions.reconciled, createdAt: sessions.createdAt,
-    sessionType: sessions.sessionType,
-  }).from(sessions).innerJoin(clients, eq(clients.id, sessions.clientId)).where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd))).all();
+  const totalActiveClients = activeCount?.count ?? 0;
+  const unreconciled = unreconciledCount?.count ?? 0;
+  const hasAvailability = availabilityRows.some((a) => a.enabled);
 
   const outreachItems = buildOutreachQueue(currentWeekFullSessions, weekOutreach);
   const outreachSummary = getOutreachSummary(outreachItems);
