@@ -1,8 +1,8 @@
 import type { Client } from "@/db/schema";
 import { sortByPriority, sortByWeightedPriority, isSchedulable, type PriorityWeights } from "./priority";
+import { SLOT_TIMES, type TimeSlot, type DayOfWeek } from "./constants";
 
-export type TimeSlot = "3pm" | "4pm" | "5pm" | "6pm" | "7pm";
-export type DayOfWeek = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "sunday";
+export type { TimeSlot, DayOfWeek };
 
 export interface ProposedSession {
   clientId: number;
@@ -12,14 +12,6 @@ export interface ProposedSession {
   date: string; // YYYY-MM-DD
   time: string; // HH:mm
 }
-
-const SLOT_TIMES: Record<TimeSlot, string> = {
-  "3pm": "15:00",
-  "4pm": "16:00",
-  "5pm": "17:00",
-  "6pm": "18:00",
-  "7pm": "19:00",
-};
 
 const SLOT_FILL_ORDER: TimeSlot[] = ["3pm", "5pm", "6pm"];
 

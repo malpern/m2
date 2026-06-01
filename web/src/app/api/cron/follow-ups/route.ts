@@ -6,15 +6,8 @@ import { sendSMS, isDevAllowed } from "@/lib/twilio";
 import { composeReply, type ConversationMessage } from "@/lib/classify-reply";
 import { getOpenSlots, rankSlotsForClient, diversifyAcrossDays, tagOfferedSlots } from "@/lib/suggest-alternatives";
 import { OUTREACH_DEFAULTS } from "@/lib/outreach-config";
+import { formatSlotsText } from "@/lib/constants";
 import { NextRequest } from "next/server";
-
-function formatSlotsText(slots: { day: string; slot: string }[]): string {
-  const DAY_LABELS: Record<string, string> = {
-    monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday",
-    thursday: "Thursday", friday: "Friday", sunday: "Sunday",
-  };
-  return slots.map((s) => `${DAY_LABELS[s.day] ?? s.day} at ${s.slot}`).join(", ");
-}
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");

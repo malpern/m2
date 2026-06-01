@@ -1,13 +1,7 @@
 import type { Client } from "@/db/schema";
+import { GRADE_RANK } from "./constants";
 
-export const GRADE_RANK: Record<string, number> = {
-  adult: 0,
-  freshman: 1,
-  sophomore: 2,
-  junior: 3,
-  senior: 4,
-  post_grad: 5,
-};
+export { GRADE_RANK };
 
 export type PriorityWeights = {
   collegeBoundWeight: number;

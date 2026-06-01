@@ -3,24 +3,10 @@ import { sessions, clients, outreach, defaultAvailability, weeklyOverrides } fro
 import { and, gte, lte, eq, ne } from "drizzle-orm";
 import { listEvents, isConnected } from "@/lib/google-calendar";
 import { OUTREACH_DEFAULTS } from "./outreach-config";
-
-type TimeSlot = "3pm" | "4pm" | "5pm" | "6pm" | "7pm";
-
-const SLOT_TIMES: Record<TimeSlot, string> = {
-  "3pm": "15:00",
-  "4pm": "16:00",
-  "5pm": "17:00",
-  "6pm": "18:00",
-  "7pm": "19:00",
-};
+import { syslog } from "./logger";
+import { SLOT_TIMES, DAY_NAMES_BY_INDEX, DAY_LABELS, type TimeSlot } from "./constants";
 
 const SLOTS: TimeSlot[] = ["3pm", "4pm", "5pm", "6pm", "7pm"];
-
-const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-const DAY_LABELS: Record<string, string> = {
-  monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday",
-  thursday: "Thursday", friday: "Friday", sunday: "Sunday",
-};
 
 function getWeekDates(weekStart: string): { day: string; date: string }[] {
   const start = new Date(weekStart + "T12:00:00Z");
@@ -138,7 +124,9 @@ export async function getOpenSlots(
         gcalKeys.add(`${date}|${time}`);
       }
     }
-  } catch { /* ignore */ }
+  } catch (e) {
+    syslog.warn("system", "Google Calendar check failed — proceeding without it", `GCal listEvents error: ${e instanceof Error ? e.message : String(e)}`);
+  }
 
   const pendingOffers = await getPendingOfferKeys(weekOf, excludeClientId);
 
@@ -213,7 +201,7 @@ export async function rankSlotsForClient(
   const slotCounts = new Map<string, number>();
   for (const s of allSessions) {
     const d = new Date(s.date + "T12:00:00Z");
-    const day = DAY_NAMES[d.getDay()];
+    const day = DAY_NAMES_BY_INDEX[d.getDay()];
     dayCounts.set(day, (dayCounts.get(day) ?? 0) + 1);
     slotCounts.set(s.time, (slotCounts.get(s.time) ?? 0) + 1);
   }

@@ -5,10 +5,7 @@ import { sortByPriority, isSchedulable } from "./priority";
 import { sendSMS, isDevAllowed } from "./twilio";
 import { syslog } from "./logger";
 import { getMonday } from "./scheduler";
-
-export const SLOT_TIMES: Record<string, string> = {
-  "3pm": "15:00", "4pm": "16:00", "5pm": "17:00", "6pm": "18:00", "7pm": "19:00",
-};
+import { SLOT_TIMES_MAP } from "./constants";
 
 export function buildAutoFillMessage(clientName: string, cancelledDate: string, cancelledSlot: string): string {
   const dayLabel = new Date(cancelledDate + "T12:00:00Z")
@@ -103,7 +100,7 @@ export async function sendAutoFillOffer(
     const inserted = await tx.insert(sessions).values({
       clientId: client.id,
       scheduledDate: cancelledDate,
-      scheduledTime: SLOT_TIMES[cancelledSlot] ?? "15:00",
+      scheduledTime: SLOT_TIMES_MAP[cancelledSlot] ?? "15:00",
       slot: cancelledSlot as "3pm" | "4pm" | "5pm" | "6pm" | "7pm",
       status: "proposed",
     }).returning().get();

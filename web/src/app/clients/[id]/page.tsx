@@ -11,6 +11,7 @@ import { MessageHistory } from "./message-history";
 import { SessionHistoryCard } from "./session-history-card";
 import { PackageAdjustmentForm } from "./package-adjustment-form";
 import { getTransactionHistory } from "@/lib/package-accounting";
+import { DAY_NAMES_BY_INDEX } from "@/lib/constants";
 import {
   EditableText,
   EditableNumber,
@@ -97,7 +98,6 @@ export default async function ClientDetailPage({
   }
 
   const CORE_HOURS = ["11am", "12pm", "1pm", "2pm", "3pm", "4pm", "5pm", "6pm"];
-  const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const DAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
   // Compute per-client day×time frequencies weighted by recency
@@ -108,7 +108,7 @@ export default async function ClientDetailPage({
   const clientTimeSlots = new Set<string>();
   for (const s of allClientSessions) {
     const d = new Date(s.scheduledDate + "T12:00:00");
-    const day = DAY_NAMES[d.getDay()];
+    const day = DAY_NAMES_BY_INDEX[d.getDay()];
     const slot = timeLabel(s.scheduledTime);
     const ageDays = (now - d.getTime()) / 86400000;
     const weight = ageDays <= FULL_WEIGHT_DAYS ? 1 : Math.pow(0.5, (ageDays - FULL_WEIGHT_DAYS) / HALF_LIFE_DAYS);
@@ -252,7 +252,7 @@ export default async function ClientDetailPage({
         const typicalDayTime = new Map<string, number>();
         for (const s of sorted) {
           const d = new Date(s.scheduledDate + "T12:00:00");
-          const day = DAY_NAMES[d.getDay()];
+          const day = DAY_NAMES_BY_INDEX[d.getDay()];
           const time = timeLabel(s.scheduledTime);
           const k = `${day.slice(0, 3)} ${time}`;
           typicalDayTime.set(k, (typicalDayTime.get(k) ?? 0) + 1);
@@ -272,7 +272,7 @@ export default async function ClientDetailPage({
                   <div className="space-y-2">
                     {lastWeekSessions.map((s) => {
                       const d = new Date(s.scheduledDate + "T12:00:00");
-                      const dayName = DAY_NAMES[d.getDay()];
+                      const dayName = DAY_NAMES_BY_INDEX[d.getDay()];
                       const time = timeLabel(s.scheduledTime);
                       const label = `${dayName.slice(0, 3)} ${time}`;
                       const count = typicalDayTime.get(label) ?? 0;

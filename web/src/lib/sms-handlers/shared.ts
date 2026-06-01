@@ -8,14 +8,9 @@ import { getMonday } from "@/lib/scheduler";
 import type { ConversationMessage } from "@/lib/classify-reply";
 import { getOpenSlots, rankSlotsForClient, diversifyAcrossDays, tagOfferedSlots } from "@/lib/suggest-alternatives";
 import { composeReply } from "@/lib/classify-reply";
+import { SLOT_TIMES_MAP, formatSlotsText } from "@/lib/constants";
 
-export const SLOT_TIMES_MAP: Record<string, string> = {
-  "3pm": "15:00",
-  "4pm": "16:00",
-  "5pm": "17:00",
-  "6pm": "18:00",
-  "7pm": "19:00",
-};
+export { SLOT_TIMES_MAP, formatSlotsText };
 
 export interface WebhookContext {
   client: Client;
@@ -42,14 +37,6 @@ export function buildConversationHistory(records: { direction: string; messageTe
       direction: r.direction as "sent" | "received",
       text: stripOfferedTags(r.messageText),
     }));
-}
-
-export function formatSlotsText(slots: { day: string; slot: string }[]): string {
-  const DAY_LABELS: Record<string, string> = {
-    monday: "Monday", tuesday: "Tuesday", wednesday: "Wednesday",
-    thursday: "Thursday", friday: "Friday", sunday: "Sunday",
-  };
-  return slots.map((s) => `${DAY_LABELS[s.day] ?? s.day} at ${s.slot}`).join(", ");
 }
 
 export function getDayLabel(scheduledDate: string): string {
