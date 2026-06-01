@@ -16,7 +16,7 @@ function formatSlotsText(slots: { day: string; slot: string }[]): string {
   return slots.map((s) => `${DAY_LABELS[s.day] ?? s.day} at ${s.slot}`).join(", ");
 }
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response("Unauthorized", { status: 401 });

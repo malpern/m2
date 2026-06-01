@@ -6,7 +6,7 @@ import { sendEmail } from "@/lib/email";
 const ALERT_PHONE = "+14082099509";
 const ALERT_EMAIL = "malpern@gmail.com";
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return new Response("Unauthorized", { status: 401 });
