@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/api/twilio", "/api/auth", "/api/cron", "/api/migrate", "/login"];
+const PUBLIC_PATHS = ["/api/twilio", "/api/auth", "/api/cron", "/login"];
 
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -22,7 +22,9 @@ export async function middleware(request: NextRequest) {
 
   const appPassword = process.env.APP_PASSWORD;
   if (!appPassword) {
-    return NextResponse.next();
+    return new NextResponse("Service Unavailable: APP_PASSWORD not configured", {
+      status: 503,
+    });
   }
 
   const authCookie = request.cookies.get("m2_auth");
