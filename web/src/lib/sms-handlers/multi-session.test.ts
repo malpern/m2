@@ -121,7 +121,7 @@ beforeEach(() => {
   mockSyncCal.mockResolvedValue(undefined);
   mockGetInvitePrompt.mockResolvedValue(null);
   mockCreditCancel.mockResolvedValue(true);
-  mockAutoFill.mockResolvedValue(undefined);
+  mockAutoFill.mockResolvedValue({ offered: false });
   mockGetOpenSlots.mockResolvedValue([]);
   mockRankSlots.mockResolvedValue([]);
   mockTryBookSlot.mockResolvedValue(false);
@@ -139,7 +139,7 @@ beforeEach(() => {
           all: () => [],
         }),
       }),
-    } as ReturnType<typeof db.select>;
+    } as unknown as ReturnType<typeof db.select>;
   });
 });
 
@@ -151,6 +151,7 @@ describe("handleMultiSessionReply", () => {
           { day: "tuesday", slot: "4pm", action: "confirm" },
           { day: "thursday", slot: "5pm", action: "confirm" },
         ],
+        confidence: 0.95,
       });
 
       await handleMultiSessionReply(makeCtx(), [42, 43]);
@@ -171,6 +172,7 @@ describe("handleMultiSessionReply", () => {
           { day: "tuesday", slot: "4pm", action: "confirm" },
           { day: "thursday", slot: "5pm", action: "confirm" },
         ],
+        confidence: 0.95,
       });
       mockGetInvitePrompt.mockResolvedValue("\n\nWant a calendar invite?");
 
@@ -188,6 +190,7 @@ describe("handleMultiSessionReply", () => {
           { day: "tuesday", slot: "4pm", action: "confirm" },
           { day: "thursday", slot: "5pm", action: "cancel" },
         ],
+        confidence: 0.95,
       });
 
       await handleMultiSessionReply(makeCtx({ body: "tuesday good, cancel thursday" }), [42, 43]);
@@ -206,10 +209,11 @@ describe("handleMultiSessionReply", () => {
           { day: "tuesday", slot: "4pm", action: "confirm" },
           { day: "thursday", slot: "5pm", action: "reschedule", requestedDay: "friday" },
         ],
+        confidence: 0.95,
       });
-      const slots = [{ day: "friday", date: "2026-06-05", slot: "3pm", time: "15:00" }];
+      const slots = [{ day: "friday", date: "2026-06-05", slot: "3pm" as const, time: "15:00" }];
       mockGetOpenSlots.mockResolvedValue(slots);
-      mockRankSlots.mockResolvedValue(slots);
+      mockRankSlots.mockResolvedValue(slots.map((s) => ({ ...s, score: 0 })));
       mockTryBookSlot.mockResolvedValue(true);
 
       await handleMultiSessionReply(makeCtx({ body: "tuesday yes, move thursday to friday" }), [42, 43]);
@@ -227,13 +231,14 @@ describe("handleMultiSessionReply", () => {
         actions: [
           { day: "thursday", slot: "5pm", action: "reschedule" },
         ],
+        confidence: 0.95,
       });
       const slots = [
-        { day: "monday", date: "2026-06-01", slot: "3pm", time: "15:00" },
-        { day: "friday", date: "2026-06-05", slot: "4pm", time: "16:00" },
+        { day: "monday", date: "2026-06-01", slot: "3pm" as const, time: "15:00" },
+        { day: "friday", date: "2026-06-05", slot: "4pm" as const, time: "16:00" },
       ];
       mockGetOpenSlots.mockResolvedValue(slots);
-      mockRankSlots.mockResolvedValue(slots);
+      mockRankSlots.mockResolvedValue(slots.map((s) => ({ ...s, score: 0 })));
 
       await handleMultiSessionReply(makeCtx({ body: "can we move thursday?" }), [42, 43]);
 
@@ -273,6 +278,7 @@ describe("handleMultiSessionReply", () => {
         actions: [
           { day: "saturday", slot: "3pm", action: "confirm" },
         ],
+        confidence: 0.95,
       });
 
       await handleMultiSessionReply(makeCtx(), [42, 43]);

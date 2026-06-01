@@ -23,8 +23,8 @@ function makeClient(overrides: Partial<Client> & { id: number; name: string }): 
     email: null,
     calendarInviteOptIn: null,
     sessionReminders: null,
-    createdAt: null,
-    updatedAt: null,
+    createdAt: "2026-06-01T00:00:00Z",
+    updatedAt: "2026-06-01T00:00:00Z",
     ...overrides,
   };
 }

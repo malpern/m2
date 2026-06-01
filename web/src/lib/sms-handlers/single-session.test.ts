@@ -119,7 +119,7 @@ beforeEach(() => {
   mockSyncSessionToCalendar.mockResolvedValue(undefined);
   mockGetInvitePrompt.mockResolvedValue(null);
   mockCreditCancellation.mockResolvedValue(true);
-  mockAutoFillCancelledSlot.mockResolvedValue(undefined);
+  mockAutoFillCancelledSlot.mockResolvedValue({ offered: false });
   mockWhySlotUnavailable.mockResolvedValue("not_available");
   mockGetOpenSlots.mockResolvedValue([]);
   mockRankSlotsForClient.mockResolvedValue([]);
@@ -290,9 +290,9 @@ describe("handleSingleSessionReply", () => {
         interpretation: "selecting_offered_slot", confidence: 0.9,
         extractedDay: "Tuesday", extractedTime: "4pm",
       });
-      const slots = [{ day: "tuesday", date: "2026-06-02", slot: "4pm", time: "16:00" }];
+      const slots = [{ day: "tuesday", date: "2026-06-02", slot: "4pm" as const, time: "16:00" }];
       mockGetOpenSlots.mockResolvedValue(slots);
-      mockRankSlotsForClient.mockResolvedValue(slots);
+      mockRankSlotsForClient.mockResolvedValue(slots.map((s) => ({ ...s, score: 0 })));
       mockTryBookSlot.mockResolvedValue(true);
 
       await handleSingleSessionReply(makeCtx({ body: "Tuesday 4pm" }));
@@ -311,11 +311,11 @@ describe("handleSingleSessionReply", () => {
         extractedDay: "Tuesday", extractedTime: "4pm",
       });
       const slots = [
-        { day: "tuesday", date: "2026-06-02", slot: "4pm", time: "16:00" },
-        { day: "wednesday", date: "2026-06-03", slot: "5pm", time: "17:00" },
+        { day: "tuesday", date: "2026-06-02", slot: "4pm" as const, time: "16:00" },
+        { day: "wednesday", date: "2026-06-03", slot: "5pm" as const, time: "17:00" },
       ];
       mockGetOpenSlots.mockResolvedValue(slots);
-      mockRankSlotsForClient.mockResolvedValue(slots);
+      mockRankSlotsForClient.mockResolvedValue(slots.map((s) => ({ ...s, score: 0 })));
       mockTryBookSlot.mockResolvedValue(false);
 
       await handleSingleSessionReply(makeCtx({ body: "Tuesday 4pm" }));
@@ -334,7 +334,7 @@ describe("handleSingleSessionReply", () => {
         interpretation: "declined_wants_options", confidence: 0.9,
         extractedDay: "Wednesday",
       });
-      const slots = [{ day: "wednesday", date: "2026-06-03", slot: "5pm", time: "17:00" }];
+      const slots = [{ day: "wednesday", date: "2026-06-03", slot: "5pm" as const, time: "17:00" }];
       mockGetOpenSlots.mockResolvedValue(slots);
       mockTryBookSlot.mockResolvedValue(true);
 
@@ -352,9 +352,9 @@ describe("handleSingleSessionReply", () => {
         interpretation: "declined_wants_options", confidence: 0.9,
         extractedDay: "Saturday",
       });
-      const slots = [{ day: "monday", date: "2026-06-01", slot: "3pm", time: "15:00" }];
+      const slots = [{ day: "monday", date: "2026-06-01", slot: "3pm" as const, time: "15:00" }];
       mockGetOpenSlots.mockResolvedValue(slots);
-      mockRankSlotsForClient.mockResolvedValue(slots);
+      mockRankSlotsForClient.mockResolvedValue(slots.map((s) => ({ ...s, score: 0 })));
       mockTryBookSlot.mockResolvedValue(false);
       mockWhySlotUnavailable.mockResolvedValue("not_a_slot");
 
@@ -372,11 +372,11 @@ describe("handleSingleSessionReply", () => {
         interpretation: "declined_wants_options", confidence: 0.9,
       });
       const slots = [
-        { day: "monday", date: "2026-06-01", slot: "3pm", time: "15:00" },
-        { day: "wednesday", date: "2026-06-03", slot: "5pm", time: "17:00" },
+        { day: "monday", date: "2026-06-01", slot: "3pm" as const, time: "15:00" },
+        { day: "wednesday", date: "2026-06-03", slot: "5pm" as const, time: "17:00" },
       ];
       mockGetOpenSlots.mockResolvedValue(slots);
-      mockRankSlotsForClient.mockResolvedValue(slots);
+      mockRankSlotsForClient.mockResolvedValue(slots.map((s) => ({ ...s, score: 0 })));
 
       await handleSingleSessionReply(makeCtx({ body: "what else is available?" }));
 

@@ -100,7 +100,7 @@ beforeEach(() => {
   mockComposeReply.mockResolvedValue("Got it, cancelled.");
   mockCreditCancellation.mockResolvedValue(true);
   mockSyncSessionToCalendar.mockResolvedValue(undefined);
-  mockAutoFillCancelledSlot.mockResolvedValue(undefined);
+  mockAutoFillCancelledSlot.mockResolvedValue({ offered: false });
   mockDbSelect.mockReturnValue({
     from: () => ({
       where: () => ({
@@ -108,7 +108,7 @@ beforeEach(() => {
         all: () => [],
       }),
     }),
-  } as ReturnType<typeof db.select>);
+  } as unknown as ReturnType<typeof db.select>);
 });
 
 describe("handleCancellation", () => {
@@ -163,7 +163,7 @@ describe("handleCancellation", () => {
           all: () => [],
         }),
       }),
-    } as ReturnType<typeof db.select>);
+    } as unknown as ReturnType<typeof db.select>);
 
     await handleCancellation(makeCtx(), "cancellation");
 
