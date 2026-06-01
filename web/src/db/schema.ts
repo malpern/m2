@@ -1,10 +1,10 @@
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const clients = sqliteTable("clients", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
-  phone: text("phone").notNull(),
+  phone: text("phone").notNull().unique(),
   category: text("category", {
     enum: ["active", "inactive", "in_season", "on_break", "vacation"],
   })
@@ -33,8 +33,8 @@ export const clients = sqliteTable("clients", {
   email: text("email"),
   calendarInviteOptIn: integer("calendar_invite_opt_in", { mode: "boolean" }),
   sessionReminders: integer("session_reminders", { mode: "boolean" }),
-  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const packages = sqliteTable("packages", {
@@ -105,7 +105,7 @@ export const sessions = sqliteTable("sessions", {
   reconciled: integer("reconciled", { mode: "boolean" })
     .notNull()
     .default(false),
-  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (t) => [
   index("sessions_client_id_idx").on(t.clientId),
   index("sessions_scheduled_date_idx").on(t.scheduledDate),
@@ -161,7 +161,9 @@ export const defaultAvailability = sqliteTable("default_availability", {
   }).notNull(),
   slot: text("slot").notNull(),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-});
+}, (t) => [
+  uniqueIndex("default_availability_day_slot_idx").on(t.day, t.slot),
+]);
 
 export const weeklyOverrides = sqliteTable("weekly_overrides", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -174,6 +176,7 @@ export const weeklyOverrides = sqliteTable("weekly_overrides", {
   note: text("note"),
 }, (t) => [
   index("weekly_overrides_week_of_idx").on(t.weekOf),
+  uniqueIndex("weekly_overrides_week_day_slot_idx").on(t.weekOf, t.day, t.slot),
 ]);
 
 export const prioritySettings = sqliteTable("priority_settings", {
