@@ -1,12 +1,14 @@
 import { db } from "@/db";
 import { clients, sessions } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SessionCalendar } from "../session-calendar";
 
 export const dynamic = "force-dynamic";
+
+const SESSION_LIMIT = 500;
 
 export default async function SessionHistoryPage({
   params,
@@ -24,6 +26,8 @@ export default async function SessionHistoryPage({
     .select()
     .from(sessions)
     .where(eq(sessions.clientId, clientId))
+    .orderBy(desc(sessions.scheduledDate))
+    .limit(SESSION_LIMIT)
     .all();
 
   return (
@@ -37,7 +41,9 @@ export default async function SessionHistoryPage({
 
       <h1 className="text-2xl font-bold tracking-tight mb-1">{client.name}</h1>
       <p className="text-sm text-muted-foreground mb-6">
-        {allSessions.length} sessions total
+        {allSessions.length === SESSION_LIMIT
+          ? `${SESSION_LIMIT}+ sessions (showing most recent)`
+          : `${allSessions.length} sessions total`}
       </p>
 
       <Card>

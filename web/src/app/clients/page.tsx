@@ -1,15 +1,24 @@
 import { db } from "@/db";
 import { clients, packages, sessions } from "@/db/schema";
-import { eq, sql, desc, and } from "drizzle-orm";
+import { eq, sql, desc, gte } from "drizzle-orm";
 import { ClientTable } from "./client-table";
 import { PackageAlerts } from "@/components/package-alerts";
 import { GRADE_RANK } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
+/** Only load sessions from the last 6 months for the inline expandable view */
+function sixMonthsAgo(): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 6);
+  return d.toISOString().split("T")[0];
+}
+
 export default async function ClientsPage() {
+  const cutoff = sixMonthsAgo();
+
   // All three queries are independent — run in parallel
-  const [allClients, allSessions, lowPackagesRaw] = await Promise.all([
+  const [allClients, recentSessions, lowPackagesRaw] = await Promise.all([
     db
       .select({
         id: clients.id,
@@ -50,6 +59,7 @@ export default async function ClientsPage() {
         status: sessions.status,
       })
       .from(sessions)
+      .where(gte(sessions.scheduledDate, cutoff))
       .orderBy(desc(sessions.scheduledDate))
       .all(),
     db
@@ -70,7 +80,7 @@ export default async function ClientsPage() {
   const lowPackages = lowPackagesRaw.filter((p) => p.remaining <= 2);
 
   const sessionsByClient = new Map<number, { date: string; time: string; status: string }[]>();
-  for (const s of allSessions) {
+  for (const s of recentSessions) {
     if (!sessionsByClient.has(s.clientId)) sessionsByClient.set(s.clientId, []);
     sessionsByClient.get(s.clientId)!.push({ date: s.date, time: s.time, status: s.status });
   }

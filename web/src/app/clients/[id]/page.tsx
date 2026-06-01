@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { clients, packages, sessions, outreach } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,9 @@ import { ClientPackageCard } from "./client-package-card";
 
 export const dynamic = "force-dynamic";
 
+/** Limits for per-client queries */
+const SESSION_LIMIT = 500;
+const OUTREACH_LIMIT = 200;
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Active", className: "text-amber-400" },
@@ -54,16 +57,43 @@ export default async function ClientDetailPage({
   if (!client) notFound();
 
   // These queries are all independent — run in parallel
-  const [clientPackages, clientMessages, allClientSessions, transactionHistory] = await Promise.all([
+  const [clientPackages, clientMessages, allClientSessions, transactionHistory, sessionCounts] = await Promise.all([
     db.select().from(packages).where(eq(packages.clientId, clientId)).all(),
-    db.select().from(outreach).where(eq(outreach.clientId, clientId)).orderBy(outreach.sentAt).all(),
-    db.select().from(sessions).where(eq(sessions.clientId, clientId)).all(),
+    db
+      .select()
+      .from(outreach)
+      .where(eq(outreach.clientId, clientId))
+      .orderBy(desc(outreach.sentAt))
+      .limit(OUTREACH_LIMIT)
+      .all(),
+    db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.clientId, clientId))
+      .orderBy(desc(sessions.scheduledDate))
+      .limit(SESSION_LIMIT)
+      .all(),
     getTransactionHistory(clientId, 10),
+    db
+      .select({
+        status: sessions.status,
+        count: sql<number>`count(*)`.as("count"),
+      })
+      .from(sessions)
+      .where(eq(sessions.clientId, clientId))
+      .groupBy(sessions.status)
+      .all(),
   ]);
 
-  const totalCompleted = allClientSessions.filter((s) => s.status === "completed").length;
-  const totalCancelled = allClientSessions.filter((s) => s.status === "cancelled").length;
-  const totalNoShow = allClientSessions.filter((s) => s.status === "no_show").length;
+  // Use accurate SQL counts instead of filtering limited rows
+  const countByStatus = new Map(sessionCounts.map((r) => [r.status, r.count]));
+  const totalCompleted = countByStatus.get("completed") ?? 0;
+  const totalCancelled = countByStatus.get("cancelled") ?? 0;
+  const totalNoShow = countByStatus.get("no_show") ?? 0;
+  const totalSessionCount = sessionCounts.reduce((sum, r) => sum + r.count, 0);
+
+  // Messages come back in desc order; reverse for chronological display
+  const clientMessagesChronological = [...clientMessages].reverse();
 
   const memberSince = client.createdAt
     ? new Date(client.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
@@ -154,7 +184,7 @@ export default async function ClientDetailPage({
         maxDayTimeScore={maxDayTimeScore}
         allTimeSlots={allTimeSlots}
         coreHours={coreHours}
-        totalSessions={allClientSessions.length}
+        totalSessions={totalSessionCount}
       />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -180,7 +210,7 @@ export default async function ClientDetailPage({
             <MessageHistory
               clientId={clientId}
               clientName={client.name}
-              messages={clientMessages}
+              messages={clientMessagesChronological}
             />
           </CardContent>
         </Card>
