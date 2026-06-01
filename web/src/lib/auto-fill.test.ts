@@ -7,6 +7,15 @@ vi.mock("@/db", () => {
   const selectResults: Record<string, unknown> = {};
   const insertResult = { id: 999, clientId: 1 };
 
+  const insertFn = () => ({
+    values: () => ({
+      returning: () => ({
+        get: () => insertResult,
+      }),
+      run: () => {},
+    }),
+  });
+
   return {
     db: {
       select: () => ({
@@ -22,14 +31,11 @@ vi.mock("@/db", () => {
           all: () => selectResults.clients ?? [],
         }),
       }),
-      insert: () => ({
-        values: () => ({
-          returning: () => ({
-            get: () => insertResult,
-          }),
-          run: () => {},
-        }),
-      }),
+      insert: insertFn,
+      transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+        const tx = { insert: insertFn };
+        return fn(tx);
+      },
       _setResults: (key: string, value: unknown) => {
         selectResults[key] = value;
       },

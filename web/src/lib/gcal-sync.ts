@@ -36,13 +36,19 @@ export async function syncSessionToCalendar(sessionId: number): Promise<void> {
         { attendeeEmail },
       );
       if (eventId) {
-        const fresh = await db.select({ status: sessions.status }).from(sessions).where(eq(sessions.id, sessionId)).get();
-        if (fresh && fresh.status === "cancelled") {
+        const wasCancelled = await db.transaction(async (tx) => {
+          const fresh = await tx.select({ status: sessions.status }).from(sessions).where(eq(sessions.id, sessionId)).get();
+          if (fresh && fresh.status === "cancelled") {
+            return true;
+          }
+          await tx.update(sessions).set({ gcalEventId: eventId }).where(eq(sessions.id, sessionId)).run();
+          return false;
+        });
+        if (wasCancelled) {
           await deleteCalendarEvent(eventId);
           syslog.info("system", `Session cancelled while creating event — deleted immediately`, `GCal event ${eventId} created then deleted for session ${sessionId}`, { sessionId });
           return;
         }
-        await db.update(sessions).set({ gcalEventId: eventId }).where(eq(sessions.id, sessionId)).run();
         const inviteNote = attendeeEmail ? ` (invite sent to ${attendeeEmail})` : "";
         syslog.info("system", `Added ${session.clientName}'s session to Google Calendar${inviteNote}`, `GCal event created: ${eventId} for session ${sessionId}`, { sessionId });
       } else {

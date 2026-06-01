@@ -17,6 +17,19 @@ vi.mock("@/db", () => ({
         }),
       }),
     }),
+    transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        select: (...args: unknown[]) => mockDbSelect(...args),
+        update: () => ({
+          set: () => ({
+            where: () => ({
+              run: () => {},
+            }),
+          }),
+        }),
+      };
+      return fn(tx);
+    },
   },
 }));
 
