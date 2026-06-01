@@ -72,28 +72,3 @@ export async function syncSessionToCalendar(sessionId: number): Promise<void> {
   }
 }
 
-export async function removeTestEvents(): Promise<number> {
-  const { connected } = await isConnected();
-  if (!connected) return 0;
-
-  const testSessions = await db.select({
-    id: sessions.id,
-    gcalEventId: sessions.gcalEventId,
-  })
-  .from(sessions)
-  .all();
-
-  let removed = 0;
-  for (const s of testSessions) {
-    if (s.gcalEventId) {
-      try {
-        await deleteCalendarEvent(s.gcalEventId);
-        await db.update(sessions).set({ gcalEventId: null }).where(eq(sessions.id, s.id)).run();
-        removed++;
-      } catch {
-        // Event may already be deleted
-      }
-    }
-  }
-  return removed;
-}

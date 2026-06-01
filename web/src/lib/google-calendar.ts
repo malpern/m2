@@ -70,14 +70,6 @@ export async function isConnected(): Promise<{ connected: boolean; email?: strin
   return { connected: true, email: stored.email ?? undefined };
 }
 
-export async function listCalendars() {
-  const auth = await getAuthenticatedClient();
-  if (!auth) return [];
-
-  const calendar = google.calendar({ version: "v3", auth });
-  const res = await calendar.calendarList.list();
-  return res.data.items ?? [];
-}
 
 export async function listEvents(calendarId: string, startDate: string, endDate: string) {
   const auth = await getAuthenticatedClient();
