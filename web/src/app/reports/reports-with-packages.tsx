@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ReportsDashboard } from "./reports-dashboard";
 import { PackagesTable } from "../packages/packages-table";
+import type { RevenueStats } from "@/lib/revenue";
 
 interface PackageData {
   clientId: number;
@@ -38,11 +39,13 @@ interface UnreconciledSession {
 
 export function ReportsWithPackages({
   stats,
+  revenue,
   clientPackages,
   recentTransactions,
   unreconciledSessions,
 }: {
   stats: Parameters<typeof ReportsDashboard>[0]["stats"];
+  revenue: RevenueStats;
   clientPackages: PackageData[];
   recentTransactions: TransactionData[];
   unreconciledSessions: UnreconciledSession[];
@@ -79,7 +82,7 @@ export function ReportsWithPackages({
       </div>
 
       {tab === "reports" ? (
-        <ReportsDashboard stats={stats} />
+        <ReportsDashboard stats={stats} revenue={revenue} />
       ) : (
         <PackagesTable clientPackages={clientPackages} recentTransactions={recentTransactions} unreconciled={unreconciledSessions} />
       )}
