@@ -8,6 +8,13 @@ import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventInput } from "@fullcalendar/core";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { AutoFillDialog } from "@/components/auto-fill-dialog";
 import { fetchAutoFillCandidates, type AutoFillCandidateWithBalance } from "@/app/auto-fill-actions";
 import {
@@ -91,19 +98,21 @@ function NotifyDialog({
   const [message, setMessage] = useState(change.draftMessage);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-background border border-border rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h3 className="text-lg font-bold mb-2">
-          {change.type === "move" ? "Session moved" : "Session cancelled"}
-        </h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          {change.clientName}'s session was {change.type === "move"
+    <Dialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
+      <DialogContent className="sm:max-w-md" showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>
+            {change.type === "move" ? "Session moved" : "Session cancelled"}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          {change.clientName}&apos;s session was {change.type === "move"
             ? `moved from ${change.oldDay} ${change.oldSlot} to ${change.newDay} ${change.newSlot}`
             : `cancelled (${change.oldDay} ${change.oldSlot})`
           }. This session was <strong>confirmed</strong> — do you want to notify them?
         </p>
 
-        <div className="mb-4">
+        <div>
           <label className="text-sm font-medium mb-1 block">Message</label>
           <textarea
             value={message}
@@ -113,7 +122,7 @@ function NotifyDialog({
           />
         </div>
 
-        <div className="flex gap-2 justify-end">
+        <DialogFooter>
           <Button variant="ghost" size="sm" onClick={onCancel}>
             Undo
           </Button>
@@ -123,9 +132,9 @@ function NotifyDialog({
           <Button size="sm" onClick={() => onSend(message)}>
             Send text
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
