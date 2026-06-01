@@ -8,9 +8,12 @@ import { getMonday } from "@/lib/scheduler";
 import type { ConversationMessage } from "@/lib/classify-reply";
 import { getOpenSlots, rankSlotsForClient, diversifyAcrossDays, tagOfferedSlots } from "@/lib/suggest-alternatives";
 import { composeReply } from "@/lib/classify-reply";
-import { SLOT_TIMES_MAP, formatSlotsText } from "@/lib/constants";
+import { syncSessionToCalendar } from "@/lib/gcal-sync";
+import { creditCancellation } from "@/lib/package-accounting";
+import { autoFillCancelledSlot } from "@/lib/auto-fill";
+import { SLOT_TIMES_MAP, formatSlotsText, capitalize, ESCALATION_MESSAGE, OUTREACH_HISTORY_LIMIT } from "@/lib/constants";
 
-export { SLOT_TIMES_MAP, formatSlotsText };
+export { SLOT_TIMES_MAP, formatSlotsText, capitalize, ESCALATION_MESSAGE, OUTREACH_HISTORY_LIMIT };
 
 export interface WebhookContext {
   client: Client;
@@ -98,6 +101,50 @@ export async function getGroupedSessionIds(outreachGroupId: string | null): Prom
     ))
     .all();
   return siblings.map((s) => s.sessionId).filter((id): id is number => id !== null);
+}
+
+/** Fire-and-forget calendar sync with error logging. */
+export function safeSyncCalendar(sessionId: number): void {
+  syncSessionToCalendar(sessionId).catch((e) =>
+    syslog.error("system", "Calendar sync failed", String(e), { sessionId }),
+  );
+}
+
+/** Fire-and-forget credit-back for a cancelled session with error logging. */
+export function safeCreditCancellation(sessionId: number): void {
+  creditCancellation(sessionId).catch((e) =>
+    syslog.error("system", "Credit cancellation failed", String(e), { sessionId }),
+  );
+}
+
+/** Fire-and-forget auto-fill of a cancelled slot with error logging. */
+export function safeAutoFill(date: string, slot: string, clientId: number): void {
+  autoFillCancelledSlot(date, slot, clientId).catch((e) =>
+    syslog.error("auto_fill", "Auto-fill failed after cancellation", String(e)),
+  );
+}
+
+/** Record an inbound reply in the outreach table. */
+export async function recordInboundReply(
+  clientId: number,
+  sessionId: number | null,
+  weekOf: string,
+  body: string,
+  status: string,
+  opts?: { interpretation?: string; sendError?: string },
+): Promise<{ id: number }> {
+  const row = await db.insert(outreach).values({
+    clientId,
+    sessionId,
+    weekOf,
+    direction: "received" as const,
+    messageText: body,
+    status: status as "pending" | "awaiting_reply" | "confirmed" | "needs_matt" | "expired",
+    repliedAt: new Date().toISOString(),
+    ...(opts?.interpretation ? { interpretation: opts.interpretation } : {}),
+    ...(opts?.sendError ? { sendError: opts.sendError } : {}),
+  }).returning().get();
+  return row;
 }
 
 export async function offerFreshAlternatives(

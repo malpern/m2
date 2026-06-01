@@ -1,7 +1,7 @@
 import { db } from "@/db";
-import { outreach, clients, sessions } from "@/db/schema";
+import { clients, sessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { logAndSend, type WebhookContext } from "./shared";
+import { logAndSend, recordInboundReply, type WebhookContext } from "./shared";
 import { syslog } from "@/lib/logger";
 
 export function isCalendarInviteFlow(lastSentText: string): boolean {
@@ -24,11 +24,7 @@ export async function handleCalendarInviteFlow(ctx: WebhookContext): Promise<"ha
       return "handled";
     }
     await db.update(clients).set({ email, calendarInviteOptIn: true }).where(eq(clients.id, client.id)).run();
-    await db.insert(outreach).values({
-      clientId: client.id, sessionId, weekOf,
-      direction: "received" as const, messageText: body,
-      status: "confirmed" as const, repliedAt: new Date().toISOString(),
-    }).run();
+    await recordInboundReply(client.id, sessionId, weekOf, body, "confirmed");
 
     if (lastSent?.sessionId) {
       await addAttendeeToEvent(lastSent.sessionId, email);
@@ -42,11 +38,7 @@ export async function handleCalendarInviteFlow(ctx: WebhookContext): Promise<"ha
 
   if (lowerBody === "no" || lowerBody === "nah" || lowerBody === "no thanks" || lowerBody.includes("don't") || lowerBody.includes("opt out")) {
     await db.update(clients).set({ calendarInviteOptIn: false }).where(eq(clients.id, client.id)).run();
-    await db.insert(outreach).values({
-      clientId: client.id, sessionId, weekOf,
-      direction: "received" as const, messageText: body,
-      status: "confirmed" as const, repliedAt: new Date().toISOString(),
-    }).run();
+    await recordInboundReply(client.id, sessionId, weekOf, body, "confirmed");
     await logAndSend(client.id, sessionId, weekOf, client.phone,
       "No problem! You won't get calendar invites.");
     return "handled";
@@ -55,11 +47,7 @@ export async function handleCalendarInviteFlow(ctx: WebhookContext): Promise<"ha
   if (lowerBody === "yes" || lowerBody === "yeah" || lowerBody === "sure" || lowerBody === "yep") {
     if (client.email) {
       await db.update(clients).set({ calendarInviteOptIn: true }).where(eq(clients.id, client.id)).run();
-      await db.insert(outreach).values({
-        clientId: client.id, sessionId, weekOf,
-        direction: "received" as const, messageText: body,
-        status: "confirmed" as const, repliedAt: new Date().toISOString(),
-      }).run();
+      await recordInboundReply(client.id, sessionId, weekOf, body, "confirmed");
 
       if (lastSent?.sessionId) {
         await addAttendeeToEvent(lastSent.sessionId, client.email);
@@ -70,11 +58,7 @@ export async function handleCalendarInviteFlow(ctx: WebhookContext): Promise<"ha
       return "handled";
     }
 
-    await db.insert(outreach).values({
-      clientId: client.id, sessionId, weekOf,
-      direction: "received" as const, messageText: body,
-      status: "awaiting_reply" as const, repliedAt: new Date().toISOString(),
-    }).run();
+    await recordInboundReply(client.id, sessionId, weekOf, body, "awaiting_reply");
     await logAndSend(client.id, sessionId, weekOf, client.phone,
       "What's your email address?");
     return "handled";

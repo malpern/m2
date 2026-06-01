@@ -74,6 +74,7 @@ vi.mock("@/lib/sms-handlers", () => ({
 
 vi.mock("@/lib/sms-handlers/shared", () => ({
   offerFreshAlternatives: vi.fn().mockResolvedValue(undefined),
+  recordInboundReply: vi.fn().mockResolvedValue({ id: 99 }),
 }));
 
 const mockValidateRequest = vi.fn().mockReturnValue(true);
@@ -100,7 +101,7 @@ import {
   getGroupedSessionIds,
   buildConversationHistory,
 } from "@/lib/sms-handlers";
-import { offerFreshAlternatives } from "@/lib/sms-handlers/shared";
+import { offerFreshAlternatives, recordInboundReply } from "@/lib/sms-handlers/shared";
 import { classifyReply, composeReply } from "@/lib/classify-reply";
 
 const mockFindClient = vi.mocked(findClient);
@@ -115,6 +116,7 @@ const mockHandleSingleSessionReply = vi.mocked(handleSingleSessionReply);
 const mockGetGroupedSessionIds = vi.mocked(getGroupedSessionIds);
 const mockBuildConversationHistory = vi.mocked(buildConversationHistory);
 const mockOfferFreshAlternatives = vi.mocked(offerFreshAlternatives);
+const mockRecordInboundReply = vi.mocked(recordInboundReply);
 const mockClassifyReply = vi.mocked(classifyReply);
 const mockComposeReply = vi.mocked(composeReply);
 
@@ -376,7 +378,7 @@ describe("POST /api/twilio", () => {
 
       expect(response.status).toBe(200);
       expect(await getResponseText(response)).toBe("<Response/>");
-      expect(mockDbInsert).toHaveBeenCalled();
+      expect(mockRecordInboundReply).toHaveBeenCalled();
       expect(mockComposeReply).toHaveBeenCalledWith(
         expect.objectContaining({
           scenario: { type: "late_reply" },
@@ -466,7 +468,7 @@ describe("POST /api/twilio", () => {
 
       const text = await getResponseText(response);
       expect(text).toContain("pass this along to Matt");
-      expect(mockDbInsert).toHaveBeenCalled();
+      expect(mockRecordInboundReply).toHaveBeenCalled();
     });
 
     it('returns "pass along to Matt" when lastSent is not awaiting_reply', async () => {

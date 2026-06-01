@@ -3,15 +3,17 @@ import { outreach, sessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { classifyReply, composeReply, ClassifyBillingError } from "@/lib/classify-reply";
 import { getOpenSlots, rankSlotsForClient, diversifyAcrossDays, tryBookSlot, tagOfferedSlots, whySlotUnavailable } from "@/lib/suggest-alternatives";
-import { syncSessionToCalendar } from "@/lib/gcal-sync";
 import { getInvitePrompt } from "@/lib/invite-prompt";
 import { syslog } from "@/lib/logger";
 import { getMonday } from "@/lib/scheduler";
+import { capitalize, ESCALATION_MESSAGE } from "@/lib/constants";
 import {
   logAndSend,
   formatSlotsText,
   getDayLabel,
   getGroupedSessionIds,
+  safeSyncCalendar,
+  recordInboundReply,
   type WebhookContext,
 } from "./shared";
 import { handleBalanceInquiry } from "./balance";
@@ -41,15 +43,9 @@ export async function handleSingleSessionReply(ctx: WebhookContext): Promise<voi
     result = await classifyReply(history, body);
   } catch (e) {
     const errorType = e instanceof ClassifyBillingError ? "ai_billing_exhausted" : "ai_classify_error";
-    await db.insert(outreach).values({
-      clientId: client.id, sessionId, weekOf,
-      direction: "received" as const, messageText: body,
-      status: "needs_matt" as const, repliedAt: new Date().toISOString(),
-      sendError: errorType,
-    }).run();
+    await recordInboundReply(client.id, sessionId, weekOf, body, "needs_matt", { sendError: errorType });
     syslog.error("classifier", `Couldn't understand ${firstName}'s reply — flagged for you`, `Classify failed: ${errorType}. Reply: "${body}"`, { clientId: client.id });
-    await logAndSend(client.id, sessionId, weekOf, client.phone,
-      "Let me check with Matt and get back to you.");
+    await logAndSend(client.id, sessionId, weekOf, client.phone, ESCALATION_MESSAGE);
     return;
   }
 
@@ -112,12 +108,7 @@ async function handleDeferred(ctx: WebhookContext, delayMinutes: number): Promis
   const sessionId = lastSent?.sessionId ?? null;
   const followUpAt = new Date(Date.now() + delayMinutes * 60 * 1000).toISOString();
 
-  await db.insert(outreach).values({
-    clientId: client.id, sessionId, weekOf,
-    direction: "received" as const, messageText: body,
-    interpretation: "deferred", status: "awaiting_reply" as const,
-    repliedAt: new Date().toISOString(),
-  }).run();
+  await recordInboundReply(client.id, sessionId, weekOf, body, "awaiting_reply", { interpretation: "deferred" });
 
   const delayLabel = delayMinutes >= 120 ? `${Math.round(delayMinutes / 60)} hours`
     : delayMinutes === 60 ? "an hour"
@@ -138,7 +129,7 @@ async function handleConfirmed(
 
   for (const sid of sidsToConfirm) {
     await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, sid)).run();
-    syncSessionToCalendar(sid).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: sid }));
+    safeSyncCalendar(sid);
   }
 
   if (sidsToConfirm.length > 0) {
@@ -201,7 +192,7 @@ async function handleSelectingOfferedSlot(
 
   if (matched && await tryBookSlot(lastSent.sessionId!, matched.date, matched.time, matched.slot, "confirmed")) {
     await db.update(outreach).set({ status: "confirmed" }).where(eq(outreach.id, replyRecordId)).run();
-    const dayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
+    const dayLabel = capitalize(matched.day);
     const reply = await composeReply({
       firstName, history: historyWithReply,
       scenario: { type: "confirmed", day: dayLabel, slot: matched.slot },
@@ -250,7 +241,7 @@ async function handleDeclinedOrReschedule(
     if (rejected.length > 0 && accepted.length > 0) {
       for (const s of accepted) {
         await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, s.id)).run();
-        syncSessionToCalendar(s.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: s.id }));
+        safeSyncCalendar(s.id);
       }
       await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecordId)).run();
 
@@ -261,7 +252,7 @@ async function handleDeclinedOrReschedule(
       const diverse = diversifyAcrossDays(ranked, 3);
       const altText = formatSlotsText(diverse);
 
-      const rejectedDay_ = result.extractedDay.charAt(0).toUpperCase() + result.extractedDay.slice(1);
+      const rejectedDay_ = capitalize(result.extractedDay);
       const reply = await composeReply({
         firstName, history: historyWithReply,
         scenario: { type: "not_available", requestLabel: rejectedDay_, alternatives: altText },
@@ -284,7 +275,7 @@ async function handleDeclinedOrReschedule(
 
     if (matched && await tryBookSlot(lastSent.sessionId!, matched.date, matched.time, matched.slot, "proposed")) {
       await db.update(outreach).set({ status: "awaiting_reply" }).where(eq(outreach.id, replyRecordId)).run();
-      const dayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
+      const dayLabel = capitalize(matched.day);
       const reply = await composeReply({
         firstName, history: historyWithReply,
         scenario: { type: "counter_offer", day: dayLabel, slot: matched.slot },
@@ -294,7 +285,7 @@ async function handleDeclinedOrReschedule(
       return;
     }
 
-    const requestedDay = result.extractedDay ? result.extractedDay.charAt(0).toUpperCase() + result.extractedDay.slice(1) : null;
+    const requestedDay = result.extractedDay ? capitalize(result.extractedDay) : null;
     const requestedTime = result.extractedTime ?? null;
     const requestLabel = [requestedDay, requestedTime].filter(Boolean).join(" at ");
 
@@ -337,8 +328,7 @@ async function handleAmbiguous(
   ).length;
 
   if (recentAmbiguous >= 3) {
-    const reply = "Let me check with Matt and get back to you.";
-    await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, reply);
+    await logAndSend(client.id, lastSent?.sessionId ?? null, weekOf, client.phone, ESCALATION_MESSAGE);
     syslog.warn("classifier", `${firstName} has been unclear 3+ times — escalated to Matt`, `Escalated after ${recentAmbiguous} ambiguous replies`, { clientId: client.id });
   } else {
     const reply = await composeReply({

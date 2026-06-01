@@ -4,17 +4,19 @@ import type { Session } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { classifyMultiSessionReply, composeReply, ClassifyBillingError } from "@/lib/classify-reply";
 import { getOpenSlots, rankSlotsForClient, diversifyAcrossDays, isSlotStillOpen, tryBookSlot, tagOfferedSlots } from "@/lib/suggest-alternatives";
-import { creditCancellation } from "@/lib/package-accounting";
-import { syncSessionToCalendar } from "@/lib/gcal-sync";
-import { autoFillCancelledSlot } from "@/lib/auto-fill";
 import { getInvitePrompt } from "@/lib/invite-prompt";
 import { syslog } from "@/lib/logger";
+import { capitalize, ESCALATION_MESSAGE } from "@/lib/constants";
 import {
   SLOT_TIMES_MAP,
   logAndSend,
   formatSlotsText,
   getDayLabel,
   offerFreshAlternatives,
+  safeSyncCalendar,
+  safeCreditCancellation,
+  safeAutoFill,
+  recordInboundReply,
   type WebhookContext,
 } from "./shared";
 
@@ -70,11 +72,7 @@ async function handlePartialResolution(
   }
 
   if (offeredSlots.length === 0 && parsedOfferedSlots.length > 0) {
-    await db.insert(outreach).values({
-      clientId: client.id, sessionId, weekOf,
-      direction: "received" as const, messageText: body,
-      status: "awaiting_reply" as const, repliedAt: new Date().toISOString(),
-    }).run();
+    await recordInboundReply(client.id, sessionId, weekOf, body, "awaiting_reply");
     await offerFreshAlternatives(ctx, "slot_taken", sessionId);
     return "handled";
   }
@@ -100,11 +98,7 @@ async function handlePartialResolution(
     }
 
     if (matchedSlots.length > 1) {
-      await db.insert(outreach).values({
-        clientId: client.id, sessionId, weekOf,
-        direction: "received" as const, messageText: body,
-        status: "awaiting_reply" as const, repliedAt: new Date().toISOString(),
-      }).run();
+      await recordInboundReply(client.id, sessionId, weekOf, body, "awaiting_reply");
       const reply = await composeReply({ firstName, history: historyWithReply, scenario: { type: "clarification" } });
       await logAndSend(client.id, sessionId, weekOf, client.phone, reply);
       return "handled";
@@ -121,13 +115,9 @@ async function handlePartialResolution(
         slot: picked.slot as "3pm" | "4pm" | "5pm" | "6pm" | "7pm",
         status: "confirmed",
       }).where(eq(sessions.id, sessionToMove.id)).run();
-      syncSessionToCalendar(sessionToMove.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: sessionToMove.id }));
+      safeSyncCalendar(sessionToMove.id);
 
-      await db.insert(outreach).values({
-        clientId: client.id, sessionId, weekOf,
-        direction: "received" as const, messageText: body,
-        status: "confirmed" as const, repliedAt: new Date().toISOString(),
-      }).run();
+      await recordInboundReply(client.id, sessionId, weekOf, body, "confirmed");
 
       const refreshed = await refreshGroupSessions(groupIds);
       const summaryLines = buildSessionSummary(refreshed, [origDay], pendingSessions);
@@ -158,14 +148,10 @@ async function handlePartialResolution(
   if (pendingResult && pendingResult.actions.every((a) => a.action === "confirm")) {
     for (const ps of pendingSessions) {
       await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, ps.id)).run();
-      syncSessionToCalendar(ps.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: ps.id }));
+      safeSyncCalendar(ps.id);
     }
 
-    await db.insert(outreach).values({
-      clientId: client.id, sessionId, weekOf,
-      direction: "received" as const, messageText: body,
-      status: "confirmed" as const, repliedAt: new Date().toISOString(),
-    }).run();
+    await recordInboundReply(client.id, sessionId, weekOf, body, "confirmed");
 
     const refreshed = await refreshGroupSessions(groupIds);
     const finalParts = buildFinalSummary(refreshed);
@@ -201,23 +187,13 @@ async function handleFullMultiSession(
     multiResult = await classifyMultiSessionReply(history, body, offeredSessions);
   } catch (e) {
     const errorType = e instanceof ClassifyBillingError ? "ai_billing_exhausted" : "ai_classify_error";
-    await db.insert(outreach).values({
-      clientId: client.id, sessionId, weekOf,
-      direction: "received" as const, messageText: body,
-      status: "needs_matt" as const, repliedAt: new Date().toISOString(),
-      sendError: errorType,
-    }).run();
+    await recordInboundReply(client.id, sessionId, weekOf, body, "needs_matt", { sendError: errorType });
     syslog.error("classifier", `Couldn't understand ${firstName}'s reply — flagged for you`, `Multi-session classify failed: ${errorType}. Reply: "${body}"`, { clientId: client.id });
-    await logAndSend(client.id, sessionId, weekOf, client.phone,
-      "Let me check with Matt and get back to you.");
+    await logAndSend(client.id, sessionId, weekOf, client.phone, ESCALATION_MESSAGE);
     return;
   }
 
-  await db.insert(outreach).values({
-    clientId: client.id, sessionId, weekOf,
-    direction: "received" as const, messageText: body,
-    status: "awaiting_reply" as const, repliedAt: new Date().toISOString(),
-  }).run();
+  await recordInboundReply(client.id, sessionId, weekOf, body, "awaiting_reply");
 
   const sessionOutcomes: { originalDay: string; originalSlot: string; result: string; sessionId: number }[] = [];
   const cancelledDays = new Set<string>();
@@ -239,15 +215,15 @@ async function handleFullMultiSession(
 
     if (action.action === "confirm") {
       await db.update(sessions).set({ status: "confirmed" }).where(eq(sessions.id, matchedSession.id)).run();
-      syncSessionToCalendar(matchedSession.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: matchedSession.id }));
+      safeSyncCalendar(matchedSession.id);
       sessionOutcomes.push({ originalDay: dayLabel, originalSlot: matchedSession.slot, result: `${dayLabel} at ${matchedSession.slot} — confirmed`, sessionId: matchedSession.id });
     } else if (action.action === "cancel") {
       await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, matchedSession.id)).run();
-      creditCancellation(matchedSession.id).catch((e) => syslog.error("system", "Credit cancellation failed", String(e), { sessionId: matchedSession.id }));
-      syncSessionToCalendar(matchedSession.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: matchedSession.id }));
+      safeCreditCancellation(matchedSession.id);
+      safeSyncCalendar(matchedSession.id);
       cancelledDays.add(dayLabel.toLowerCase());
       sessionOutcomes.push({ originalDay: dayLabel, originalSlot: matchedSession.slot, result: `${dayLabel} — cancelled`, sessionId: matchedSession.id });
-      autoFillCancelledSlot(matchedSession.scheduledDate, matchedSession.slot, client.id).catch((e) => syslog.error("auto_fill", "Auto-fill failed after cancellation", String(e)));
+      safeAutoFill(matchedSession.scheduledDate, matchedSession.slot, client.id);
     } else if (action.action === "reschedule") {
       rescheduleNeeded.push({ session: matchedSession, originalDay: dayLabel, requestedDay: action.requestedDay, requestedTime: action.requestedTime });
     }
@@ -268,7 +244,7 @@ async function handleFullMultiSession(
         );
 
         if (matched && await tryBookSlot(rSession.id, matched.date, matched.time, matched.slot, "proposed")) {
-          const mDayLabel = matched.day.charAt(0).toUpperCase() + matched.day.slice(1);
+          const mDayLabel = capitalize(matched.day);
           pendingParts.push(`For ${originalDay}, how about ${mDayLabel} at ${matched.slot}?`);
           offeredAlternatives.push(matched);
         } else {

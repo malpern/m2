@@ -5,6 +5,9 @@ import {
   DAY_NAMES_BY_INDEX,
   DAY_LABELS,
   GRADE_RANK,
+  ESCALATION_MESSAGE,
+  OUTREACH_HISTORY_LIMIT,
+  capitalize,
   formatSlotsText,
 } from "./constants";
 
@@ -57,5 +60,35 @@ describe("formatSlotsText", () => {
 
   it("falls back to raw day name for unknown days", () => {
     expect(formatSlotsText([{ day: "holiday", slot: "3pm" }])).toBe("holiday at 3pm");
+  });
+});
+
+describe("ESCALATION_MESSAGE", () => {
+  it("contains the expected escalation text", () => {
+    expect(ESCALATION_MESSAGE).toBe("Let me check with Matt and get back to you.");
+  });
+});
+
+describe("OUTREACH_HISTORY_LIMIT", () => {
+  it("is 50", () => {
+    expect(OUTREACH_HISTORY_LIMIT).toBe(50);
+  });
+});
+
+describe("capitalize", () => {
+  it("capitalises the first letter of a lowercase string", () => {
+    expect(capitalize("monday")).toBe("Monday");
+  });
+
+  it("leaves an already-capitalised string unchanged", () => {
+    expect(capitalize("Tuesday")).toBe("Tuesday");
+  });
+
+  it("handles single-character strings", () => {
+    expect(capitalize("a")).toBe("A");
+  });
+
+  it("handles empty string without error", () => {
+    expect(capitalize("")).toBe("");
   });
 });

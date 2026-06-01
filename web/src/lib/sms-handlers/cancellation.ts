@@ -1,12 +1,18 @@
 import { db } from "@/db";
-import { outreach, sessions } from "@/db/schema";
+import { sessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { composeReply } from "@/lib/classify-reply";
-import { creditCancellation } from "@/lib/package-accounting";
-import { syncSessionToCalendar } from "@/lib/gcal-sync";
-import { autoFillCancelledSlot } from "@/lib/auto-fill";
 import { syslog } from "@/lib/logger";
-import { logAndSend, getDayLabel, getGroupedSessionIds, type WebhookContext } from "./shared";
+import {
+  logAndSend,
+  getDayLabel,
+  getGroupedSessionIds,
+  safeSyncCalendar,
+  safeCreditCancellation,
+  safeAutoFill,
+  recordInboundReply,
+  type WebhookContext,
+} from "./shared";
 
 export async function handleCancellation(
   ctx: WebhookContext,
@@ -22,8 +28,8 @@ export async function handleCancellation(
   for (const sid of sidsToCancel) {
     const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
     await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sid)).run();
-    creditCancellation(sid).catch((e) => syslog.error("system", "Credit cancellation failed", String(e), { sessionId: sid }));
-    syncSessionToCalendar(sid).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: sid }));
+    safeCreditCancellation(sid);
+    safeSyncCalendar(sid);
     if (s) cancelledSlots.push({ date: s.scheduledDate, slot: s.slot, clientId: client.id });
   }
 
@@ -46,8 +52,7 @@ export async function handleCancellation(
   }
 
   for (const cs of cancelledSlots) {
-    autoFillCancelledSlot(cs.date, cs.slot, cs.clientId).catch((e) =>
-      syslog.error("auto_fill", "Auto-fill failed after cancellation", String(e)));
+    safeAutoFill(cs.date, cs.slot, cs.clientId);
   }
 }
 
@@ -59,19 +64,14 @@ export async function handleConfirmedSessionCancellation(
   const historyWithReply = [...history, { direction: "received" as const, text: body }];
 
   await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sessionId)).run();
-  creditCancellation(sessionId).catch((e) => syslog.error("system", "Credit cancellation failed", String(e), { sessionId }));
-  syncSessionToCalendar(sessionId).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId }));
+  safeCreditCancellation(sessionId);
+  safeSyncCalendar(sessionId);
 
   const session = await db.select().from(sessions).where(eq(sessions.id, sessionId)).get();
   const dayLabel = session ? getDayLabel(session.scheduledDate) : "your session";
   const slot = session?.slot ?? "";
 
-  await db.insert(outreach).values({
-    clientId: client.id, sessionId, weekOf,
-    direction: "received" as const, messageText: body,
-    interpretation: "cancellation", status: "expired" as const,
-    repliedAt: new Date().toISOString(),
-  }).run();
+  await recordInboundReply(client.id, sessionId, weekOf, body, "expired", { interpretation: "cancellation" });
 
   const reply = await composeReply({
     firstName,
@@ -81,7 +81,6 @@ export async function handleConfirmedSessionCancellation(
   await logAndSend(client.id, sessionId, weekOf, client.phone, reply);
 
   if (session) {
-    autoFillCancelledSlot(session.scheduledDate, session.slot, client.id).catch((e) =>
-      syslog.error("auto_fill", "Auto-fill failed after cancellation", String(e)));
+    safeAutoFill(session.scheduledDate, session.slot, client.id);
   }
 }
