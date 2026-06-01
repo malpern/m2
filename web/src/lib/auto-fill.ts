@@ -146,3 +146,23 @@ export async function autoFillCancelledSlot(
 
   return sendAutoFillOffer(cancelledDate, cancelledSlot, candidate.clientId, candidate.draftMessage);
 }
+
+export async function cascadeAutoFill(
+  expiredSessionId: number,
+): Promise<{ offered: boolean; clientName?: string }> {
+  const session = await db.select({
+    scheduledDate: sessions.scheduledDate,
+    slot: sessions.slot,
+    clientId: sessions.clientId,
+  }).from(sessions).where(eq(sessions.id, expiredSessionId)).get();
+
+  if (!session) return { offered: false };
+
+  const result = await autoFillCancelledSlot(session.scheduledDate, session.slot, session.clientId);
+
+  if (result.offered) {
+    syslog.info("auto_fill", `Cascaded ${session.slot} slot on ${session.scheduledDate} to ${result.clientName}`, `Auto-fill cascade: previous offer expired, now offered to ${result.clientName}`, { sessionId: expiredSessionId });
+  }
+
+  return result;
+}

@@ -7,6 +7,7 @@ import { composeReply, type ConversationMessage } from "@/lib/classify-reply";
 import { getOpenSlots, rankSlotsForClient, diversifyAcrossDays, tagOfferedSlots } from "@/lib/suggest-alternatives";
 import { OUTREACH_DEFAULTS } from "@/lib/outreach-config";
 import { formatSlotsText } from "@/lib/constants";
+import { cascadeAutoFill } from "@/lib/auto-fill";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -60,6 +61,15 @@ export async function POST(request: NextRequest) {
       await db.update(outreach).set({ status: "expired" }).where(eq(outreach.id, sent.id)).run();
       if (sent.sessionId) {
         await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sent.sessionId)).run();
+
+        const isAutoFill = sent.messageText.toLowerCase().includes("just opened up");
+        if (isAutoFill) {
+          const cascade = await cascadeAutoFill(sent.sessionId);
+          if (cascade.offered) {
+            results.push(`auto-fill-cascade: ${sent.clientName} → ${cascade.clientName}`);
+            continue;
+          }
+        }
       }
       results.push(`moved-on: ${sent.clientName}`);
       continue;
