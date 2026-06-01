@@ -55,7 +55,7 @@ export default async function SchedulePage({
     const { connected } = await isConnected();
     if (connected) {
       const clientNames = new Set(allClients.map((c) => c.name.toLowerCase()));
-      const events = await listEvents("f4lathletics@gmail.com", weekStart, weekEnd);
+      const events = await listEvents(process.env.GOOGLE_CALENDAR_EMAIL ?? "f4lathletics@gmail.com", weekStart, weekEnd);
       const m2SessionKeys = new Set(
         weekSessions.map((s) => `${s.scheduledDate}|${s.scheduledTime}`)
       );

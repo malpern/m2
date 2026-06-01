@@ -87,7 +87,7 @@ export async function listEvents(calendarId: string, startDate: string, endDate:
   return res.data.items ?? [];
 }
 
-const CALENDAR_ID = "primary";
+const CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID ?? "primary";
 const IS_TESTING = process.env.OUTREACH_LIVE !== "true";
 const EVENT_PREFIX = "🤖 ";
 const TEST_SUFFIX = IS_TESTING ? " — IGNORE JUST TESTING" : "";

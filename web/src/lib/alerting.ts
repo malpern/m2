@@ -4,8 +4,9 @@ import { gte, eq, and } from "drizzle-orm";
 import { sendSMS, isDevAllowed } from "./twilio";
 import { sendEmail } from "./email";
 
-const ALERT_PHONE = "+14082099509";
-const ALERT_EMAIL = "malpern@gmail.com";
+const ALERT_PHONE = process.env.ALERT_PHONE_NUMBER ?? "+14082099509";
+const ALERT_EMAIL = process.env.ALERT_EMAIL ?? "malpern@gmail.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://web-jet-mu-62.vercel.app";
 const THROTTLE_MS = 10 * 60 * 1000;
 
 let lastAlertAt = 0;
@@ -28,7 +29,7 @@ export async function checkAndAlert(mattMessage: string, technicalMessage: strin
 
   lastAlertAt = now;
 
-  const alertMsg = `🚨 M2 Alert: ${recentErrors.length} errors in the last 10 minutes.\n\nLatest: ${mattMessage}\n\nCheck logs: https://web-jet-mu-62.vercel.app/settings/logs`;
+  const alertMsg = `🚨 M2 Alert: ${recentErrors.length} errors in the last 10 minutes.\n\nLatest: ${mattMessage}\n\nCheck logs: ${APP_URL}/settings/logs`;
 
   if (!isDevAllowed(ALERT_PHONE)) {
     console.log(`[ALERT] Would send to ${ALERT_PHONE}: ${alertMsg.slice(0, 80)}`);
@@ -84,7 +85,7 @@ export async function getDailyDigest(): Promise<string> {
   ];
 
   if (errors > 0) {
-    lines.push(``, `Check logs: https://web-jet-mu-62.vercel.app/settings/logs`);
+    lines.push(``, `Check logs: ${APP_URL}/settings/logs`);
   }
 
   return lines.join("\n");

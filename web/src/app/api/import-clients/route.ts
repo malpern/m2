@@ -5,7 +5,7 @@ import { readSheet } from "@/lib/google-sheets";
 import { listEvents } from "@/lib/google-calendar";
 import { DAY_NAMES_BY_INDEX } from "@/lib/constants";
 
-const SPREADSHEET_ID = "109w4fOCcwmudr5Os2Rk20mdcxbVhGZB6BNMaM8q0GCo";
+const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID ?? "109w4fOCcwmudr5Os2Rk20mdcxbVhGZB6BNMaM8q0GCo";
 const SESSIONS_2026_TAB = "Sales & Sessions Completed 2026";
 const CLIENT_INFO_TAB = "Client Information";
 
@@ -208,7 +208,7 @@ async function getCalendarHistory(): Promise<Map<string, CalendarClientData>> {
 
     const s = cursor.toISOString().split("T")[0];
     const e = chunkEnd.toISOString().split("T")[0];
-    const events = await listEvents("f4lathletics@gmail.com", s, e);
+    const events = await listEvents(process.env.GOOGLE_CALENDAR_EMAIL ?? "f4lathletics@gmail.com", s, e);
 
     for (const ev of events) {
       if (!ev.summary || !ev.start?.dateTime) continue;
