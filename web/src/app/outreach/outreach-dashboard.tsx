@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { markConfirmed, markDeclined, overrideStatus, sendOutreachBatch, retrySend, skipClientThisWeek, unskipClientThisWeek, triggerFollowUpNow, cancelDeferral } from "./actions";
-import { fetchAutoFillCandidate } from "@/app/auto-fill-actions";
+import { fetchAutoFillCandidates, type AutoFillCandidateWithBalance } from "@/app/auto-fill-actions";
 import { AutoFillDialog } from "@/components/auto-fill-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/components/toast";
@@ -16,9 +16,7 @@ const UNDO_DELAY_MS = 5000;
 
 type AutoFillPrompt = {
   sessionId: number;
-  candidateClientId: number;
-  candidateClientName: string;
-  draftMessage: string;
+  candidates: AutoFillCandidateWithBalance[];
   slotLabel: string;
 };
 
@@ -390,14 +388,12 @@ export function OutreachDashboard({
     async (sessionId: number) => {
       const item = items.find((i) => i.sessionId === sessionId);
       if (!item) return;
-      const candidate = await fetchAutoFillCandidate(sessionId);
-      if (candidate) {
+      const candidates = await fetchAutoFillCandidates(sessionId);
+      if (candidates.length > 0) {
         const dayLabel = new Date(item.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" });
         setAutoFillPrompt({
           sessionId,
-          candidateClientId: candidate.clientId,
-          candidateClientName: candidate.clientName,
-          draftMessage: candidate.draftMessage,
+          candidates,
           slotLabel: `${dayLabel} at ${item.slot}`,
         });
       }
@@ -536,9 +532,7 @@ export function OutreachDashboard({
       {autoFillPrompt && (
         <AutoFillDialog
           sessionId={autoFillPrompt.sessionId}
-          candidateClientId={autoFillPrompt.candidateClientId}
-          candidateClientName={autoFillPrompt.candidateClientName}
-          draftMessage={autoFillPrompt.draftMessage}
+          candidates={autoFillPrompt.candidates}
           slotLabel={autoFillPrompt.slotLabel}
           onClose={() => setAutoFillPrompt(null)}
         />

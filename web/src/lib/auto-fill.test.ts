@@ -79,6 +79,7 @@ describe("auto-fill", () => {
     const mod = await import("./auto-fill");
     expect(mod.autoFillCancelledSlot).toBeDefined();
     expect(mod.getAutoFillCandidate).toBeDefined();
+    expect(mod.getAutoFillCandidates).toBeDefined();
     expect(mod.sendAutoFillOffer).toBeDefined();
     expect(mod.buildAutoFillMessage).toBeDefined();
   });
@@ -94,10 +95,70 @@ describe("buildAutoFillMessage", () => {
   });
 });
 
+describe("getAutoFillCandidates", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsDevAllowed.mockReturnValue(true);
+  });
+
+  it("returns empty array when no eligible clients", async () => {
+    setResults("sessions", []);
+    setResults("clients", []);
+    const { getAutoFillCandidates } = await import("./auto-fill");
+    const result = await getAutoFillCandidates("2026-06-03", "4pm", 99);
+    expect(result).toEqual([]);
+  });
+
+  it("returns all eligible candidates in priority order", async () => {
+    setResults("sessions", []);
+    setResults("clients", [
+      makeClient({ id: 5, name: "Alex Smith", collegeBound: false, behaviorScore: 3 }),
+      makeClient({ id: 6, name: "Jordan Lee", collegeBound: true, behaviorScore: 9 }),
+    ]);
+    const { getAutoFillCandidates } = await import("./auto-fill");
+    const result = await getAutoFillCandidates("2026-06-03", "4pm", 99);
+    expect(result).toHaveLength(2);
+    expect(result[0].clientName).toBe("Jordan Lee");
+    expect(result[1].clientName).toBe("Alex Smith");
+    expect(result[0].draftMessage).toContain("Hey Jordan");
+    expect(result[1].draftMessage).toContain("Hey Alex");
+  });
+
+  it("excludes dev-guarded clients", async () => {
+    mockIsDevAllowed.mockImplementation((phone: string) => phone !== "+10000000000");
+    setResults("sessions", []);
+    setResults("clients", [
+      makeClient({ id: 5, name: "Alex Smith", phone: "+14082099509" }),
+      makeClient({ id: 6, name: "Blocked Bob", phone: "+10000000000" }),
+    ]);
+    const { getAutoFillCandidates } = await import("./auto-fill");
+    const result = await getAutoFillCandidates("2026-06-03", "4pm", 99);
+    expect(result).toHaveLength(1);
+    expect(result[0].clientName).toBe("Alex Smith");
+  });
+
+  it("excludes the cancelled client", async () => {
+    setResults("sessions", []);
+    setResults("clients", [makeClient({ id: 10 })]);
+    const { getAutoFillCandidates } = await import("./auto-fill");
+    const result = await getAutoFillCandidates("2026-06-03", "4pm", 10);
+    expect(result).toEqual([]);
+  });
+});
+
 describe("getAutoFillCandidate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsDevAllowed.mockReturnValue(true);
+  });
+
+  it("returns the top candidate from getAutoFillCandidates", async () => {
+    setResults("sessions", []);
+    setResults("clients", [makeClient({ id: 5, name: "Alex Smith" })]);
+    const { getAutoFillCandidate } = await import("./auto-fill");
+    const result = await getAutoFillCandidate("2026-06-03", "4pm", 99);
+    expect(result).not.toBeNull();
+    expect(result!.clientId).toBe(5);
   });
 
   it("returns null when no eligible clients", async () => {
@@ -105,35 +166,6 @@ describe("getAutoFillCandidate", () => {
     setResults("clients", []);
     const { getAutoFillCandidate } = await import("./auto-fill");
     const result = await getAutoFillCandidate("2026-06-03", "4pm", 99);
-    expect(result).toBeNull();
-  });
-
-  it("returns top priority candidate with draft message", async () => {
-    setResults("sessions", []);
-    setResults("clients", [makeClient({ id: 5, name: "Alex Smith" })]);
-    const { getAutoFillCandidate } = await import("./auto-fill");
-    const result = await getAutoFillCandidate("2026-06-03", "4pm", 99);
-    expect(result).not.toBeNull();
-    expect(result!.clientId).toBe(5);
-    expect(result!.clientName).toBe("Alex Smith");
-    expect(result!.draftMessage).toContain("Hey Alex");
-    expect(result!.draftMessage).toContain("4pm");
-  });
-
-  it("returns null when dev guard blocks", async () => {
-    mockIsDevAllowed.mockReturnValue(false);
-    setResults("sessions", []);
-    setResults("clients", [makeClient()]);
-    const { getAutoFillCandidate } = await import("./auto-fill");
-    const result = await getAutoFillCandidate("2026-06-03", "4pm", 99);
-    expect(result).toBeNull();
-  });
-
-  it("excludes the cancelled client", async () => {
-    setResults("sessions", []);
-    setResults("clients", [makeClient({ id: 10 })]);
-    const { getAutoFillCandidate } = await import("./auto-fill");
-    const result = await getAutoFillCandidate("2026-06-03", "4pm", 10);
     expect(result).toBeNull();
   });
 });

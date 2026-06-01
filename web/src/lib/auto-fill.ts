@@ -24,11 +24,11 @@ export type AutoFillCandidate = {
   draftMessage: string;
 };
 
-export async function getAutoFillCandidate(
+export async function getAutoFillCandidates(
   cancelledDate: string,
   cancelledSlot: string,
   cancelledClientId: number,
-): Promise<AutoFillCandidate | null> {
+): Promise<AutoFillCandidate[]> {
   const monday = getMonday().toISOString().split("T")[0];
   const sunday = new Date(new Date(monday + "T12:00:00Z").getTime() + 6 * 86400000)
     .toISOString().split("T")[0];
@@ -52,19 +52,27 @@ export async function getAutoFillCandidate(
     !bookedClientIds.has(c.id)
   );
 
-  if (eligible.length === 0) return null;
+  if (eligible.length === 0) return [];
 
   const sorted = sortByPriority(eligible);
-  const topClient = sorted[0];
 
-  if (!isDevAllowed(topClient.phone)) return null;
+  return sorted
+    .filter((c) => isDevAllowed(c.phone))
+    .map((c) => ({
+      clientId: c.id,
+      clientName: c.name,
+      phone: c.phone,
+      draftMessage: buildAutoFillMessage(c.name, cancelledDate, cancelledSlot),
+    }));
+}
 
-  return {
-    clientId: topClient.id,
-    clientName: topClient.name,
-    phone: topClient.phone,
-    draftMessage: buildAutoFillMessage(topClient.name, cancelledDate, cancelledSlot),
-  };
+export async function getAutoFillCandidate(
+  cancelledDate: string,
+  cancelledSlot: string,
+  cancelledClientId: number,
+): Promise<AutoFillCandidate | null> {
+  const candidates = await getAutoFillCandidates(cancelledDate, cancelledSlot, cancelledClientId);
+  return candidates[0] ?? null;
 }
 
 export async function sendAutoFillOffer(

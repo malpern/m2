@@ -3,19 +3,41 @@
 import { db } from "@/db";
 import { sessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { getAutoFillCandidate, sendAutoFillOffer, type AutoFillCandidate } from "@/lib/auto-fill";
+import { getAutoFillCandidates, sendAutoFillOffer, buildAutoFillMessage } from "@/lib/auto-fill";
+import { getPackageBalance } from "@/lib/package-accounting";
 import { revalidatePath } from "next/cache";
 
-export async function fetchAutoFillCandidate(sessionId: number): Promise<AutoFillCandidate | null> {
+export type AutoFillCandidateWithBalance = {
+  clientId: number;
+  clientName: string;
+  draftMessage: string;
+  packageBalance: { remaining: number; total: number } | null;
+};
+
+export async function fetchAutoFillCandidates(sessionId: number): Promise<AutoFillCandidateWithBalance[]> {
   const session = await db.select({
     scheduledDate: sessions.scheduledDate,
     slot: sessions.slot,
     clientId: sessions.clientId,
   }).from(sessions).where(eq(sessions.id, sessionId)).get();
 
-  if (!session) return null;
+  if (!session) return [];
 
-  return getAutoFillCandidate(session.scheduledDate, session.slot, session.clientId);
+  const candidates = await getAutoFillCandidates(session.scheduledDate, session.slot, session.clientId);
+
+  const withBalances = await Promise.all(
+    candidates.map(async (c) => {
+      const balance = await getPackageBalance(c.clientId);
+      return {
+        clientId: c.clientId,
+        clientName: c.clientName,
+        draftMessage: c.draftMessage,
+        packageBalance: balance ? { remaining: balance.remaining, total: balance.total } : null,
+      };
+    })
+  );
+
+  return withBalances;
 }
 
 export async function confirmAutoFillOffer(
