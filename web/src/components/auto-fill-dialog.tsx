@@ -2,6 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { confirmAutoFillOffer, type AutoFillCandidateWithBalance } from "@/app/auto-fill-actions";
 import { useToast } from "@/components/toast";
 
@@ -55,14 +62,16 @@ export function AutoFillDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-background border border-border rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-        <h3 className="text-lg font-bold mb-2">Offer this slot?</h3>
-        <p className="text-sm text-muted-foreground mb-4">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Offer this slot?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
           {slotLabel} just opened up. Who should get it?
         </p>
 
-        <div className="mb-3">
+        <div>
           <label className="text-sm font-medium mb-1 block">Client</label>
           <select
             value={selectedIndex}
@@ -77,7 +86,7 @@ export function AutoFillDialog({
           </select>
         </div>
 
-        <div className="flex items-center gap-2 mb-4 text-xs">
+        <div className="flex items-center gap-2 text-xs">
           <span className={balanceColor(selected.packageBalance)}>
             {balanceLabel(selected.packageBalance)}
           </span>
@@ -86,7 +95,7 @@ export function AutoFillDialog({
           )}
         </div>
 
-        <div className="mb-4">
+        <div>
           <label className="text-sm font-medium mb-1 block">Message</label>
           <textarea
             value={message}
@@ -96,15 +105,15 @@ export function AutoFillDialog({
           />
         </div>
 
-        <div className="flex gap-2 justify-end">
+        <DialogFooter>
           <Button variant="ghost" size="sm" onClick={onClose} disabled={isPending}>
             Skip
           </Button>
           <Button size="sm" onClick={handleSend} disabled={isPending}>
             {isPending ? "Sending..." : "Send offer"}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

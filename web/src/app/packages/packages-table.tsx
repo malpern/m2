@@ -14,6 +14,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/empty-state";
 
 export type PackageRow = {
@@ -43,11 +50,12 @@ function InlineAdjustForm({ clientId, clientName, onClose }: { clientId: number;
   const toast = useToast();
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-200" role="dialog" aria-label="Adjust package" onClick={onClose}>
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200" />
-      <div className="relative bg-background border border-border rounded-xl p-5 w-full max-w-sm mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-sm font-semibold mb-3">Adjust {clientName}&rsquo;s package</h3>
-        <div className="flex gap-2 mb-3">
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Adjust {clientName}&rsquo;s package</DialogTitle>
+        </DialogHeader>
+        <div className="flex gap-2">
           <input
             type="number"
             placeholder="+2 or -1"
@@ -66,7 +74,7 @@ function InlineAdjustForm({ clientId, clientName, onClose }: { clientId: number;
             className="h-9 flex-1 rounded-md border border-border bg-muted/50 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
-        <div className="flex justify-end gap-2">
+        <DialogFooter>
           <Button size="sm" variant="ghost" onClick={onClose} disabled={isPending}>Cancel</Button>
           <Button
             size="sm"
@@ -82,9 +90,9 @@ function InlineAdjustForm({ clientId, clientName, onClose }: { clientId: number;
           >
             {isPending ? "Saving..." : "Save"}
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
