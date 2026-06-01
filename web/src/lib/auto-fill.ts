@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { clients, sessions, outreach } from "@/db/schema";
-import { eq, and, gte, lte, ne } from "drizzle-orm";
+import { eq, and, gte, lte, ne, like } from "drizzle-orm";
 import { sortByPriority, isSchedulable } from "./priority";
 import { sendSMS, isDevAllowed } from "./twilio";
 import { syslog } from "./logger";
@@ -45,11 +45,24 @@ export async function getAutoFillCandidates(
 
   const bookedClientIds = new Set(weekSessions.map((s) => s.clientId));
 
+  const autoFillOffersSentThisWeek = await db
+    .select({ clientId: outreach.clientId })
+    .from(outreach)
+    .where(and(
+      eq(outreach.weekOf, monday),
+      eq(outreach.direction, "sent"),
+      like(outreach.messageText, "%just opened up%"),
+    ))
+    .all();
+
+  const alreadyOfferedIds = new Set(autoFillOffersSentThisWeek.map((o) => o.clientId));
+
   const allClients = await db.select().from(clients).all();
   const eligible = allClients.filter((c) =>
     isSchedulable(c) &&
     c.id !== cancelledClientId &&
-    !bookedClientIds.has(c.id)
+    !bookedClientIds.has(c.id) &&
+    !alreadyOfferedIds.has(c.id)
   );
 
   if (eligible.length === 0) return [];

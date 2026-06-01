@@ -10,10 +10,11 @@ vi.mock("@/db", () => {
   return {
     db: {
       select: () => ({
-        from: (table: { clientId?: string }) => ({
+        from: (table: { _table?: string }) => ({
           where: () => ({
             all: () => {
-              if (table.clientId) return selectResults.sessions ?? [];
+              if (table._table === "sessions") return selectResults.sessions ?? [];
+              if (table._table === "outreach") return selectResults.outreach ?? [];
               return selectResults.clients ?? [];
             },
             get: () => selectResults.singleClient ?? null,
@@ -37,9 +38,9 @@ vi.mock("@/db", () => {
 });
 
 vi.mock("@/db/schema", () => ({
-  clients: {},
-  sessions: { clientId: "client_id", scheduledDate: "scheduled_date", status: "status" },
-  outreach: { clientId: "client_id" },
+  clients: { _table: "clients" },
+  sessions: { _table: "sessions", clientId: "client_id", scheduledDate: "scheduled_date", status: "status" },
+  outreach: { _table: "outreach", clientId: "client_id", weekOf: "week_of", direction: "direction", messageText: "message_text" },
 }));
 
 vi.mock("@/lib/twilio", () => ({
@@ -99,6 +100,7 @@ describe("getAutoFillCandidates", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsDevAllowed.mockReturnValue(true);
+    setResults("outreach", []);
   });
 
   it("returns empty array when no eligible clients", async () => {
@@ -144,12 +146,38 @@ describe("getAutoFillCandidates", () => {
     const result = await getAutoFillCandidates("2026-06-03", "4pm", 10);
     expect(result).toEqual([]);
   });
+
+  it("excludes clients already offered an auto-fill this week", async () => {
+    setResults("sessions", []);
+    setResults("outreach", [{ clientId: 5 }]);
+    setResults("clients", [
+      makeClient({ id: 5, name: "Already Offered" }),
+      makeClient({ id: 6, name: "Fresh Client", collegeBound: false, behaviorScore: 3 }),
+    ]);
+    const { getAutoFillCandidates } = await import("./auto-fill");
+    const result = await getAutoFillCandidates("2026-06-03", "4pm", 99);
+    expect(result).toHaveLength(1);
+    expect(result[0].clientName).toBe("Fresh Client");
+  });
+
+  it("returns all candidates when no prior auto-fill offers exist", async () => {
+    setResults("sessions", []);
+    setResults("outreach", []);
+    setResults("clients", [
+      makeClient({ id: 5, name: "Alex Smith" }),
+      makeClient({ id: 6, name: "Jordan Lee", collegeBound: false, behaviorScore: 3 }),
+    ]);
+    const { getAutoFillCandidates } = await import("./auto-fill");
+    const result = await getAutoFillCandidates("2026-06-03", "4pm", 99);
+    expect(result).toHaveLength(2);
+  });
 });
 
 describe("getAutoFillCandidate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsDevAllowed.mockReturnValue(true);
+    setResults("outreach", []);
   });
 
   it("returns the top candidate from getAutoFillCandidates", async () => {
@@ -205,6 +233,7 @@ describe("autoFillCancelledSlot (integration)", () => {
     vi.clearAllMocks();
     mockIsDevAllowed.mockReturnValue(true);
     mockSendSMS.mockResolvedValue("SM123");
+    setResults("outreach", []);
   });
 
   it("composes getAutoFillCandidate + sendAutoFillOffer", async () => {
