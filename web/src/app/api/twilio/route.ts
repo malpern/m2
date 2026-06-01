@@ -77,8 +77,15 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
     return twiml();
   }
 
+  // Cache findClient so we only query once per request
+  let cachedClient: Awaited<ReturnType<typeof findClient>> | undefined;
+  const getClient = async () => {
+    if (cachedClient === undefined) cachedClient = await findClient(from);
+    return cachedClient;
+  };
+
   if (lower === "stop invites" || lower === "stop calendar invites" || lower === "no more invites") {
-    const inviteClient = await findClient(from);
+    const inviteClient = await getClient();
     if (inviteClient) {
       await db.update(clients).set({ calendarInviteOptIn: false }).where(eq(clients.id, inviteClient.id)).run();
       return twiml("Got it — no more calendar invites. You'll still get scheduling texts.");
@@ -90,11 +97,11 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
     return twiml(`M2 Performance & Therapy — session scheduling texts. Reply STOP to opt out. Contact: ${process.env.BUSINESS_CONTACT_PHONE ?? "(408) 599-1777"}`);
   }
 
-  if (lower === "start" || lower === "subscribe" || (lower === "yes" && !await findClient(from))) {
+  if (lower === "start" || lower === "subscribe" || (lower === "yes" && !await getClient())) {
     return twiml("M2 Performance: You're signed up for session scheduling texts. For help, reply HELP. To opt out, reply STOP. Msg & data rates may apply.");
   }
 
-  const client = await findClient(from);
+  const client = await getClient();
 
   if (!client) {
     return twiml(`This number is for M2 Performance scheduling. If you're a client, contact Matt at ${process.env.BUSINESS_CONTACT_PHONE ?? "(408) 599-1777"} to get set up.`);

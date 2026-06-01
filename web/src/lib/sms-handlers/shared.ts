@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { outreach, clients, sessions } from "@/db/schema";
 import type { Client, Outreach, Session } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { sendSMS } from "@/lib/twilio";
 import { syslog } from "@/lib/logger";
 import { getMonday } from "@/lib/scheduler";
@@ -71,12 +71,21 @@ export async function logAndSend(clientId: number, sessionId: number | null, wee
 
 export async function findClient(phone: string) {
   const normalized = phone.replace(/^whatsapp:/i, "").replace(/\s/g, "");
-  const digits = normalized.replace(/\D/g, "");
-  const allClients = await db.select().from(clients).all();
-  return allClients.find((c) => {
-    const clientDigits = c.phone.replace(/\D/g, "");
-    return clientDigits.slice(-10) === digits.slice(-10);
-  }) ?? null;
+  const last10 = normalized.replace(/\D/g, "").slice(-10);
+  if (last10.length < 10) return null;
+
+  // Use SQL to match the last 10 digits server-side instead of loading all clients.
+  // Strip common formatting chars (+, -, spaces, parens) from the stored phone before comparing.
+  const result = await db
+    .select()
+    .from(clients)
+    .where(
+      sql`SUBSTR(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(${clients.phone}, '-', ''), ' ', ''), '(', ''), ')', ''), '+', ''), -10) = ${last10}`
+    )
+    .limit(1)
+    .all();
+
+  return result[0] ?? null;
 }
 
 export async function getGroupedSessionIds(outreachGroupId: string | null): Promise<number[] | null> {
