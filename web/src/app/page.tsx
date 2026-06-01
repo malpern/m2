@@ -1,13 +1,13 @@
 import { db } from "@/db";
 import { clients, packages, sessions, outreach, defaultAvailability } from "@/db/schema";
 import { eq, sql, and, gte, lte } from "drizzle-orm";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { WeeklyPlanner } from "@/components/weekly-planner";
-import { SessionList } from "@/components/session-list";
 import { OutreachMini } from "@/components/outreach-mini";
 import { PackageAlerts } from "@/components/package-alerts";
-import Link from "next/link";
+import { StatCard } from "@/components/stat-card";
+import { UrgentBanner } from "@/components/urgent-banner";
+import { DashboardSessionCard } from "@/components/dashboard-session-card";
+import { WeeklyRecap } from "@/components/weekly-recap";
 import { getMonday } from "@/lib/scheduler";
 import {
   buildOutreachQueue,
@@ -110,12 +110,6 @@ export default async function DashboardPage() {
   };
 
   // Smart banner — one urgent action
-  const bannerColors: Record<string, { border: string; borderHover: string; dot: string }> = {
-    purple: { border: "border-purple-500/30", borderHover: "hover:border-purple-500/50", dot: "bg-purple-500" },
-    emerald: { border: "border-emerald-500/30", borderHover: "hover:border-emerald-500/50", dot: "bg-emerald-500" },
-    blue: { border: "border-blue-500/30", borderHover: "hover:border-blue-500/50", dot: "bg-blue-500" },
-    red: { border: "border-red-500/30", borderHover: "hover:border-red-500/50", dot: "bg-red-500" },
-  };
   let urgentBanner: { message: string; href: string; color: string } | null = null;
   if (flaggedItems.length > 0) {
     urgentBanner = { message: `${flaggedItems.length} repl${flaggedItems.length === 1 ? "y needs" : "ies need"} your attention`, href: "/outreach", color: "purple" };
@@ -144,22 +138,7 @@ export default async function DashboardPage() {
         <p className="text-muted-foreground text-sm mt-1">{dayLabel}</p>
       </div>
 
-      {/* Urgent action banner */}
-      {urgentBanner && (
-        <Link href={urgentBanner.href}>
-          <Card className={`mb-4 ${bannerColors[urgentBanner.color].border} ${bannerColors[urgentBanner.color].borderHover} transition-colors cursor-pointer`}>
-            <CardContent className="pt-4 pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full ${bannerColors[urgentBanner.color].dot} animate-pulse`} />
-                  <span className="text-sm font-medium">{urgentBanner.message}</span>
-                </div>
-                <span className="text-xs text-muted-foreground">&rarr;</span>
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-      )}
+      {urgentBanner && <UrgentBanner banner={urgentBanner} />}
 
       {/* Planner — show on weekends */}
       {isWeekend && <WeeklyPlanner state={plannerState} />}
@@ -196,79 +175,12 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {/* Sessions — always show something */}
-      {sessionListData ? (
-        <Card className="mb-4">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm">{sessionListData.label}</CardTitle>
-              <Link href="/schedule" className="text-xs text-accent hover:underline">Full schedule &rarr;</Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <SessionList sessions={sessionListData.sessions} />
-            {sessionListData.showTomorrow && tomorrowSessions.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-border">
-                <div className="text-xs text-muted-foreground mb-2">Tomorrow</div>
-                {tomorrowSessions.sort((a, b) => a.time.localeCompare(b.time)).slice(0, 4).map((s) => (
-                  <div key={s.id} className="flex items-center gap-3 py-1 text-sm text-muted-foreground">
-                    <span className="w-10 font-mono text-xs">{s.slot}</span>
-                    <Link href={`/clients/${s.clientId}`} className="hover:underline">{s.clientName}</Link>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="mb-4">
-          <CardContent className="pt-6 pb-6 text-center">
-            <p className="text-sm text-muted-foreground mb-3">No sessions scheduled</p>
-            <Link href="/schedule" className="text-sm text-accent hover:underline">Go to Schedule &rarr;</Link>
-          </CardContent>
-        </Card>
-      )}
+      <DashboardSessionCard sessionListData={sessionListData} tomorrowSessions={tomorrowSessions} />
 
       {/* Package alerts — always if any */}
       <PackageAlerts items={lowPackages} />
 
-      {/* Weekly recap — show end of week if sessions completed */}
-      {completed + cancelled + noShow > 3 && (
-        <Card className="mt-4">
-          <CardContent className="pt-5 pb-4">
-            <div className="text-xs text-muted-foreground mb-2">This week</div>
-            <div className="flex items-center gap-6 text-sm">
-              <span><strong>{completed}</strong> completed</span>
-              {cancelled > 0 && <span className="text-red-400">{cancelled} cancelled</span>}
-              {noShow > 0 && <span className="text-amber-400">{noShow} no-show</span>}
-              <span className="text-emerald-400">{completed + cancelled + noShow > 0 ? Math.round((completed / (completed + cancelled + noShow)) * 100) : 0}% show-up</span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <WeeklyRecap completed={completed} cancelled={cancelled} noShow={noShow} />
     </div>
-  );
-}
-
-function StatCard({ label, count, href, color, suffix }: { label: string; count: number; href: string; color: string; suffix?: string }) {
-  const colors: Record<string, { bg: string; text: string; iconBg: string }> = {
-    purple: { bg: "from-purple-500/10", text: "", iconBg: "bg-purple-500/15" },
-    blue: { bg: "from-blue-500/10", text: "text-blue-400", iconBg: "bg-blue-500/15" },
-    amber: { bg: "from-amber-500/10", text: "text-amber-400", iconBg: "bg-amber-500/15" },
-    red: { bg: "from-red-500/10", text: "text-red-400", iconBg: "bg-red-500/15" },
-    emerald: { bg: "from-emerald-500/10", text: "text-emerald-400", iconBg: "bg-emerald-500/15" },
-  };
-  const c = colors[color] ?? colors.blue;
-
-  return (
-    <Link href={href}>
-      <Card className="group relative overflow-hidden hover:border-foreground/20 transition-colors cursor-pointer h-full">
-        <div className={`absolute inset-0 bg-gradient-to-br ${c.bg} to-transparent`} />
-        <CardContent className="relative pt-4 pb-3 text-center">
-          <div className={`text-2xl font-bold ${c.text}`}>{count}{suffix ?? ""}</div>
-          <div className="text-xs text-muted-foreground">{label}</div>
-        </CardContent>
-      </Card>
-    </Link>
   );
 }
