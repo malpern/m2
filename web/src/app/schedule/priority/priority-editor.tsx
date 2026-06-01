@@ -40,7 +40,7 @@ function ImportanceBar({ value, onChange, color }: { value: number; onChange: (v
   return (
     <div className="flex gap-1.5">
       {Array.from({ length: 5 }, (_, i) => (
-        <button key={i} onClick={() => onChange(i + 1)} className={`w-8 h-8 rounded-lg transition-all ${i < value ? `${color} shadow-sm` : "bg-muted hover:bg-muted/80"}`} />
+        <button key={i} onClick={() => onChange(i + 1)} aria-label={`Set importance to ${i + 1} of 5`} className={`w-8 h-8 rounded-lg transition-all ${i < value ? `${color} shadow-sm` : "bg-muted hover:bg-muted/80"}`} />
       ))}
     </div>
   );
@@ -92,6 +92,7 @@ function SortableClientRow({
               onClick={(e) => { e.stopPropagation(); onUnpin(); }}
               className="text-[10px] text-amber-400/70 hover:text-amber-400 transition-colors"
               title="Remove manual ranking"
+              aria-label="Unpin manual ranking"
             >
               pinned ✕
             </button>

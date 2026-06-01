@@ -123,6 +123,7 @@ function InlineGradeSelect({ clientId, value }: { clientId: number; value: strin
         startTransition(() => updateClientField(clientId, "gradeLevel", e.target.value));
       }}
       className={`bg-transparent border-0 outline-none cursor-pointer text-xs appearance-none pr-4 transition-colors ${isPending ? "opacity-50" : ""} ${local ? "text-blue-400 font-medium" : "text-muted-foreground/50"}`}
+      aria-label="Grade level"
       style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='6' height='6' viewBox='0 0 8 8' fill='%234b5563' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 2.5L4 5.5L7 2.5' stroke='%234b5563' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right center" }}
     >
       {GRADE_OPTIONS.map((o) => (
@@ -143,6 +144,7 @@ function InlineCollegeToggle({ clientId, value }: { clientId: number; value: boo
         startTransition(() => updateClientField(clientId, "collegeBound", next));
       }}
       className={`cursor-pointer transition-colors ${isPending ? "opacity-50" : ""}`}
+      aria-label={local ? "College bound: yes, click to toggle" : "College bound: no, click to toggle"}
     >
       {local ? (
         <Badge variant="default" className="bg-purple-500/15 text-purple-400 border-0 hover:bg-purple-500/25">Yes</Badge>
@@ -593,6 +595,7 @@ export function ClientTable({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoFocus
+            aria-label="Search clients"
             className="h-8 w-full sm:w-52 rounded-md border border-border bg-muted/50 pl-8 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring focus:bg-background transition-colors"
           />
         </div>

@@ -51,8 +51,10 @@ export function ReportsWithPackages({
 
   return (
     <div>
-      <div className="flex gap-1 mb-6 border-b border-border">
+      <div className="flex gap-1 mb-6 border-b border-border" role="tablist" aria-label="View">
         <button
+          role="tab"
+          aria-selected={tab === "reports"}
           onClick={() => setTab("reports")}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
             tab === "reports"
@@ -63,6 +65,8 @@ export function ReportsWithPackages({
           Reports
         </button>
         <button
+          role="tab"
+          aria-selected={tab === "packages"}
           onClick={() => setTab("packages")}
           className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
             tab === "packages"

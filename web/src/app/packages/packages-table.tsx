@@ -43,7 +43,7 @@ function InlineAdjustForm({ clientId, clientName, onClose }: { clientId: number;
   const toast = useToast();
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-200" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center animate-in fade-in duration-200" role="dialog" aria-label="Adjust package" onClick={onClose}>
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200" />
       <div className="relative bg-background border border-border rounded-xl p-5 w-full max-w-sm mx-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-semibold mb-3">Adjust {clientName}&rsquo;s package</h3>
@@ -53,6 +53,7 @@ function InlineAdjustForm({ clientId, clientName, onClose }: { clientId: number;
             placeholder="+2 or -1"
             value={delta}
             onChange={(e) => setDelta(e.target.value)}
+            aria-label="Session adjustment amount"
             className="h-9 w-24 rounded-md border border-border bg-muted/50 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             autoFocus
           />
@@ -61,6 +62,7 @@ function InlineAdjustForm({ clientId, clientName, onClose }: { clientId: number;
             placeholder="Reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
+            aria-label="Adjustment reason"
             className="h-9 flex-1 rounded-md border border-border bg-muted/50 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>

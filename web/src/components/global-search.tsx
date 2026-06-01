@@ -125,7 +125,7 @@ export function GlobalSearch() {
   const hasResults = items.length > 0;
 
   return (
-    <div className="fixed inset-0 z-[200]" onClick={() => setOpen(false)}>
+    <div className="fixed inset-0 z-[200]" role="dialog" aria-label="Search" onClick={() => setOpen(false)}>
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
       <div className="fixed inset-x-0 top-[15vh] mx-auto max-w-lg px-4" onClick={(e) => e.stopPropagation()}>
         <div className="rounded-xl border border-border bg-background shadow-2xl overflow-hidden">
@@ -140,6 +140,7 @@ export function GlobalSearch() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
+              aria-label="Search clients, sessions, and messages"
               className="flex-1 py-3 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
             />
             <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-border bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">

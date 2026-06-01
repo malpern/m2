@@ -75,8 +75,10 @@ export function OutreachWithMessages({
   return (
     <div>
       <div className="flex items-center justify-between mb-6 border-b border-border">
-        <div className="flex gap-1">
+        <div className="flex gap-1" role="tablist" aria-label="View">
           <button
+            role="tab"
+            aria-selected={tab === "outreach"}
             onClick={() => setTab("outreach")}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
               tab === "outreach"
@@ -87,6 +89,8 @@ export function OutreachWithMessages({
             Outreach
           </button>
           <button
+            role="tab"
+            aria-selected={tab === "messages"}
             onClick={() => setTab("messages")}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
               tab === "messages"
@@ -101,6 +105,7 @@ export function OutreachWithMessages({
           onClick={doRefresh}
           className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors pb-2"
           title="Click to refresh now"
+          aria-label="Refresh data"
         >
           <RefreshCw className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} />
           <span>Updated {formatSecondsAgo(secondsAgo)}</span>

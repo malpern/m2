@@ -36,6 +36,7 @@ function NumberStepper({
       <button
         onClick={() => onChange(Math.max(min, value - 1))}
         className="w-8 h-8 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-bold transition-colors"
+        aria-label="Decrease value"
       >
         −
       </button>
@@ -43,6 +44,7 @@ function NumberStepper({
       <button
         onClick={() => onChange(Math.min(max, value + 1))}
         className="w-8 h-8 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-bold transition-colors"
+        aria-label="Increase value"
       >
         +
       </button>
@@ -94,6 +96,7 @@ export function SettingsEditor() {
               <select
                 value={settings.outreachDay}
                 onChange={(e) => update("outreachDay", e.target.value)}
+                aria-label="Outreach day"
                 className="h-9 rounded-md border border-border bg-background px-3 text-sm"
               >
                 {DAYS.map((d) => (
@@ -104,6 +107,7 @@ export function SettingsEditor() {
               <select
                 value={settings.outreachHour}
                 onChange={(e) => update("outreachHour", parseInt(e.target.value))}
+                aria-label="Outreach hour"
                 className="h-9 rounded-md border border-border bg-background px-3 text-sm"
               >
                 {HOURS.map((h) => (
