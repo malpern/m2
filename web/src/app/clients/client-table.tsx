@@ -31,6 +31,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { updateClientOrder, clearAllSortOrders, updateClientField } from "./actions";
 import { EmptyState } from "@/components/empty-state";
+import { SearchInput } from "@/components/search-input";
 import type { Client } from "@/db/schema";
 import { GRADE_RANK } from "@/lib/constants";
 
@@ -578,27 +579,13 @@ export function ClientTable({
             {isPending && <span className="ml-2 text-blue-400">Saving...</span>}
           </p>
         </div>
-        <div className="relative">
-          <svg
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            autoFocus
-            aria-label="Search clients"
-            className="h-8 w-full sm:w-52 rounded-md border border-border bg-muted/50 pl-8 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring focus:bg-background transition-colors"
-          />
-        </div>
+        <SearchInput
+          placeholder="Search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          autoFocus
+          aria-label="Search clients"
+        />
       </div>
 
       {/* Mobile card view */}

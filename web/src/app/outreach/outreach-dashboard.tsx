@@ -9,6 +9,8 @@ import { markConfirmed, markDeclined, overrideStatus, sendOutreachBatch, retrySe
 import { fetchAutoFillCandidates, type AutoFillCandidateWithBalance } from "@/app/auto-fill-actions";
 import { AutoFillDialog } from "@/components/auto-fill-dialog";
 import { EmptyState } from "@/components/empty-state";
+import { SearchInput } from "@/components/search-input";
+import { StatCard } from "@/components/stat-card";
 import { useToast } from "@/components/toast";
 import type { OutreachItem } from "@/lib/outreach-engine";
 
@@ -591,31 +593,13 @@ export function OutreachDashboard({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="relative">
-            <svg
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-              />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              autoFocus
-              aria-label="Search outreach by client name"
-              className="h-8 w-full sm:w-52 rounded-md border border-border bg-muted/50 pl-8 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring focus:bg-background transition-colors"
-            />
-          </div>
+          <SearchInput
+            placeholder="Search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+            aria-label="Search outreach by client name"
+          />
           {nextBatch.length > 0 && (
             <Button
               onClick={() =>
@@ -656,77 +640,12 @@ export function OutreachDashboard({
 
       {/* Summary cards */}
       <div className={`grid grid-cols-2 ${summary.failed > 0 ? "sm:grid-cols-5" : "sm:grid-cols-4"} gap-3 mb-8`}>
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent" />
-          <CardContent className="relative pt-5 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/15 flex items-center justify-center">
-                <svg className="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-emerald-400">{summary.confirmed}</div>
-                <div className="text-xs text-muted-foreground">Confirmed</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-transparent" />
-          <CardContent className="relative pt-5 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center">
-                <svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-amber-400">{summary.sent}</div>
-                <div className="text-xs text-muted-foreground">Waiting</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent" />
-          <CardContent className="relative pt-5 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-500/15 flex items-center justify-center">
-                <svg className="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-purple-400">{summary.needsAttention}</div>
-                <div className="text-xs text-muted-foreground">Needs You</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
-          <CardContent className="relative pt-5 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/15 flex items-center justify-center">
-                <svg className="w-5 h-5 text-blue-400" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{summary.pending}</div>
-                <div className="text-xs text-muted-foreground">Queued</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard label="Confirmed" count={summary.confirmed} color="emerald" icon={<svg className="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>} />
+        <StatCard label="Waiting" count={summary.sent} color="amber" icon={<svg className="w-5 h-5 text-amber-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>} />
+        <StatCard label="Needs You" count={summary.needsAttention} color="purple" icon={<svg className="w-5 h-5 text-purple-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>} />
+        <StatCard label="Queued" count={summary.pending} color="blue" icon={<svg className="w-5 h-5 text-blue-400" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>} />
         {summary.failed > 0 && (
-          <Card className="relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent" />
-            <CardContent className="relative pt-5 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-red-500/15 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-red-400">{summary.failed}</div>
-                  <div className="text-xs text-muted-foreground">Failed</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard label="Failed" count={summary.failed} color="red" icon={<svg className="w-5 h-5 text-red-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>} />
         )}
       </div>
 
