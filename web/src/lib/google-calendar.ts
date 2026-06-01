@@ -39,8 +39,8 @@ export async function handleCallback(code: string) {
     const oauth2Api = google.oauth2({ version: "v2", auth: oauth2 });
     const userInfo = await oauth2Api.userinfo.get();
     email = userInfo.data.email ?? null;
-  } catch {
-    // Email lookup failed, continue without it
+  } catch (e) {
+    console.warn("Google OAuth email lookup failed, continuing without it:", e instanceof Error ? e.message : String(e));
   }
 
   // Store in DB (upsert)
@@ -158,7 +158,8 @@ export async function deleteCalendarEvent(eventId: string): Promise<boolean> {
   try {
     await calendar.events.delete({ calendarId: CALENDAR_ID, eventId });
     return true;
-  } catch {
+  } catch (e) {
+    console.error("Failed to delete Google Calendar event:", eventId, e instanceof Error ? e.message : String(e));
     return false;
   }
 }

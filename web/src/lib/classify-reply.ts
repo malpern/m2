@@ -301,7 +301,8 @@ export async function composeReply(ctx: ComposeContext): Promise<string> {
 
     const text = response.content[0].type === "text" ? response.content[0].text : "";
     return text.replace(/^["']|["']$/g, "").trim();
-  } catch {
+  } catch (e) {
+    console.error("composeReply API/parse error, using fallback:", e);
     return fallbackMessage(ctx);
   }
 }

@@ -46,7 +46,9 @@ export const syslog = {
   error: (category: Category, matt: string, technical: string, opts?: Partial<LogEntry>) => {
     const promise = log({ severity: "error", category, matt, technical, ...opts });
     promise.then(() => {
-      import("./alerting").then(({ checkAndAlert }) => checkAndAlert(matt, technical)).catch(() => {});
+      import("./alerting").then(({ checkAndAlert }) => checkAndAlert(matt, technical)).catch((e) =>
+        console.error("Failed to run alerting check:", e instanceof Error ? e.message : String(e))
+      );
     });
     return promise;
   },

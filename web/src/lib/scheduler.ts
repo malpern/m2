@@ -39,7 +39,8 @@ function parsePreferredDays(client: Client): DayOfWeek[] {
   if (!client.preferredDays) return DAYS_OF_WEEK.filter((d) => d !== "sunday");
   try {
     return JSON.parse(client.preferredDays) as DayOfWeek[];
-  } catch {
+  } catch (e) {
+    console.warn(`Failed to parse preferredDays for client ${client.id}:`, e instanceof Error ? e.message : String(e));
     return DAYS_OF_WEEK.filter((d) => d !== "sunday");
   }
 }
