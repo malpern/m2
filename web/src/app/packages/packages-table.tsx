@@ -15,6 +15,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/empty-state";
+import { SearchInput } from "@/components/search-input";
+import { StatCard } from "@/components/stat-card";
 
 export type PackageRow = {
   clientId: number;
@@ -231,76 +233,34 @@ export function PackagesTable({
             )}
           </p>
         </div>
-        <div className="relative">
-          <svg
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-            />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            autoFocus
-            className="h-8 w-full sm:w-52 rounded-md border border-border bg-muted/50 pl-8 pr-3 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring focus:bg-background transition-colors"
-          />
-        </div>
+        <SearchInput
+          placeholder="Search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          autoFocus
+        />
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent" />
-          <CardContent className="relative pt-5 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/15 flex items-center justify-center">
-                <svg className="w-5 h-5 text-blue-400" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{clientPackages.length}</div>
-                <div className="text-xs text-muted-foreground">Active Packages</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden">
-          <div className={`absolute inset-0 bg-gradient-to-br ${lowPackages.length > 0 ? "from-amber-500/10" : "from-emerald-500/10"} to-transparent`} />
-          <CardContent className="relative pt-5 pb-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${lowPackages.length > 0 ? "bg-amber-500/15" : "bg-emerald-500/15"}`}>
-                <svg className={`w-5 h-5 ${lowPackages.length > 0 ? "text-amber-400" : "text-emerald-400"}`} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-              </div>
-              <div>
-                <div className={`text-2xl font-bold ${lowPackages.length > 0 ? "text-amber-400" : "text-emerald-400"}`}>{lowPackages.length}</div>
-                <div className="text-xs text-muted-foreground">Running Low</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="relative overflow-hidden">
-          <div className={`absolute inset-0 bg-gradient-to-br ${totalUnreconciled > 0 ? "from-red-500/10" : "from-emerald-500/10"} to-transparent`} />
-          <CardContent className="relative pt-5 pb-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${totalUnreconciled > 0 ? "bg-red-500/15" : "bg-emerald-500/15"}`}>
-                <svg className={`w-5 h-5 ${totalUnreconciled > 0 ? "text-red-400" : "text-emerald-400"}`} viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
-              </div>
-              <div>
-                <div className={`text-2xl font-bold ${totalUnreconciled > 0 ? "text-red-400" : "text-emerald-400"}`}>{totalUnreconciled}</div>
-                <div className="text-xs text-muted-foreground">Unreconciled</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          label="Active Packages"
+          count={clientPackages.length}
+          color="blue"
+          icon={<svg className="w-5 h-5 text-blue-400" viewBox="0 0 24 24" fill="currentColor"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>}
+        />
+        <StatCard
+          label="Running Low"
+          count={lowPackages.length}
+          color={lowPackages.length > 0 ? "amber" : "emerald"}
+          icon={<svg className={`w-5 h-5 ${lowPackages.length > 0 ? "text-amber-400" : "text-emerald-400"}`} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>}
+        />
+        <StatCard
+          label="Unreconciled"
+          count={totalUnreconciled}
+          color={totalUnreconciled > 0 ? "red" : "emerald"}
+          icon={<svg className={`w-5 h-5 ${totalUnreconciled > 0 ? "text-red-400" : "text-emerald-400"}`} viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>}
+        />
       </div>
 
       {/* Package alerts */}
