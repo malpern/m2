@@ -6,11 +6,11 @@ import { buildOutreachQueue, getNextWaveToSend } from "@/lib/outreach-engine";
 import { sendSMS, isDevAllowed } from "@/lib/twilio";
 import { syslog } from "@/lib/logger";
 import { isVacationWeek } from "@/lib/vacation-detect";
+import { isCronAuthorized } from "@/lib/cron-auth";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return new Response("Unauthorized", { status: 401 });
   }
 
