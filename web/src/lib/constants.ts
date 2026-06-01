@@ -60,8 +60,23 @@ export const GRADE_RANK: Record<string, number> = {
 };
 
 // ---------------------------------------------------------------------------
+// SMS handler constants
+// ---------------------------------------------------------------------------
+
+/** Default message sent when the bot can’t handle a reply and escalates to Matt. */
+export const ESCALATION_MESSAGE = "Let me check with Matt and get back to you.";
+
+/** How many recent outreach rows to fetch for conversation context. */
+export const OUTREACH_HISTORY_LIMIT = 50;
+
+// ---------------------------------------------------------------------------
 // Formatting helpers
 // ---------------------------------------------------------------------------
+
+/** Capitalise the first letter of a string. */
+export function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
 /** Human-readable slot list, e.g. "Monday at 3pm, Wednesday at 5pm". */
 export function formatSlotsText(slots: { day: string; slot: string }[]): string {

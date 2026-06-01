@@ -1,8 +1,6 @@
-import { db } from "@/db";
-import { outreach } from "@/db/schema";
 import { getPackageBalance } from "@/lib/package-accounting";
 import { syslog } from "@/lib/logger";
-import { logAndSend, type WebhookContext } from "./shared";
+import { logAndSend, recordInboundReply, type WebhookContext } from "./shared";
 
 const BALANCE_KEYWORDS = [
   "how many sessions", "sessions left", "sessions remaining",
@@ -18,12 +16,7 @@ export async function handleBalanceInquiry(ctx: WebhookContext): Promise<void> {
   const { client, body, weekOf, firstName } = ctx;
 
   const balance = await getPackageBalance(client.id);
-  await db.insert(outreach).values({
-    clientId: client.id, sessionId: null, weekOf,
-    direction: "received" as const, messageText: body,
-    interpretation: "account_inquiry", status: "confirmed" as const,
-    repliedAt: new Date().toISOString(),
-  }).run();
+  await recordInboundReply(client.id, null, weekOf, body, "confirmed", { interpretation: "account_inquiry" });
 
   let reply: string;
   if (!balance) {

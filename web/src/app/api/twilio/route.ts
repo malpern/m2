@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 import { classifyReply, composeReply, ClassifyBillingError } from "@/lib/classify-reply";
 import { getMonday } from "@/lib/scheduler";
 import { syslog } from "@/lib/logger";
+import { OUTREACH_HISTORY_LIMIT } from "@/lib/constants";
 import twilio from "twilio";
 import {
   findClient,
@@ -20,7 +21,7 @@ import {
   handleSingleSessionReply,
   type WebhookContext,
 } from "@/lib/sms-handlers";
-import { offerFreshAlternatives } from "@/lib/sms-handlers/shared";
+import { offerFreshAlternatives, recordInboundReply } from "@/lib/sms-handlers/shared";
 
 function escapeXml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -112,7 +113,7 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
     .from(outreach)
     .where(eq(outreach.clientId, client.id))
     .orderBy(desc(outreach.id))
-    .limit(50)
+    .limit(OUTREACH_HISTORY_LIMIT)
     .all();
 
   const lastSent = recentOutreach
@@ -133,11 +134,7 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
 
   // Late reply — outreach is from a previous week
   if (lastSent && lastSent.weekOf !== weekOf) {
-    await db.insert(outreach).values({
-      clientId: client.id, sessionId: null, weekOf,
-      direction: "received" as const, messageText: body,
-      status: "needs_matt" as const, repliedAt: new Date().toISOString(),
-    }).run();
+    await recordInboundReply(client.id, null, weekOf, body, "needs_matt");
     const reply = await composeReply({
       firstName,
       history: [...history, { direction: "received" as const, text: body }],
@@ -155,12 +152,7 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
         result = await classifyReply(history, body);
       } catch (e) {
         if (e instanceof ClassifyBillingError) {
-          await db.insert(outreach).values({
-            clientId: client.id, sessionId: lastSent.sessionId, weekOf,
-            direction: "received" as const, messageText: body,
-            status: "needs_matt" as const, repliedAt: new Date().toISOString(),
-            sendError: "ai_billing_exhausted",
-          }).run();
+          await recordInboundReply(client.id, lastSent.sessionId, weekOf, body, "needs_matt", { sendError: "ai_billing_exhausted" });
           return twiml();
         }
         throw e;
@@ -171,31 +163,19 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
         return twiml();
       }
 
-      await db.insert(outreach).values({
-        clientId: client.id, sessionId: lastSent.sessionId, weekOf,
-        direction: "received" as const, messageText: body,
-        status: "needs_matt" as const, repliedAt: new Date().toISOString(),
-      }).run();
+      await recordInboundReply(client.id, lastSent.sessionId, weekOf, body, "needs_matt");
       return twiml("Hey! I'll pass this along to Matt and he'll get back to you.");
     }
 
     // Expired/moved-on — re-engage with fresh options
-    await db.insert(outreach).values({
-      clientId: client.id, sessionId: lastSent.sessionId, weekOf,
-      direction: "received" as const, messageText: body,
-      status: "awaiting_reply" as const, repliedAt: new Date().toISOString(),
-    }).run();
+    await recordInboundReply(client.id, lastSent.sessionId, weekOf, body, "awaiting_reply");
     await offerFreshAlternatives(ctx, "re_engage", lastSent.sessionId);
     return twiml();
   }
 
   // No active outreach
   if (!lastSent || lastSent.status !== "awaiting_reply") {
-    await db.insert(outreach).values({
-      clientId: client.id, sessionId: null, weekOf,
-      direction: "received" as const, messageText: body,
-      status: "needs_matt" as const, repliedAt: new Date().toISOString(),
-    }).run();
+    await recordInboundReply(client.id, null, weekOf, body, "needs_matt");
     return twiml("Hey! I'll pass this along to Matt and he'll get back to you.");
   }
 
