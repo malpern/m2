@@ -72,7 +72,7 @@ export function FeedbackSection({ initialItems }: { initialItems: FeedbackItem[]
     <div>
       <h2 className="text-lg font-bold mb-2">Feedback</h2>
       <p className="text-sm text-muted-foreground mb-6">
-        Hey Matt — if something's broken, confusing, or you have an idea for how this could work better, drop it here. Micah will see it right away and track it until it's fixed. You can paste screenshots too.
+        Hey Matt — if something&apos;s broken, confusing, or you have an idea for how this could work better, drop it here. Micah will see it right away and track it until it&apos;s fixed. You can paste screenshots too.
       </p>
 
       <Card className="mb-6">

@@ -22,7 +22,7 @@ export function GoogleCalendarCard({
           <div className="text-xs text-emerald-400 mb-2 font-medium">Google Calendar connected successfully! Reload to see the status.</div>
         )}
         {status === "error" && (
-          <div className="text-xs text-red-400 mb-2 font-medium">Connection failed. Make sure you're signed in as a test user and try again.</div>
+          <div className="text-xs text-red-400 mb-2 font-medium">Connection failed. Make sure you&apos;re signed in as a test user and try again.</div>
         )}
         <div className="flex items-center justify-between">
           <div>

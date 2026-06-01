@@ -141,7 +141,9 @@ export async function recordInboundReply(
     messageText: body,
     status: status as "pending" | "awaiting_reply" | "confirmed" | "needs_matt" | "expired",
     repliedAt: new Date().toISOString(),
-    ...(opts?.interpretation ? { interpretation: opts.interpretation } : {}),
+    ...(opts?.interpretation
+      ? { interpretation: opts.interpretation as NonNullable<(typeof outreach.$inferInsert)["interpretation"]> }
+      : {}),
     ...(opts?.sendError ? { sendError: opts.sendError } : {}),
   }).returning().get();
   return row;

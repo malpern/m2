@@ -112,7 +112,7 @@ export async function getOpenSlots(
 
   const bookedKeys = new Set(weekSessions.map((s) => `${s.date}|${s.time}`));
 
-  let gcalKeys = new Set<string>();
+  const gcalKeys = new Set<string>();
   try {
     const { connected } = await isConnected();
     if (connected) {

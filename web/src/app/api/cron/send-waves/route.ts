@@ -82,16 +82,7 @@ export async function POST(request: NextRequest) {
   }
 
   const results: string[] = [];
-  const allOutreachRows: Array<{
-    clientId: number;
-    sessionId: number;
-    weekOf: string;
-    direction: string;
-    messageText: string;
-    status: string;
-    sentAt: string;
-    outreachGroupId: string | null;
-  }> = [];
+  const allOutreachRows: (typeof outreach.$inferInsert)[] = [];
   const smsJobs: Array<{
     clientId: number;
     clientName: string;

@@ -27,6 +27,16 @@ export interface FeedbackItem {
   url: string;
 }
 
+// Shape of the subset of the GitHub Issues API response we consume.
+interface GitHubIssue {
+  number: number;
+  title: string;
+  body?: string | null;
+  state: string;
+  created_at: string;
+  html_url: string;
+}
+
 export async function submitFeedback(title: string, body: string): Promise<FeedbackItem> {
   const res = await ghFetch("/issues", {
     method: "POST",
@@ -58,12 +68,12 @@ export async function getFeedbackItems(): Promise<FeedbackItem[]> {
   const res = await ghFetch("/issues?labels=feedback&state=all&sort=created&direction=desc&per_page=50");
   if (!res.ok) return [];
 
-  const issues = await res.json();
-  return issues.map((issue: any) => ({
+  const issues: GitHubIssue[] = await res.json();
+  return issues.map((issue) => ({
     number: issue.number,
     title: issue.title.replace(/^\[Feedback\]\s*/, ""),
     body: issue.body?.replace(/\*\*User Feedback\*\*\n\n/, "").replace(/\n\n---\n_Submitted from M2 Scheduler app_/, "") ?? "",
-    state: issue.state,
+    state: issue.state as "open" | "closed",
     createdAt: issue.created_at,
     url: issue.html_url,
   }));

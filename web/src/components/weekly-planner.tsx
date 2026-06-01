@@ -1,11 +1,57 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 
 const DISMISS_KEY = "weekly-planner-dismissed";
 const DISMISS_WEEK_KEY = "weekly-planner-dismissed-week";
+const DISMISS_EVENT = "weekly-planner-dismiss-change";
+
+// Hydration-safe "are we on the client yet" flag without setState-in-effect:
+// returns false during SSR, true after hydration.
+const noopSubscribe = () => () => {};
+function useMounted(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+}
+
+function readDismissed(weekLabel: string): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    localStorage.getItem(DISMISS_KEY) === "true" &&
+    localStorage.getItem(DISMISS_WEEK_KEY) === weekLabel
+  );
+}
+
+// Dismissal is persisted in localStorage, scoped to the current week. Reading it
+// through useSyncExternalStore keeps it hydration-safe and avoids resetting state
+// from inside an effect.
+function useDismissed(weekLabel: string): [boolean, () => void] {
+  const dismissed = useSyncExternalStore(
+    (cb) => {
+      window.addEventListener(DISMISS_EVENT, cb);
+      window.addEventListener("storage", cb);
+      return () => {
+        window.removeEventListener(DISMISS_EVENT, cb);
+        window.removeEventListener("storage", cb);
+      };
+    },
+    () => readDismissed(weekLabel),
+    () => false,
+  );
+
+  const dismiss = useCallback(() => {
+    localStorage.setItem(DISMISS_KEY, "true");
+    localStorage.setItem(DISMISS_WEEK_KEY, weekLabel);
+    window.dispatchEvent(new Event(DISMISS_EVENT));
+  }, [weekLabel]);
+
+  return [dismissed, dismiss];
+}
 
 interface PlannerState {
   hasAvailability: boolean;
@@ -74,20 +120,8 @@ function CalendarIcon({ className }: { className?: string }) {
 const stepIcons = [ClockIcon, SparkleIcon, PaperAirplaneIcon, CheckIcon];
 
 export function WeeklyPlanner({ state }: { state: PlannerState }) {
-  const [dismissed, setDismissed] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const savedWeek = localStorage.getItem(DISMISS_WEEK_KEY);
-    const wasDismissed = localStorage.getItem(DISMISS_KEY) === "true";
-    if (wasDismissed && savedWeek === state.weekLabel) {
-      setDismissed(true);
-    } else if (wasDismissed && savedWeek !== state.weekLabel) {
-      localStorage.removeItem(DISMISS_KEY);
-      localStorage.removeItem(DISMISS_WEEK_KEY);
-    }
-  }, [state.weekLabel]);
+  const mounted = useMounted();
+  const [dismissed, dismiss] = useDismissed(state.weekLabel);
 
   const bookedCount = state.confirmedCount;
   const totalToBook = state.totalClients;
@@ -135,9 +169,7 @@ export function WeeklyPlanner({ state }: { state: PlannerState }) {
   if (dismissed) return null;
 
   function handleDismiss() {
-    setDismissed(true);
-    localStorage.setItem(DISMISS_KEY, "true");
-    localStorage.setItem(DISMISS_WEEK_KEY, state.weekLabel);
+    dismiss();
   }
 
   return (
