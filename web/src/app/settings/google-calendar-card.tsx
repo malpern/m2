@@ -38,7 +38,7 @@ export function GoogleCalendarCard({
             <div className="text-xs text-muted-foreground mt-0.5">
               {connected
                 ? `Signed in as ${email ?? "Google account"}. Reading Matt's training calendar.`
-                : "Connect to read Matt's f4lathletics calendar and sync sessions."}
+                : "Connect to read Matt's training calendar and sync sessions."}
             </div>
           </div>
           {connected ? (

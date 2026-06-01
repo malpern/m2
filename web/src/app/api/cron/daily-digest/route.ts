@@ -3,8 +3,8 @@ import { getDailyDigest } from "@/lib/alerting";
 import { sendSMS, isDevAllowed } from "@/lib/twilio";
 import { sendEmail } from "@/lib/email";
 
-const ALERT_PHONE = "+14082099509";
-const ALERT_EMAIL = "malpern@gmail.com";
+const ALERT_PHONE = process.env.ALERT_PHONE_NUMBER ?? "+14082099509";
+const ALERT_EMAIL = process.env.ALERT_EMAIL ?? "malpern@gmail.com";
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get("authorization");

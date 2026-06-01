@@ -116,7 +116,7 @@ export async function getOpenSlots(
   try {
     const { connected } = await isConnected();
     if (connected) {
-      const events = await listEvents("f4lathletics@gmail.com", monday, sunday);
+      const events = await listEvents(process.env.GOOGLE_CALENDAR_EMAIL ?? "f4lathletics@gmail.com", monday, sunday);
       for (const ev of events) {
         if (!ev.start?.dateTime) continue;
         const date = ev.start.dateTime.slice(0, 10);
