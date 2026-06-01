@@ -8,6 +8,8 @@ import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventInput } from "@fullcalendar/core";
 import { Button } from "@/components/ui/button";
+import { AutoFillDialog } from "@/components/auto-fill-dialog";
+import { fetchAutoFillCandidate } from "@/app/auto-fill-actions";
 import {
   generateSchedule,
   updateSessionTime,
@@ -149,6 +151,13 @@ export function ScheduleCalendar({
   const [isPending, startTransition] = useTransition();
   const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
   const [revertInfo, setRevertInfo] = useState<(() => void) | null>(null);
+  const [autoFillPrompt, setAutoFillPrompt] = useState<{
+    sessionId: number;
+    candidateClientId: number;
+    candidateClientName: string;
+    draftMessage: string;
+    slotLabel: string;
+  } | null>(null);
   const isMobile = useIsMobile();
 
   const prevDate = new Date(weekStart + "T12:00:00");
@@ -248,21 +257,48 @@ export function ScheduleCalendar({
         });
       } else {
         if (confirm(`Cancel ${session.clientName}'s proposed ${day} ${slot} session?`)) {
-          startTransition(() => {
-            cancelSession(sessionId);
+          startTransition(async () => {
+            await cancelSession(sessionId);
+            const candidate = await fetchAutoFillCandidate(sessionId);
+            if (candidate) {
+              setAutoFillPrompt({
+                sessionId,
+                candidateClientId: candidate.clientId,
+                candidateClientName: candidate.clientName,
+                draftMessage: candidate.draftMessage,
+                slotLabel: `${day} at ${slot}`,
+              });
+            }
           });
         }
       }
     }
   };
 
+  const checkAutoFill = async (sessionId: number, session: SessionEvent) => {
+    const candidate = await fetchAutoFillCandidate(sessionId);
+    if (candidate) {
+      const day = formatDay(session.scheduledDate);
+      const slot = formatSlot(session.scheduledTime);
+      setAutoFillPrompt({
+        sessionId,
+        candidateClientId: candidate.clientId,
+        candidateClientName: candidate.clientName,
+        draftMessage: candidate.draftMessage,
+        slotLabel: `${day} at ${slot}`,
+      });
+    }
+  };
+
   const handleNotifySend = (message: string) => {
     if (!pendingChange) return;
-    startTransition(() => {
+    const session = sessions.find((s) => s.id === pendingChange.sessionId);
+    startTransition(async () => {
       if (pendingChange.type === "move" && pendingChange.newDate && pendingChange.newTime) {
         updateSessionTime(pendingChange.sessionId, pendingChange.newDate, pendingChange.newTime);
       } else {
-        cancelSession(pendingChange.sessionId);
+        await cancelSession(pendingChange.sessionId);
+        if (session) await checkAutoFill(pendingChange.sessionId, session);
       }
       queueNotification(pendingChange.sessionId, message);
     });
@@ -272,11 +308,13 @@ export function ScheduleCalendar({
 
   const handleNotifySkip = () => {
     if (!pendingChange) return;
-    startTransition(() => {
+    const session = sessions.find((s) => s.id === pendingChange.sessionId);
+    startTransition(async () => {
       if (pendingChange.type === "move" && pendingChange.newDate && pendingChange.newTime) {
         updateSessionTime(pendingChange.sessionId, pendingChange.newDate, pendingChange.newTime);
       } else {
-        cancelSession(pendingChange.sessionId);
+        await cancelSession(pendingChange.sessionId);
+        if (session) await checkAutoFill(pendingChange.sessionId, session);
       }
     });
     setPendingChange(null);
@@ -311,6 +349,17 @@ export function ScheduleCalendar({
           onSend={handleNotifySend}
           onSkip={handleNotifySkip}
           onCancel={handleNotifyCancel}
+        />
+      )}
+
+      {autoFillPrompt && (
+        <AutoFillDialog
+          sessionId={autoFillPrompt.sessionId}
+          candidateClientId={autoFillPrompt.candidateClientId}
+          candidateClientName={autoFillPrompt.candidateClientName}
+          draftMessage={autoFillPrompt.draftMessage}
+          slotLabel={autoFillPrompt.slotLabel}
+          onClose={() => setAutoFillPrompt(null)}
         />
       )}
 

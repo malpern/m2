@@ -6,13 +6,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { markConfirmed, markDeclined, overrideStatus, sendOutreachBatch, retrySend, skipClientThisWeek, unskipClientThisWeek, triggerFollowUpNow, cancelDeferral } from "./actions";
+import { fetchAutoFillCandidate } from "@/app/auto-fill-actions";
+import { AutoFillDialog } from "@/components/auto-fill-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { useToast } from "@/components/toast";
 import type { OutreachItem } from "@/lib/outreach-engine";
 
 const UNDO_DELAY_MS = 5000;
 
-function useUndoableDecline() {
+type AutoFillPrompt = {
+  sessionId: number;
+  candidateClientId: number;
+  candidateClientName: string;
+  draftMessage: string;
+  slotLabel: string;
+};
+
+function useUndoableDecline(onDeclined?: (sessionId: number) => void) {
   const toast = useToast();
   const [pendingDeclines, setPendingDeclines] = useState<Set<number>>(new Set());
   const timersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
@@ -29,6 +39,7 @@ function useUndoableDecline() {
           next.delete(sessionId);
           return next;
         });
+        onDeclined?.(sessionId);
       }, UNDO_DELAY_MS);
 
       timersRef.current.set(sessionId, timer);
@@ -53,7 +64,7 @@ function useUndoableDecline() {
         },
       });
     },
-    [toast]
+    [toast, onDeclined]
   );
 
   return { decline, pendingDeclines };
@@ -372,8 +383,29 @@ export function OutreachDashboard({
 }) {
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState("");
+  const [autoFillPrompt, setAutoFillPrompt] = useState<AutoFillPrompt | null>(null);
   const toast = useToast();
-  const { decline, pendingDeclines } = useUndoableDecline();
+
+  const handleDeclined = useCallback(
+    async (sessionId: number) => {
+      const item = items.find((i) => i.sessionId === sessionId);
+      if (!item) return;
+      const candidate = await fetchAutoFillCandidate(sessionId);
+      if (candidate) {
+        const dayLabel = new Date(item.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "long" });
+        setAutoFillPrompt({
+          sessionId,
+          candidateClientId: candidate.clientId,
+          candidateClientName: candidate.clientName,
+          draftMessage: candidate.draftMessage,
+          slotLabel: `${dayLabel} at ${item.slot}`,
+        });
+      }
+    },
+    [items]
+  );
+
+  const { decline, pendingDeclines } = useUndoableDecline(handleDeclined);
 
   const handleSkip = useCallback(
     (clientId: number) => {
@@ -501,6 +533,17 @@ export function OutreachDashboard({
 
   return (
     <div>
+      {autoFillPrompt && (
+        <AutoFillDialog
+          sessionId={autoFillPrompt.sessionId}
+          candidateClientId={autoFillPrompt.candidateClientId}
+          candidateClientName={autoFillPrompt.candidateClientName}
+          draftMessage={autoFillPrompt.draftMessage}
+          slotLabel={autoFillPrompt.slotLabel}
+          onClose={() => setAutoFillPrompt(null)}
+        />
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Outreach</h1>
