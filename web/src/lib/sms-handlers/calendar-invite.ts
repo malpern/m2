@@ -89,6 +89,8 @@ async function addAttendeeToEvent(sessionId: number, email: string): Promise<voi
     try {
       const { updateCalendarEventAttendee } = await import("@/lib/google-calendar");
       await updateCalendarEventAttendee(session.gcalEventId, email);
-    } catch { /* will get it next time */ }
+    } catch (e) {
+      syslog.warn("system", "Failed to add attendee to calendar event", `updateCalendarEventAttendee failed for session ${sessionId}: ${e instanceof Error ? e.message : String(e)}`, { sessionId });
+    }
   }
 }

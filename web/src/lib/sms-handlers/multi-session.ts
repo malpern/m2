@@ -243,7 +243,7 @@ async function handleFullMultiSession(
       sessionOutcomes.push({ originalDay: dayLabel, originalSlot: matchedSession.slot, result: `${dayLabel} at ${matchedSession.slot} — confirmed`, sessionId: matchedSession.id });
     } else if (action.action === "cancel") {
       await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, matchedSession.id)).run();
-      creditCancellation(matchedSession.id).catch(() => {});
+      creditCancellation(matchedSession.id).catch((e) => syslog.error("system", "Credit cancellation failed", String(e), { sessionId: matchedSession.id }));
       syncSessionToCalendar(matchedSession.id).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: matchedSession.id }));
       cancelledDays.add(dayLabel.toLowerCase());
       sessionOutcomes.push({ originalDay: dayLabel, originalSlot: matchedSession.slot, result: `${dayLabel} — cancelled`, sessionId: matchedSession.id });

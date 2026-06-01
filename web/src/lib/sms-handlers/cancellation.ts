@@ -22,7 +22,7 @@ export async function handleCancellation(
   for (const sid of sidsToCancel) {
     const s = await db.select().from(sessions).where(eq(sessions.id, sid)).get();
     await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sid)).run();
-    creditCancellation(sid).catch(() => {});
+    creditCancellation(sid).catch((e) => syslog.error("system", "Credit cancellation failed", String(e), { sessionId: sid }));
     syncSessionToCalendar(sid).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId: sid }));
     if (s) cancelledSlots.push({ date: s.scheduledDate, slot: s.slot, clientId: client.id });
   }
@@ -59,7 +59,7 @@ export async function handleConfirmedSessionCancellation(
   const historyWithReply = [...history, { direction: "received" as const, text: body }];
 
   await db.update(sessions).set({ status: "cancelled" }).where(eq(sessions.id, sessionId)).run();
-  creditCancellation(sessionId).catch(() => {});
+  creditCancellation(sessionId).catch((e) => syslog.error("system", "Credit cancellation failed", String(e), { sessionId }));
   syncSessionToCalendar(sessionId).catch((e) => syslog.error("system", "Calendar sync failed", String(e), { sessionId }));
 
   const session = await db.select().from(sessions).where(eq(sessions.id, sessionId)).get();
