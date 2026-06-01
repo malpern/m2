@@ -102,6 +102,12 @@ export default async function DashboardPage() {
   };
 
   // Smart banner — one urgent action
+  const bannerColors: Record<string, { border: string; borderHover: string; dot: string }> = {
+    purple: { border: "border-purple-500/30", borderHover: "hover:border-purple-500/50", dot: "bg-purple-500" },
+    emerald: { border: "border-emerald-500/30", borderHover: "hover:border-emerald-500/50", dot: "bg-emerald-500" },
+    blue: { border: "border-blue-500/30", borderHover: "hover:border-blue-500/50", dot: "bg-blue-500" },
+    red: { border: "border-red-500/30", borderHover: "hover:border-red-500/50", dot: "bg-red-500" },
+  };
   let urgentBanner: { message: string; href: string; color: string } | null = null;
   if (flaggedItems.length > 0) {
     urgentBanner = { message: `${flaggedItems.length} repl${flaggedItems.length === 1 ? "y needs" : "ies need"} your attention`, href: "/outreach", color: "purple" };
@@ -133,11 +139,11 @@ export default async function DashboardPage() {
       {/* Urgent action banner */}
       {urgentBanner && (
         <Link href={urgentBanner.href}>
-          <Card className={`mb-4 border-${urgentBanner.color}-500/30 hover:border-${urgentBanner.color}-500/50 transition-colors cursor-pointer`}>
+          <Card className={`mb-4 ${bannerColors[urgentBanner.color].border} ${bannerColors[urgentBanner.color].borderHover} transition-colors cursor-pointer`}>
             <CardContent className="pt-4 pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`w-2 h-2 rounded-full bg-${urgentBanner.color}-500 animate-pulse`} />
+                  <div className={`w-2 h-2 rounded-full ${bannerColors[urgentBanner.color].dot} animate-pulse`} />
                   <span className="text-sm font-medium">{urgentBanner.message}</span>
                 </div>
                 <span className="text-xs text-muted-foreground">&rarr;</span>
