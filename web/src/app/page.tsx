@@ -8,6 +8,7 @@ import { StatCard } from "@/components/stat-card";
 import { UrgentBanner } from "@/components/urgent-banner";
 import { DashboardSessionCard } from "@/components/dashboard-session-card";
 import { WeeklyRecap } from "@/components/weekly-recap";
+import Link from "next/link";
 import { getMonday } from "@/lib/scheduler";
 import {
   buildOutreachQueue,
@@ -184,3 +185,4 @@ export default async function DashboardPage() {
     </div>
   );
 }
+
