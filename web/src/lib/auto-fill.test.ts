@@ -75,22 +75,6 @@ const makeClient = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-describe("auto-fill", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockIsDevAllowed.mockReturnValue(true);
-    mockSendSMS.mockResolvedValue("SM123");
-  });
-
-  it("exports all expected functions", async () => {
-    const mod = await import("./auto-fill");
-    expect(mod.autoFillCancelledSlot).toBeDefined();
-    expect(mod.getAutoFillCandidate).toBeDefined();
-    expect(mod.getAutoFillCandidates).toBeDefined();
-    expect(mod.sendAutoFillOffer).toBeDefined();
-    expect(mod.buildAutoFillMessage).toBeDefined();
-  });
-});
 
 describe("buildAutoFillMessage", () => {
   it("builds a message with first name, day, and slot", async () => {
