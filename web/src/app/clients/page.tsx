@@ -3,15 +3,7 @@ import { clients, packages, sessions } from "@/db/schema";
 import { eq, sql, desc, and } from "drizzle-orm";
 import { ClientTable } from "./client-table";
 import { PackageAlerts } from "@/components/package-alerts";
-
-const GRADE_RANK: Record<string, number> = {
-  adult: 0,
-  freshman: 1,
-  sophomore: 2,
-  junior: 3,
-  senior: 4,
-  post_grad: 5,
-};
+import { GRADE_RANK } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 

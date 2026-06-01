@@ -6,10 +6,10 @@ import { sendSMS } from "@/lib/twilio";
 import { eq, and, gte, lte, lt, ne } from "drizzle-orm";
 import { generateWeek, getMonday, type LastWeekSession, type AvailabilitySlot, type DayOfWeek, type TimeSlot } from "@/lib/scheduler";
 import { DEFAULT_WEIGHTS } from "@/lib/priority";
+import { DAY_NAMES_BY_INDEX } from "@/lib/constants";
 import { revalidatePath } from "next/cache";
 import { deductSession } from "@/lib/package-accounting";
 
-const ALL_DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
 
 export async function generateSchedule(weekStartISO: string) {
   const weekStart = new Date(weekStartISO);
@@ -42,7 +42,7 @@ export async function generateSchedule(weekStartISO: string) {
     const dayIdx = d.getDay();
     return {
       clientId: s.clientId,
-      day: ALL_DAY_NAMES[dayIdx] as DayOfWeek,
+      day: DAY_NAMES_BY_INDEX[dayIdx] as DayOfWeek,
       slot: s.slot as TimeSlot,
     };
   });

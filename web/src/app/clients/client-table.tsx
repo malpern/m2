@@ -32,6 +32,7 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { updateClientOrder, clearAllSortOrders, updateClientField } from "./actions";
 import { EmptyState } from "@/components/empty-state";
 import type { Client } from "@/db/schema";
+import { GRADE_RANK } from "@/lib/constants";
 
 type ClientWithPackage = Client & { sessionsRemaining: number | null };
 
@@ -47,15 +48,6 @@ type SortKey =
   | "sessions"
   | "time";
 type SortDir = "asc" | "desc";
-
-const GRADE_RANK: Record<string, number> = {
-  adult: 0,
-  freshman: 1,
-  sophomore: 2,
-  junior: 3,
-  senior: 4,
-  post_grad: 5,
-};
 
 function ScoreBar({ score }: { score: number }) {
   return (

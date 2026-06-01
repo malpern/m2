@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { clients, packages, sessions, outreach } from "@/db/schema";
 import { readSheet } from "@/lib/google-sheets";
 import { listEvents } from "@/lib/google-calendar";
+import { DAY_NAMES_BY_INDEX } from "@/lib/constants";
 
 const SPREADSHEET_ID = "109w4fOCcwmudr5Os2Rk20mdcxbVhGZB6BNMaM8q0GCo";
 const SESSIONS_2026_TAB = "Sales & Sessions Completed 2026";
@@ -186,7 +187,6 @@ type CalendarClientData = {
   preferredTime: string;
 };
 
-const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
 function formatHour(hour: number, min: number): string {
   const h = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
@@ -236,7 +236,7 @@ async function getCalendarHistory(): Promise<Map<string, CalendarClientData>> {
     const localTime = startRaw.slice(11, 16);
     const [year, month, day] = localDate.split("-").map(Number);
     const localDt = new Date(year, month - 1, day);
-    const dayOfWeek = DAY_NAMES[localDt.getDay()];
+    const dayOfWeek = DAY_NAMES_BY_INDEX[localDt.getDay()];
 
     const session: CalendarSession = {
       date: localDate,
