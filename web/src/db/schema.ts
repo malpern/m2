@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const clients = sqliteTable("clients", {
@@ -53,7 +53,11 @@ export const packages = sqliteTable("packages", {
     .default("active"),
   pricePerSession: integer("price_per_session"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
-});
+}, (t) => [
+  index("packages_client_id_idx").on(t.clientId),
+  index("packages_status_idx").on(t.status),
+  index("packages_client_id_status_idx").on(t.clientId, t.status),
+]);
 
 export const packageTransactions = sqliteTable("package_transactions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -69,7 +73,11 @@ export const packageTransactions = sqliteTable("package_transactions", {
   newBalance: integer("new_balance").notNull(),
   note: text("note"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
-});
+}, (t) => [
+  index("pkg_txn_package_id_idx").on(t.packageId),
+  index("pkg_txn_session_id_idx").on(t.sessionId),
+  index("pkg_txn_session_id_reason_idx").on(t.sessionId, t.reason),
+]);
 
 export const sessions = sqliteTable("sessions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -98,7 +106,12 @@ export const sessions = sqliteTable("sessions", {
     .notNull()
     .default(false),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
-});
+}, (t) => [
+  index("sessions_client_id_idx").on(t.clientId),
+  index("sessions_scheduled_date_idx").on(t.scheduledDate),
+  index("sessions_status_idx").on(t.status),
+  index("sessions_date_status_idx").on(t.scheduledDate, t.status),
+]);
 
 export const guideFeedback = sqliteTable("guide_feedback", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -134,7 +147,12 @@ export const outreach = sqliteTable("outreach", {
   sendError: text("send_error"),
   outreachGroupId: text("outreach_group_id"),
   followUpAt: text("follow_up_at"),
-});
+}, (t) => [
+  index("outreach_client_id_idx").on(t.clientId),
+  index("outreach_week_of_idx").on(t.weekOf),
+  index("outreach_outreach_group_id_idx").on(t.outreachGroupId),
+  index("outreach_week_of_status_idx").on(t.weekOf, t.status),
+]);
 
 export const defaultAvailability = sqliteTable("default_availability", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -154,7 +172,9 @@ export const weeklyOverrides = sqliteTable("weekly_overrides", {
   slot: text("slot").notNull(),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   note: text("note"),
-});
+}, (t) => [
+  index("weekly_overrides_week_of_idx").on(t.weekOf),
+]);
 
 export const prioritySettings = sqliteTable("priority_settings", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -198,7 +218,11 @@ export const systemLogs = sqliteTable("system_logs", {
   clientId: integer("client_id"),
   sessionId: integer("session_id"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
-});
+}, (t) => [
+  index("system_logs_created_at_idx").on(t.createdAt),
+  index("system_logs_severity_idx").on(t.severity),
+  index("system_logs_severity_created_at_idx").on(t.severity, t.createdAt),
+]);
 
 export const weeklySkips = sqliteTable("weekly_skips", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -208,7 +232,10 @@ export const weeklySkips = sqliteTable("weekly_skips", {
   weekOf: text("week_of").notNull(),
   reason: text("reason"),
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
-});
+}, (t) => [
+  index("weekly_skips_week_of_idx").on(t.weekOf),
+  index("weekly_skips_client_id_week_of_idx").on(t.clientId, t.weekOf),
+]);
 
 export type Client = typeof clients.$inferSelect;
 export type PrioritySettingsRow = typeof prioritySettings.$inferSelect;
