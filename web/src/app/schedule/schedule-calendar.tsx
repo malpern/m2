@@ -9,7 +9,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import type { EventInput } from "@fullcalendar/core";
 import { Button } from "@/components/ui/button";
 import { AutoFillDialog } from "@/components/auto-fill-dialog";
-import { fetchAutoFillCandidate } from "@/app/auto-fill-actions";
+import { fetchAutoFillCandidates, type AutoFillCandidateWithBalance } from "@/app/auto-fill-actions";
 import {
   generateSchedule,
   updateSessionTime,
@@ -153,9 +153,7 @@ export function ScheduleCalendar({
   const [revertInfo, setRevertInfo] = useState<(() => void) | null>(null);
   const [autoFillPrompt, setAutoFillPrompt] = useState<{
     sessionId: number;
-    candidateClientId: number;
-    candidateClientName: string;
-    draftMessage: string;
+    candidates: AutoFillCandidateWithBalance[];
     slotLabel: string;
   } | null>(null);
   const isMobile = useIsMobile();
@@ -259,16 +257,7 @@ export function ScheduleCalendar({
         if (confirm(`Cancel ${session.clientName}'s proposed ${day} ${slot} session?`)) {
           startTransition(async () => {
             await cancelSession(sessionId);
-            const candidate = await fetchAutoFillCandidate(sessionId);
-            if (candidate) {
-              setAutoFillPrompt({
-                sessionId,
-                candidateClientId: candidate.clientId,
-                candidateClientName: candidate.clientName,
-                draftMessage: candidate.draftMessage,
-                slotLabel: `${day} at ${slot}`,
-              });
-            }
+            await checkAutoFill(sessionId, session);
           });
         }
       }
@@ -276,15 +265,13 @@ export function ScheduleCalendar({
   };
 
   const checkAutoFill = async (sessionId: number, session: SessionEvent) => {
-    const candidate = await fetchAutoFillCandidate(sessionId);
-    if (candidate) {
+    const candidates = await fetchAutoFillCandidates(sessionId);
+    if (candidates.length > 0) {
       const day = formatDay(session.scheduledDate);
       const slot = formatSlot(session.scheduledTime);
       setAutoFillPrompt({
         sessionId,
-        candidateClientId: candidate.clientId,
-        candidateClientName: candidate.clientName,
-        draftMessage: candidate.draftMessage,
+        candidates,
         slotLabel: `${day} at ${slot}`,
       });
     }
@@ -355,9 +342,7 @@ export function ScheduleCalendar({
       {autoFillPrompt && (
         <AutoFillDialog
           sessionId={autoFillPrompt.sessionId}
-          candidateClientId={autoFillPrompt.candidateClientId}
-          candidateClientName={autoFillPrompt.candidateClientName}
-          draftMessage={autoFillPrompt.draftMessage}
+          candidates={autoFillPrompt.candidates}
           slotLabel={autoFillPrompt.slotLabel}
           onClose={() => setAutoFillPrompt(null)}
         />
