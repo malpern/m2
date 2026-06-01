@@ -16,6 +16,7 @@ import {
   cancelSession,
   queueNotification,
 } from "./actions";
+import "./schedule-calendar.css";
 
 interface SessionEvent {
   id: number;
@@ -383,29 +384,7 @@ export function ScheduleCalendar({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-background p-3 sm:p-6" style={{ ['--fc-event-text-color' as string]: '#fff' }}>
-        <style>{`
-          .fc .fc-timegrid-slot { height: 80px !important; }
-          .fc .fc-col-header { background: transparent !important; }
-          .fc .fc-col-header-cell { padding: 12px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted) !important; font-weight: 600; background: var(--background) !important; }
-          .fc .fc-col-header-cell-cushion { color: inherit !important; text-decoration: none !important; }
-          .fc .fc-timegrid-axis { background: var(--background) !important; }
-          .fc .fc-timegrid-slot-label { font-size: 14px; color: var(--text-muted); padding-right: 12px; background: var(--background) !important; }
-          .fc .fc-timegrid-body, .fc .fc-timegrid-slots td { background: var(--background) !important; }
-          .fc .fc-scrollgrid { background: var(--background) !important; }
-          .fc thead, .fc tbody, .fc tr, .fc td, .fc th { background: transparent !important; }
-          .fc .fc-event { border-radius: 8px !important; padding: 6px 10px !important; font-size: 14px !important; font-weight: 600 !important; cursor: grab !important; border: none !important; box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important; }
-          .fc .fc-event .fc-event-title { font-size: 14px !important; font-weight: 600 !important; }
-          .fc .fc-event .fc-event-time { font-size: 12px !important; opacity: 0.8; }
-          .fc .fc-scrollgrid, .fc .fc-scrollgrid td, .fc .fc-scrollgrid th { border-color: var(--border) !important; }
-          .fc .fc-timegrid-divider { display: none; }
-          .fc .fc-day-today { background: rgba(108,140,255,0.03) !important; }
-          .fc .fc-list-event-dot { border-color: inherit !important; }
-          .fc .fc-list-day-cushion { background: var(--muted) !important; }
-          @media (max-width: 639px) {
-            .fc .fc-event { padding: 4px 6px !important; font-size: 13px !important; }
-          }
-        `}</style>
+      <div className="schedule-calendar rounded-lg border bg-background p-3 sm:p-6">
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, listPlugin, interactionPlugin]}
