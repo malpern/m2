@@ -4,6 +4,22 @@ import { clients, packages, sessions, outreach } from "@/db/schema";
 import { readSheet } from "@/lib/google-sheets";
 import { listEvents } from "@/lib/google-calendar";
 import { DAY_NAMES_BY_INDEX } from "@/lib/constants";
+import { canReplace, type DeletionCounts } from "@/lib/import-guard";
+
+async function countExistingData(): Promise<DeletionCounts> {
+  const [clientRows, sessionRows, packageRows, outreachRows] = await Promise.all([
+    db.select().from(clients).all(),
+    db.select().from(sessions).all(),
+    db.select().from(packages).all(),
+    db.select().from(outreach).all(),
+  ]);
+  return {
+    clients: clientRows.length,
+    sessions: sessionRows.length,
+    packages: packageRows.length,
+    outreach: outreachRows.length,
+  };
+}
 
 const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID ?? "109w4fOCcwmudr5Os2Rk20mdcxbVhGZB6BNMaM8q0GCo";
 const SESSIONS_2026_TAB = "Sales & Sessions Completed 2026";
@@ -346,11 +362,14 @@ export async function GET() {
       return b.sessions2026 - a.sessions2026;
     });
 
-    const existingClients = await db.select().from(clients).all();
+    const existing = await countExistingData();
 
     return NextResponse.json({
       preview: merged,
-      existingCount: existingClients.length,
+      existingCount: existing.clients,
+      existingSessions: existing.sessions,
+      existingPackages: existing.packages,
+      existingOutreach: existing.outreach,
       sheetsCount: sheetClients.size,
       calendarCount: calendarData.size,
     });
@@ -366,10 +385,23 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { selectedClients } = body as { selectedClients: ImportPreviewClient[] };
+    const { selectedClients, confirmReplace } = body as {
+      selectedClients: ImportPreviewClient[];
+      confirmReplace?: boolean;
+    };
 
     if (!selectedClients?.length) {
       return NextResponse.json({ error: "No clients selected" }, { status: 400 });
+    }
+
+    // This import deletes ALL existing clients, sessions, packages, and outreach.
+    // Refuse to wipe real data unless the operator explicitly confirmed.
+    const willDelete = await countExistingData();
+    if (!canReplace(confirmReplace, willDelete)) {
+      return NextResponse.json(
+        { error: "confirmation_required", willDelete },
+        { status: 409 },
+      );
     }
 
     const fourMonthsAgo = new Date();
