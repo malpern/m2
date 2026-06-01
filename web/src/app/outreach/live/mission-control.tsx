@@ -152,12 +152,14 @@ function ClientCard({
           <button
             onClick={() => startTransition(() => markConfirmed(item.sessionId))}
             className="flex-1 text-[11px] font-medium py-1 rounded bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 transition-colors"
+            aria-label="Confirm session"
           >
             Confirm
           </button>
           <button
             onClick={() => startTransition(() => markDeclined(item.sessionId))}
             className="flex-1 text-[11px] font-medium py-1 rounded bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors"
+            aria-label="Decline session"
           >
             Decline
           </button>

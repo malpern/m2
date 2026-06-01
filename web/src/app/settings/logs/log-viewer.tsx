@@ -104,11 +104,12 @@ export function LogViewer({ logs }: { logs: LogEntry[] }) {
             onClick={doRefresh}
             className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             title="Click to refresh now"
+            aria-label="Refresh logs"
           >
             <RefreshCw className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} />
             <span>Updated {formatSecondsAgo(secondsAgo)}</span>
           </button>
-          <div className="flex rounded-md border border-border overflow-hidden">
+          <div className="flex rounded-md border border-border overflow-hidden" role="group" aria-label="View mode">
             <button
               onClick={() => setView("matt")}
               className={`px-3 py-1.5 text-xs font-medium transition-colors ${

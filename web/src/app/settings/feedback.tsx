@@ -82,6 +82,7 @@ export function FeedbackSection({ initialItems }: { initialItems: FeedbackItem[]
             placeholder="What's on your mind?"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            aria-label="Feedback title"
             className="w-full h-9 rounded-md border border-border bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
           <textarea
@@ -90,6 +91,7 @@ export function FeedbackSection({ initialItems }: { initialItems: FeedbackItem[]
             onChange={(e) => setBody(e.target.value)}
             onPaste={handlePaste}
             rows={3}
+            aria-label="Feedback details"
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
           {imagePreview && (
@@ -98,6 +100,7 @@ export function FeedbackSection({ initialItems }: { initialItems: FeedbackItem[]
               <button
                 onClick={() => setImagePreview(null)}
                 className="absolute -top-2 -right-2 w-5 h-5 bg-background border border-border rounded-full flex items-center justify-center text-xs text-muted-foreground hover:text-foreground"
+                aria-label="Remove screenshot"
               >
                 ✕
               </button>
@@ -113,7 +116,7 @@ export function FeedbackSection({ initialItems }: { initialItems: FeedbackItem[]
             >
               + Add photo
             </button>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} aria-label="Upload screenshot" />
           </div>
         </CardContent>
       </Card>
@@ -158,6 +161,7 @@ export function FeedbackSection({ initialItems }: { initialItems: FeedbackItem[]
                         handleDelete(item.number);
                       }}
                       className="text-xs text-muted-foreground/50 hover:text-red-400 transition-colors flex-shrink-0"
+                      aria-label={`Delete feedback: ${item.title}`}
                     >
                       ✕
                     </button>

@@ -46,6 +46,7 @@ function EditableText({
           if (e.key === "Enter") save();
           if (e.key === "Escape") { setText(value); setEditing(false); }
         }}
+        aria-label={`Edit ${field}`}
         className={`bg-transparent border-b border-accent outline-none ${inputClassName}`}
       />
     );
@@ -53,7 +54,10 @@ function EditableText({
 
   return (
     <span
+      role="button"
+      tabIndex={0}
       onClick={() => setEditing(true)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditing(true); } }}
       className={`cursor-pointer hover:border-b hover:border-dashed hover:border-muted-foreground transition-colors ${isPending ? "opacity-50" : ""} ${className}`}
     >
       {text || <span className="text-muted-foreground italic">Click to set</span>}
@@ -106,6 +110,7 @@ function EditableNumber({
           if (e.key === "Enter") save();
           if (e.key === "Escape") { setNum(value); setEditing(false); }
         }}
+        aria-label={`Edit ${field}`}
         className="bg-transparent border-b border-accent outline-none w-16 text-sm"
       />
     );
@@ -113,7 +118,10 @@ function EditableNumber({
 
   return (
     <span
+      role="button"
+      tabIndex={0}
       onClick={() => setEditing(true)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditing(true); } }}
       className={`cursor-pointer hover:border-b hover:border-dashed hover:border-muted-foreground transition-colors ${isPending ? "opacity-50" : ""}`}
     >
       {num}
@@ -143,6 +151,7 @@ function EditableSelect({
           updateClientField(clientId, field, e.target.value);
         });
       }}
+      aria-label={`Select ${field}`}
       className={`bg-transparent border-0 outline-none cursor-pointer text-sm font-medium appearance-none pr-4 ${isPending ? "opacity-50" : ""} ${current?.className ?? ""}`}
       style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='8' height='8' viewBox='0 0 8 8' fill='%236b7280' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 2.5L4 5.5L7 2.5' stroke='%236b7280' stroke-width='1.5' fill='none'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right center" }}
     >
@@ -259,6 +268,7 @@ function EditableScoreBar({
               });
             }
           }}
+          aria-label={`Set effort score to ${i + 1}`}
           className={`h-5 w-2.5 rounded-sm transition-colors cursor-pointer hover:opacity-70 ${
             i < score ? "bg-blue-500" : "bg-muted hover:bg-muted-foreground/20"
           }`}

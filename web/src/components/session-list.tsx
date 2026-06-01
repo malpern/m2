@@ -66,6 +66,7 @@ export function SessionList({ sessions }: { sessions: Session[] }) {
                 <button
                   onClick={() => setEditingId(null)}
                   className="px-1 text-xs text-muted-foreground hover:text-foreground"
+                  aria-label="Cancel time editing"
                 >
                   ✕
                 </button>
@@ -74,6 +75,7 @@ export function SessionList({ sessions }: { sessions: Session[] }) {
               <button
                 onClick={() => setEditingId(s.id)}
                 className="text-muted-foreground hover:text-foreground hover:bg-muted/50 px-1.5 py-0.5 rounded text-xs transition-colors cursor-pointer"
+                aria-label={`Change time for ${s.clientName}, currently ${s.slot}`}
               >
                 {s.slot}
               </button>
