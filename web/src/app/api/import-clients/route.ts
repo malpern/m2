@@ -372,84 +372,88 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No clients selected" }, { status: 400 });
     }
 
-    await db.delete(outreach).run();
-    await db.delete(sessions).run();
-    await db.delete(packages).run();
-    await db.delete(clients).run();
-
     const fourMonthsAgo = new Date();
     fourMonthsAgo.setMonth(fourMonthsAgo.getMonth() - 4);
     const cutoff = fourMonthsAgo.toISOString().split("T")[0];
 
     const calendarData = await getCalendarHistory();
 
-    const inserted = await db
-      .insert(clients)
-      .values(
-        selectedClients.map((c, i) => ({
-          name: c.name,
-          phone: "+15550000000",
-          category: (c.lastDate && c.lastDate >= cutoff ? "active" : "inactive") as "active" | "inactive",
-          googleSheetsName: c.name,
-          sessionRate: c.rate,
-          sessionType: c.sessionType,
-          parentGuardian: c.parentGuardian,
-          email: c.email,
-          sortOrder: i,
-          maxSessionsPerWeek: c.sessionType === "group" ? 0 : 1,
-          behaviorScore: 5,
-          preferredDays: c.preferredDays.length > 0 ? JSON.stringify(c.preferredDays) : null,
-          preferredTime: c.preferredTime || null,
-        }))
-      )
-      .returning()
-      .all();
+    const { inserted, totalSessions } = await db.transaction(async (tx) => {
+      await tx.delete(outreach).run();
+      await tx.delete(sessions).run();
+      await tx.delete(packages).run();
+      await tx.delete(clients).run();
 
-    let totalSessions = 0;
+      const ins = await tx
+        .insert(clients)
+        .values(
+          selectedClients.map((c, i) => ({
+            name: c.name,
+            phone: "+15550000000",
+            category: (c.lastDate && c.lastDate >= cutoff ? "active" : "inactive") as "active" | "inactive",
+            googleSheetsName: c.name,
+            sessionRate: c.rate,
+            sessionType: c.sessionType,
+            parentGuardian: c.parentGuardian,
+            email: c.email,
+            sortOrder: i,
+            maxSessionsPerWeek: c.sessionType === "group" ? 0 : 1,
+            behaviorScore: 5,
+            preferredDays: c.preferredDays.length > 0 ? JSON.stringify(c.preferredDays) : null,
+            preferredTime: c.preferredTime || null,
+          }))
+        )
+        .returning()
+        .all();
 
-    for (let i = 0; i < inserted.length; i++) {
-      const client = inserted[i];
-      const preview = selectedClients[i];
-      const pkgSize = preview.packageSize > 1 ? preview.packageSize : 10;
+      let sessCount = 0;
 
-      const pkgMatch = preview.lastPackage.match(/(\d+)\s*of\s*(\d+)/);
-      const sessionsUsed = pkgMatch ? parseInt(pkgMatch[1]) : 0;
+      for (let i = 0; i < ins.length; i++) {
+        const client = ins[i];
+        const preview = selectedClients[i];
+        const pkgSize = preview.packageSize > 1 ? preview.packageSize : 10;
 
-      await db
-        .insert(packages)
-        .values({
-          clientId: client.id,
-          totalSessions: pkgSize,
-          sessionsUsed: Math.min(sessionsUsed, pkgSize),
-          pricePerSession: preview.rate,
-          status: "active" as const,
-        })
-        .run();
+        const pkgMatch = preview.lastPackage.match(/(\d+)\s*of\s*(\d+)/);
+        const sessionsUsed = pkgMatch ? parseInt(pkgMatch[1]) : 0;
 
-      const calSessions = calendarData.get(preview.name)?.sessions ?? [];
-      if (calSessions.length > 0) {
-        for (const s of calSessions) {
-          const hour = parseInt(s.time.split(":")[0]);
-          const slotMap: Record<number, "3pm" | "4pm" | "5pm" | "6pm" | "7pm"> = {
-            15: "3pm", 16: "4pm", 17: "5pm", 18: "6pm", 19: "7pm",
-          };
-          const slot = slotMap[hour] ?? (hour < 15 ? "3pm" : "7pm");
+        await tx
+          .insert(packages)
+          .values({
+            clientId: client.id,
+            totalSessions: pkgSize,
+            sessionsUsed: Math.min(sessionsUsed, pkgSize),
+            pricePerSession: preview.rate,
+            status: "active" as const,
+          })
+          .run();
 
-          await db
-            .insert(sessions)
-            .values({
-              clientId: client.id,
-              scheduledDate: s.date,
-              scheduledTime: s.time,
-              slot,
-              status: "completed" as const,
-              sessionType: preview.sessionType === "dual" ? "group" : preview.sessionType,
-            })
-            .run();
+        const calSessions = calendarData.get(preview.name)?.sessions ?? [];
+        if (calSessions.length > 0) {
+          for (const s of calSessions) {
+            const hour = parseInt(s.time.split(":")[0]);
+            const slotMap: Record<number, "3pm" | "4pm" | "5pm" | "6pm" | "7pm"> = {
+              15: "3pm", 16: "4pm", 17: "5pm", 18: "6pm", 19: "7pm",
+            };
+            const slot = slotMap[hour] ?? (hour < 15 ? "3pm" : "7pm");
+
+            await tx
+              .insert(sessions)
+              .values({
+                clientId: client.id,
+                scheduledDate: s.date,
+                scheduledTime: s.time,
+                slot,
+                status: "completed" as const,
+                sessionType: preview.sessionType === "dual" ? "group" : preview.sessionType,
+              })
+              .run();
+          }
+          sessCount += calSessions.length;
         }
-        totalSessions += calSessions.length;
       }
-    }
+
+      return { inserted: ins, totalSessions: sessCount };
+    });
 
     return NextResponse.json({
       imported: inserted.length,

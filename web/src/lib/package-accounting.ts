@@ -37,19 +37,21 @@ export async function deductSession(sessionId: number): Promise<boolean> {
   const newUsed = pkg.sessionsUsed + 1;
   const newBalance = pkg.totalSessions - newUsed;
 
-  await db.insert(packageTransactions).values({
-    packageId: pkg.id,
-    sessionId,
-    delta: -1,
-    reason: "completed",
-    previousBalance,
-    newBalance,
-  }).run();
+  await db.transaction(async (tx) => {
+    await tx.insert(packageTransactions).values({
+      packageId: pkg.id,
+      sessionId,
+      delta: -1,
+      reason: "completed",
+      previousBalance,
+      newBalance,
+    }).run();
 
-  await db.update(packages).set({
-    sessionsUsed: newUsed,
-    status: newBalance <= 0 ? "exhausted" : "active",
-  }).where(eq(packages.id, pkg.id)).run();
+    await tx.update(packages).set({
+      sessionsUsed: newUsed,
+      status: newBalance <= 0 ? "exhausted" : "active",
+    }).where(eq(packages.id, pkg.id)).run();
+  });
 
   syslog.info("system", `${session.clientName}: session completed (${newBalance} remaining)`, `Package ${pkg.id}: ${previousBalance} → ${newBalance} (session ${sessionId})`, { clientId: session.clientId, sessionId });
 
@@ -101,19 +103,21 @@ export async function creditCancellation(sessionId: number): Promise<boolean> {
   const newUsed = Math.max(0, pkg.sessionsUsed - 1);
   const newBalance = pkg.totalSessions - newUsed;
 
-  await db.insert(packageTransactions).values({
-    packageId: pkg.id,
-    sessionId,
-    delta: 1,
-    reason: "cancelled",
-    previousBalance,
-    newBalance,
-  }).run();
+  await db.transaction(async (tx) => {
+    await tx.insert(packageTransactions).values({
+      packageId: pkg.id,
+      sessionId,
+      delta: 1,
+      reason: "cancelled",
+      previousBalance,
+      newBalance,
+    }).run();
 
-  await db.update(packages).set({
-    sessionsUsed: newUsed,
-    status: newBalance > 0 ? "active" : "exhausted",
-  }).where(eq(packages.id, pkg.id)).run();
+    await tx.update(packages).set({
+      sessionsUsed: newUsed,
+      status: newBalance > 0 ? "active" : "exhausted",
+    }).where(eq(packages.id, pkg.id)).run();
+  });
 
   syslog.info("system", `${session.clientName}: cancelled session credited back (${newBalance} remaining)`, `Package ${pkg.id}: ${previousBalance} → ${newBalance} (session ${sessionId} cancelled)`, { clientId: session.clientId, sessionId });
 
@@ -140,19 +144,21 @@ export async function manualAdjustment(
   const newUsed = Math.max(0, pkg.sessionsUsed - delta);
   const newBalance = pkg.totalSessions - newUsed;
 
-  await db.insert(packageTransactions).values({
-    packageId: pkg.id,
-    delta,
-    reason: "manual_adjustment",
-    previousBalance,
-    newBalance,
-    note: reason,
-  }).run();
+  await db.transaction(async (tx) => {
+    await tx.insert(packageTransactions).values({
+      packageId: pkg.id,
+      delta,
+      reason: "manual_adjustment",
+      previousBalance,
+      newBalance,
+      note: reason,
+    }).run();
 
-  await db.update(packages).set({
-    sessionsUsed: newUsed,
-    status: newBalance <= 0 ? "exhausted" : "active",
-  }).where(eq(packages.id, pkg.id)).run();
+    await tx.update(packages).set({
+      sessionsUsed: newUsed,
+      status: newBalance <= 0 ? "exhausted" : "active",
+    }).where(eq(packages.id, pkg.id)).run();
+  });
 
   syslog.info("system", `Manual adjustment for client ${clientId}: ${delta > 0 ? "+" : ""}${delta} (${reason})`, `Package ${pkg.id}: ${previousBalance} → ${newBalance}`, { clientId });
 

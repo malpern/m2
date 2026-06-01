@@ -99,23 +99,27 @@ export async function sendAutoFillOffer(
 
   const weekOf = getMonday().toISOString().split("T")[0];
 
-  const newSession = await db.insert(sessions).values({
-    clientId: client.id,
-    scheduledDate: cancelledDate,
-    scheduledTime: SLOT_TIMES[cancelledSlot] ?? "15:00",
-    slot: cancelledSlot as "3pm" | "4pm" | "5pm" | "6pm" | "7pm",
-    status: "proposed",
-  }).returning().get();
+  const newSession = await db.transaction(async (tx) => {
+    const inserted = await tx.insert(sessions).values({
+      clientId: client.id,
+      scheduledDate: cancelledDate,
+      scheduledTime: SLOT_TIMES[cancelledSlot] ?? "15:00",
+      slot: cancelledSlot as "3pm" | "4pm" | "5pm" | "6pm" | "7pm",
+      status: "proposed",
+    }).returning().get();
 
-  await db.insert(outreach).values({
-    clientId: client.id,
-    sessionId: newSession.id,
-    weekOf,
-    direction: "sent",
-    messageText: message,
-    status: "awaiting_reply",
-    sentAt: new Date().toISOString(),
-  }).run();
+    await tx.insert(outreach).values({
+      clientId: client.id,
+      sessionId: inserted.id,
+      weekOf,
+      direction: "sent",
+      messageText: message,
+      status: "awaiting_reply",
+      sentAt: new Date().toISOString(),
+    }).run();
+
+    return inserted;
+  });
 
   const dayLabel = new Date(cancelledDate + "T12:00:00Z")
     .toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });

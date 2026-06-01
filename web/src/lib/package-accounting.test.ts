@@ -20,6 +20,23 @@ vi.mock("@/db", () => ({
         }),
       }),
     }),
+    transaction: async (fn: (tx: unknown) => Promise<unknown>) => {
+      const tx = {
+        insert: () => ({
+          values: () => ({
+            run: () => {},
+          }),
+        }),
+        update: () => ({
+          set: () => ({
+            where: () => ({
+              run: () => {},
+            }),
+          }),
+        }),
+      };
+      return fn(tx);
+    },
   },
 }));
 
