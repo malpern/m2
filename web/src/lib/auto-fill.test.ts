@@ -26,7 +26,10 @@ vi.mock("@/db", () => {
               if (table._table === "outreach") return selectResults.outreach ?? [];
               return selectResults.clients ?? [];
             },
-            get: () => selectResults.singleClient ?? null,
+            get: () => {
+              if (table._table === "sessions") return selectResults.singleSession ?? null;
+              return selectResults.singleClient ?? null;
+            },
           }),
           all: () => selectResults.clients ?? [],
         }),
@@ -242,6 +245,43 @@ describe("autoFillCancelledSlot (integration)", () => {
     setResults("clients", []);
     const { autoFillCancelledSlot } = await import("./auto-fill");
     const result = await autoFillCancelledSlot("2026-06-03", "4pm", 99);
+    expect(result.offered).toBe(false);
+  });
+});
+
+describe("cascadeAutoFill", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockIsDevAllowed.mockReturnValue(true);
+    mockSendSMS.mockResolvedValue("SM123");
+    setResults("outreach", []);
+  });
+
+  it("looks up expired session and offers to next client", async () => {
+    setResults("singleSession", { scheduledDate: "2026-06-03", slot: "4pm", clientId: 10 });
+    setResults("sessions", []);
+    setResults("clients", [makeClient({ id: 7, name: "Next Client" })]);
+    setResults("singleClient", makeClient({ id: 7, name: "Next Client" }));
+    const { cascadeAutoFill } = await import("./auto-fill");
+    const result = await cascadeAutoFill(42);
+    expect(result.offered).toBe(true);
+    expect(result.clientName).toBe("Next Client");
+    expect(mockSendSMS).toHaveBeenCalled();
+  });
+
+  it("returns offered false when session not found", async () => {
+    setResults("singleSession", null);
+    const { cascadeAutoFill } = await import("./auto-fill");
+    const result = await cascadeAutoFill(999);
+    expect(result.offered).toBe(false);
+  });
+
+  it("returns offered false when no more eligible clients", async () => {
+    setResults("singleSession", { scheduledDate: "2026-06-03", slot: "4pm", clientId: 10 });
+    setResults("sessions", []);
+    setResults("clients", []);
+    const { cascadeAutoFill } = await import("./auto-fill");
+    const result = await cascadeAutoFill(42);
     expect(result.offered).toBe(false);
   });
 });
