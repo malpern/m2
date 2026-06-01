@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
 import { exportSessionsCSV, exportClientsCSV } from "./actions";
+import type { RevenueStats } from "@/lib/revenue";
 
 function downloadCSV(content: string, filename: string) {
   const blob = new Blob([content], { type: "text/csv" });
@@ -19,6 +20,7 @@ function downloadCSV(content: string, filename: string) {
 
 export function ReportsDashboard({
   stats,
+  revenue,
 }: {
   stats: {
     totalSessions: number;
@@ -30,6 +32,7 @@ export function ReportsDashboard({
     activeClients: number;
     weeklyAvg: number;
   };
+  revenue: RevenueStats;
 }) {
   const [isPending, startTransition] = useTransition();
   const [range, setRange] = useState("8weeks");
@@ -139,6 +142,43 @@ export function ReportsDashboard({
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Revenue estimates */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold mb-3">Estimated Revenue</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+          <Card>
+            <CardContent className="pt-5 pb-4">
+              <div className="text-sm text-muted-foreground">Estimated Revenue</div>
+              <div className="text-3xl font-bold mt-1 text-emerald-400">
+                {revenue.totalRevenueDisplay}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                from {revenue.sessionsWithRate} completed session{revenue.sessionsWithRate !== 1 ? "s" : ""} with rates
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-5 pb-4">
+              <div className="text-sm text-muted-foreground">Weekly Revenue Avg</div>
+              <div className="text-3xl font-bold mt-1 text-emerald-400">
+                {revenue.weeklyAvgRevenueDisplay}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                per week average
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        {revenue.totalCompletedSessions > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Based on {revenue.sessionsWithRate} of {revenue.totalCompletedSessions} completed session{revenue.totalCompletedSessions !== 1 ? "s" : ""} with rates set
+            {revenue.sessionsWithRate < revenue.totalCompletedSessions && (
+              <> &mdash; {revenue.totalCompletedSessions - revenue.sessionsWithRate} session{(revenue.totalCompletedSessions - revenue.sessionsWithRate) !== 1 ? "s" : ""} missing client or package rates</>
+            )}
+          </p>
+        )}
       </div>
     </div>
   );

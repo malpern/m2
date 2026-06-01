@@ -2,12 +2,13 @@ import { db } from "@/db";
 import { clients, packages, sessions, packageTransactions } from "@/db/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { ReportsWithPackages } from "./reports-with-packages";
+import { calculateRevenue, type CompletedSessionWithRate } from "@/lib/revenue";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
-  // All four queries are independent — run in parallel
-  const [all, clientPackagesRaw, recentTransactions, unreconciledSessions] = await Promise.all([
+  // All five queries are independent — run in parallel
+  const [all, clientPackagesRaw, recentTransactions, unreconciledSessions, completedWithRates] = await Promise.all([
     db.select().from(sessions).all(),
     db
       .select({
@@ -54,6 +55,20 @@ export default async function ReportsPage() {
       .innerJoin(clients, eq(clients.id, sessions.clientId))
       .where(and(eq(sessions.status, "completed"), eq(sessions.reconciled, false)))
       .all(),
+    // Revenue: join completed sessions with client rates and package rates
+    db
+      .select({
+        sessionId: sessions.id,
+        clientId: sessions.clientId,
+        clientSessionRate: clients.sessionRate,
+        packagePricePerSession: packages.pricePerSession,
+        scheduledDate: sessions.scheduledDate,
+      })
+      .from(sessions)
+      .innerJoin(clients, eq(clients.id, sessions.clientId))
+      .leftJoin(packages, eq(packages.id, sessions.packageId))
+      .where(eq(sessions.status, "completed"))
+      .all(),
   ]);
 
   const clientPackages = clientPackagesRaw.map((p) => ({ ...p, remaining: p.totalSessions - p.sessionsUsed }));
@@ -76,6 +91,16 @@ export default async function ReportsPage() {
   );
   const weeklyAvg = weeks.size > 0 ? Math.round(completed / weeks.size) : 0;
 
+  // Revenue calculation
+  const revenueData: CompletedSessionWithRate[] = completedWithRates.map((r) => ({
+    sessionId: r.sessionId,
+    clientId: r.clientId,
+    clientSessionRate: r.clientSessionRate,
+    packagePricePerSession: r.packagePricePerSession,
+    scheduledDate: r.scheduledDate,
+  }));
+  const revenue = calculateRevenue(revenueData);
+
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-6 sm:py-8">
       <ReportsWithPackages
@@ -89,6 +114,7 @@ export default async function ReportsPage() {
           activeClients: 0,
           weeklyAvg,
         }}
+        revenue={revenue}
         clientPackages={clientPackages}
         recentTransactions={recentTransactions}
         unreconciledSessions={unreconciledSessions}
