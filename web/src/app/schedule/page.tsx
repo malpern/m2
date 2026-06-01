@@ -27,25 +27,27 @@ export default async function SchedulePage({
   sunday.setDate(sunday.getDate() + 6);
   const weekEnd = sunday.toISOString().split("T")[0];
 
-  const weekSessions = await db
-    .select({
-      id: sessions.id,
-      clientId: sessions.clientId,
-      clientName: clients.name,
-      scheduledDate: sessions.scheduledDate,
-      scheduledTime: sessions.scheduledTime,
-      status: sessions.status,
-    })
-    .from(sessions)
-    .innerJoin(clients, eq(clients.id, sessions.clientId))
-    .where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd)))
-    .all();
-
-  const allClients = await db
-    .select({ id: clients.id, name: clients.name })
-    .from(clients)
-    .where(eq(clients.category, "active"))
-    .all();
+  // Both DB queries are independent — run in parallel
+  const [weekSessions, allClients] = await Promise.all([
+    db
+      .select({
+        id: sessions.id,
+        clientId: sessions.clientId,
+        clientName: clients.name,
+        scheduledDate: sessions.scheduledDate,
+        scheduledTime: sessions.scheduledTime,
+        status: sessions.status,
+      })
+      .from(sessions)
+      .innerJoin(clients, eq(clients.id, sessions.clientId))
+      .where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd)))
+      .all(),
+    db
+      .select({ id: clients.id, name: clients.name })
+      .from(clients)
+      .where(eq(clients.category, "active"))
+      .all(),
+  ]);
 
   // Fetch Google Calendar events and classify as training vs personal
   let googleEvents: { title: string; date: string; time: string; endTime: string; isTraining: boolean }[] = [];

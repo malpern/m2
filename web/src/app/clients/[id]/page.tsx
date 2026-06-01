@@ -52,22 +52,13 @@ export default async function ClientDetailPage({
   const client = await db.select().from(clients).where(eq(clients.id, clientId)).get();
   if (!client) notFound();
 
-  const clientPackages = await db.select().from(packages).where(eq(packages.clientId, clientId)).all();
-
-  const clientMessages = await db
-    .select()
-    .from(outreach)
-    .where(eq(outreach.clientId, clientId))
-    .orderBy(outreach.sentAt)
-    .all();
-
-  const allClientSessions = await db
-    .select()
-    .from(sessions)
-    .where(eq(sessions.clientId, clientId))
-    .all();
-
-  const transactionHistory = await getTransactionHistory(clientId, 10);
+  // These queries are all independent — run in parallel
+  const [clientPackages, clientMessages, allClientSessions, transactionHistory] = await Promise.all([
+    db.select().from(packages).where(eq(packages.clientId, clientId)).all(),
+    db.select().from(outreach).where(eq(outreach.clientId, clientId)).orderBy(outreach.sentAt).all(),
+    db.select().from(sessions).where(eq(sessions.clientId, clientId)).all(),
+    getTransactionHistory(clientId, 10),
+  ]);
 
   const totalCompleted = allClientSessions.filter((s) => s.status === "completed").length;
   const totalCancelled = allClientSessions.filter((s) => s.status === "cancelled").length;
