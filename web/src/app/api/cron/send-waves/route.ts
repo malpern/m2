@@ -81,8 +81,26 @@ export async function POST(request: NextRequest) {
     byClient.set(item.clientId, group);
   }
 
-  let sent = 0;
   const results: string[] = [];
+  const allOutreachRows: Array<{
+    clientId: number;
+    sessionId: number;
+    weekOf: string;
+    direction: string;
+    messageText: string;
+    status: string;
+    sentAt: string;
+    outreachGroupId: string | null;
+  }> = [];
+  const smsJobs: Array<{
+    clientId: number;
+    clientName: string;
+    clientPhone: string;
+    message: string;
+    sessionCount: number;
+  }> = [];
+
+  const now = new Date().toISOString();
 
   for (const [clientId, clientItems] of byClient) {
     const first = clientItems[0];
@@ -110,9 +128,8 @@ export async function POST(request: NextRequest) {
       message = `Hey ${firstName}, here's your schedule this week:\n${days.join("\n")}\nAll good, or need to change anything?`;
     }
 
-    const now = new Date().toISOString();
     for (const item of clientItems) {
-      await db.insert(outreach).values({
+      allOutreachRows.push({
         clientId: item.clientId,
         sessionId: item.sessionId,
         weekOf: weekStart,
@@ -121,18 +138,40 @@ export async function POST(request: NextRequest) {
         status: "awaiting_reply",
         sentAt: now,
         outreachGroupId: groupId,
-      }).run();
+      });
     }
 
-    try {
-      await sendSMS(first.clientPhone, message);
+    smsJobs.push({
+      clientId,
+      clientName: first.clientName,
+      clientPhone: first.clientPhone,
+      message,
+      sessionCount: clientItems.length,
+    });
+  }
+
+  // Batch-insert all outreach rows in a single DB write
+  if (allOutreachRows.length > 0) {
+    await db.insert(outreach).values(allOutreachRows).run();
+  }
+
+  // Send all SMS messages in parallel
+  const smsResults = await Promise.allSettled(
+    smsJobs.map((job) => sendSMS(job.clientPhone, job.message))
+  );
+
+  let sent = 0;
+  for (let i = 0; i < smsJobs.length; i++) {
+    const job = smsJobs[i];
+    const result = smsResults[i];
+    if (result.status === "fulfilled") {
       sent++;
-      results.push(`sent wave ${wave}: ${first.clientName} (${clientItems.length} sessions)`);
-      syslog.info("outreach", `Sent wave ${wave} outreach to ${first.clientName}`, `Auto-wave ${wave}: ${clientItems.length} sessions to ${first.clientPhone}`, { clientId });
-    } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : String(e);
-      results.push(`failed: ${first.clientName}: ${errorMsg}`);
-      syslog.error("outreach", `Wave ${wave} send failed for ${first.clientName}`, `Auto-wave send error: ${errorMsg}`, { clientId });
+      results.push(`sent wave ${wave}: ${job.clientName} (${job.sessionCount} sessions)`);
+      syslog.info("outreach", `Sent wave ${wave} outreach to ${job.clientName}`, `Auto-wave ${wave}: ${job.sessionCount} sessions to ${job.clientPhone}`, { clientId: job.clientId });
+    } else {
+      const errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      results.push(`failed: ${job.clientName}: ${errorMsg}`);
+      syslog.error("outreach", `Wave ${wave} send failed for ${job.clientName}`, `Auto-wave send error: ${errorMsg}`, { clientId: job.clientId });
     }
   }
 
