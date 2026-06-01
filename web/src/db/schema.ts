@@ -238,9 +238,7 @@ export const weeklySkips = sqliteTable("weekly_skips", {
 ]);
 
 export type Client = typeof clients.$inferSelect;
-export type PrioritySettingsRow = typeof prioritySettings.$inferSelect;
 export type NewClient = typeof clients.$inferInsert;
 export type Package = typeof packages.$inferSelect;
 export type Session = typeof sessions.$inferSelect;
 export type Outreach = typeof outreach.$inferSelect;
-export type WeeklySkip = typeof weeklySkips.$inferSelect;
