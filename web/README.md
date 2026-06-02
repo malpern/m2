@@ -46,10 +46,14 @@ npm run build    # next build — must succeed
 `npm run lint` must report **0 errors**. Remaining warnings (e.g. unused
 imports) are intentionally not failing CI yet; clear them opportunistically.
 
-### Workspace root
+### Workspace root warning (local only)
 
-`next.config.ts` pins `turbopack.root` to this directory so Next does not infer
-an unrelated parent lockfile as the workspace root.
+Running `next build` locally may print a warning that Next inferred a parent
+`pnpm-lock.yaml` as the workspace root. It is cosmetic and does not occur on
+Vercel (which builds from a clean checkout of this directory). Do **not** set
+`turbopack.root` in `next.config.ts` to silence it — an absolute path there
+resolves differently on Vercel and breaks the build with "Couldn't find any
+pages or app directory".
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
