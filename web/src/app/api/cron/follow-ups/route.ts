@@ -8,11 +8,11 @@ import { getOpenSlots, rankSlotsForClient, diversifyAcrossDays, tagOfferedSlots 
 import { OUTREACH_DEFAULTS } from "@/lib/outreach-config";
 import { formatSlotsText } from "@/lib/constants";
 import { cascadeAutoFill } from "@/lib/auto-fill";
+import { isCronAuthorized } from "@/lib/cron-auth";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

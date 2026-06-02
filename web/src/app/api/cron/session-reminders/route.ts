@@ -3,11 +3,11 @@ import { sessions, clients, outreachSettings } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { sendSMS, isDevAllowed } from "@/lib/twilio";
 import { syslog } from "@/lib/logger";
+import { isCronAuthorized } from "@/lib/cron-auth";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

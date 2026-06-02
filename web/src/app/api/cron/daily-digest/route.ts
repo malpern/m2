@@ -2,13 +2,13 @@ import { NextRequest } from "next/server";
 import { getDailyDigest } from "@/lib/alerting";
 import { sendSMS, isDevAllowed } from "@/lib/twilio";
 import { sendEmail } from "@/lib/email";
+import { isCronAuthorized } from "@/lib/cron-auth";
 
 const ALERT_PHONE = process.env.ALERT_PHONE_NUMBER ?? "+14082099509";
 const ALERT_EMAIL = process.env.ALERT_EMAIL ?? "malpern@gmail.com";
 
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isCronAuthorized(request)) {
     return new Response("Unauthorized", { status: 401 });
   }
 

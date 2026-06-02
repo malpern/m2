@@ -10,6 +10,9 @@ import type { ImportPreviewClient } from "@/app/api/import-clients/route";
 type PreviewData = {
   preview: ImportPreviewClient[];
   existingCount: number;
+  existingSessions: number;
+  existingPackages: number;
+  existingOutreach: number;
   sheetsCount: number;
   calendarCount: number;
 };
@@ -83,7 +86,7 @@ export default function ImportClientsPage() {
       const res = await fetch("/api/import-clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ selectedClients }),
+        body: JSON.stringify({ selectedClients, confirmReplace: true }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -134,8 +137,8 @@ export default function ImportClientsPage() {
         Import Clients
       </h1>
       <p className="text-sm text-muted-foreground mb-6">
-        Pull real client data from Google Sheets and Calendar. This replaces all
-        existing test data.
+        Pull real client data from Google Sheets and Calendar. This deletes all
+        existing clients, sessions, packages, and outreach before importing.
       </p>
 
       {error && (
@@ -306,7 +309,7 @@ export default function ImportClientsPage() {
                     variant="destructive"
                     onClick={handleImport}
                   >
-                    Yes, replace {data.existingCount} clients with {selected.size}
+                    Yes, delete everything and import {selected.size} clients
                   </Button>
                   <Button
                     variant="outline"
@@ -334,8 +337,20 @@ export default function ImportClientsPage() {
             </div>
           )}
 
+          {confirming && (
+            <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
+              <span className="font-semibold">This permanently deletes all existing data first.</span>{" "}
+              {data.existingCount} client{data.existingCount === 1 ? "" : "s"},{" "}
+              {data.existingSessions} session{data.existingSessions === 1 ? "" : "s"},{" "}
+              {data.existingPackages} package{data.existingPackages === 1 ? "" : "s"}, and{" "}
+              {data.existingOutreach} outreach message{data.existingOutreach === 1 ? "" : "s"} will be erased
+              and replaced with {selected.size} imported client{selected.size === 1 ? "" : "s"}. This cannot be undone.
+            </div>
+          )}
+
           <p className="text-xs text-muted-foreground mt-3">
-            This replaces all existing clients with the selected imports.
+            Importing deletes all existing clients, sessions, packages, and outreach,
+            then inserts the selected clients.
           </p>
         </>
       )}
