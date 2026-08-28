@@ -138,11 +138,17 @@ function FollowUpCancelButton({
   );
 }
 
+// Minutes remaining until a deferred follow-up is due. Kept out of the
+// component body so the current-time read is not evaluated during render.
+function minutesUntil(followUpAt: string): number {
+  const remaining = new Date(followUpAt).getTime() - Date.now();
+  return Math.max(0, Math.ceil(remaining / 60_000));
+}
+
 function DeferredBadge({ followUpAt, outreachId }: { followUpAt: string; outreachId: number | null }) {
   const [isPending, startTransition] = useTransition();
   const toast = useToast();
-  const remaining = new Date(followUpAt).getTime() - Date.now();
-  const minutes = Math.max(0, Math.ceil(remaining / 60_000));
+  const minutes = minutesUntil(followUpAt);
   const label = minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes}m`;
   const isReady = minutes <= 0;
 

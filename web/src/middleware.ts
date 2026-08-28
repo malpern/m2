@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = ["/api/twilio", "/api/auth", "/api/cron", "/login"];
+// Exact public routes — no app session required. Kept deliberately narrow so
+// operational endpoints (e.g. /api/auth/disconnect) stay behind the auth gate.
+const PUBLIC_EXACT = new Set([
+  "/login",
+  "/api/auth", // Google OAuth start
+  "/api/auth/callback", // Google OAuth callback
+  "/api/auth/login",
+  "/api/auth/logout",
+  "/api/twilio", // Twilio webhook (signature-verified in-route)
+]);
+
+// Cron routes authenticate themselves via CRON_SECRET (see lib/cron-auth.ts).
+const PUBLIC_PREFIXES = ["/api/cron/"];
+
+export function isPublicPath(pathname: string): boolean {
+  if (PUBLIC_EXACT.has(pathname)) return true;
+  return PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+}
 
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -12,7 +29,7 @@ async function hashPassword(password: string): Promise<string> {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 
 export default function ScheduleError({
   error,
@@ -29,12 +30,12 @@ export default function ScheduleError({
           >
             Try again
           </button>
-          <a
+          <Link
             href="/"
             className="rounded-md border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"
           >
             Go to dashboard
-          </a>
+          </Link>
         </div>
       </div>
     </div>

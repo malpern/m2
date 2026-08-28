@@ -149,7 +149,7 @@ export function SettingsEditor() {
 
           <div>
             <h3 className="font-semibold text-sm mb-1">Wave 3 — Everyone else</h3>
-            <p className="text-xs text-muted-foreground mb-3">How long before sending the rest? For people who haven't been reached yet.</p>
+            <p className="text-xs text-muted-foreground mb-3">How long before sending the rest? For people who haven&apos;t been reached yet.</p>
             <NumberStepper
               value={settings.wave3DelayMinutes}
               onChange={(v) => update("wave3DelayMinutes", v)}
@@ -163,7 +163,7 @@ export function SettingsEditor() {
 
           <div>
             <h3 className="font-semibold text-sm mb-1">Follow-up</h3>
-            <p className="text-xs text-muted-foreground mb-3">If someone doesn't reply, when should the system follow up?</p>
+            <p className="text-xs text-muted-foreground mb-3">If someone doesn&apos;t reply, when should the system follow up?</p>
             <NumberStepper
               value={settings.followUpAfterMinutes}
               onChange={(v) => update("followUpAfterMinutes", v)}

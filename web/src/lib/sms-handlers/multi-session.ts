@@ -230,7 +230,7 @@ async function handleFullMultiSession(
   }
 
   const pendingParts: string[] = [];
-  let offeredAlternatives: { day: string; date: string; slot: string; time: string }[] = [];
+  const offeredAlternatives: { day: string; date: string; slot: string; time: string }[] = [];
 
   if (rescheduleNeeded.length > 0) {
     const open = await getOpenSlots(weekOf, client.id);

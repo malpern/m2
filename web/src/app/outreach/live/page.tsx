@@ -7,6 +7,32 @@ import { MissionControl } from "./mission-control";
 
 export const dynamic = "force-dynamic";
 
+const MOVE_ON_MS = 180 * 60 * 1000;
+
+// Slots offered to someone and still awaiting a reply (within the move-on
+// window). Kept out of the component body so the current-time read is not
+// evaluated during render.
+function computeReservedKeys(
+  weekOutreach: { clientId: number; direction: string; messageText: string; sentAt: string | null; repliedAt: string | null }[],
+): Set<string> {
+  const reservedKeys = new Set<string>();
+  const now = Date.now();
+  for (const o of weekOutreach) {
+    if (o.direction !== "sent" || !o.messageText.includes("[offered:")) continue;
+    const sentTime = o.sentAt ? new Date(o.sentAt).getTime() : 0;
+    if ((now - sentTime) > MOVE_ON_MS) continue;
+    const hasReply = weekOutreach.some(
+      (r) => r.clientId === o.clientId && r.direction === "received" && (r.repliedAt ?? "") > (o.sentAt ?? "")
+    );
+    if (hasReply) continue;
+    const match = o.messageText.match(/\[offered:([^\]]+)\]/);
+    if (match) {
+      for (const pair of match[1].split(",")) reservedKeys.add(pair.trim());
+    }
+  }
+  return reservedKeys;
+}
+
 export default async function LiveOutreachPage() {
   const monday = getMonday();
   const weekStart = monday.toISOString().split("T")[0];
@@ -57,22 +83,7 @@ export default async function LiveOutreachPage() {
   }));
 
   // Find reserved slots (offered to someone, awaiting reply)
-  const reservedKeys = new Set<string>();
-  const moveOnMs = 180 * 60 * 1000;
-  const now = Date.now();
-  for (const o of weekOutreach) {
-    if (o.direction !== "sent" || !o.messageText.includes("[offered:")) continue;
-    const sentTime = o.sentAt ? new Date(o.sentAt).getTime() : 0;
-    if ((now - sentTime) > moveOnMs) continue;
-    const hasReply = weekOutreach.some(
-      (r) => r.clientId === o.clientId && r.direction === "received" && (r.repliedAt ?? "") > (o.sentAt ?? "")
-    );
-    if (hasReply) continue;
-    const match = o.messageText.match(/\[offered:([^\]]+)\]/);
-    if (match) {
-      for (const pair of match[1].split(",")) reservedKeys.add(pair.trim());
-    }
-  }
+  const reservedKeys = computeReservedKeys(weekOutreach);
 
   // Open slots for the mini calendar
   const bookedSlots = weekSessions

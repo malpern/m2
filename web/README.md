@@ -18,6 +18,43 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Local CI checks (the green path)
+
+Run all three from `web/`:
+
+```bash
+npm test         # vitest — uses an in-memory SQLite db, no env required
+npm run lint     # eslint — must be error-free (warnings are allowed, see below)
+npm run build    # next build — must succeed
+```
+
+### Environment
+
+- **Tests** need no environment — they use an in-memory SQLite database via
+  `createTestDb()`.
+- **Build** needs no database environment. The libsql client is created lazily
+  (see `src/db/index.ts`), so `next build` can collect routes without
+  `TURSO_DATABASE_URL`. At **runtime**, a missing `TURSO_DATABASE_URL` throws a
+  clear, actionable error rather than a cryptic `URL_INVALID`.
+- **Dev/runtime** environment variables (set in `web/.env.local`) include
+  `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `APP_PASSWORD`, `CRON_SECRET`,
+  the `GOOGLE_*` OAuth/Sheets values, and the `TWILIO_*` values. Auth gates
+  fail closed when `APP_PASSWORD` / `CRON_SECRET` are absent.
+
+### Lint policy
+
+`npm run lint` must report **0 errors**. Remaining warnings (e.g. unused
+imports) are intentionally not failing CI yet; clear them opportunistically.
+
+### Workspace root warning (local only)
+
+Running `next build` locally may print a warning that Next inferred a parent
+`pnpm-lock.yaml` as the workspace root. It is cosmetic and does not occur on
+Vercel (which builds from a clean checkout of this directory). Do **not** set
+`turbopack.root` in `next.config.ts` to silence it — an absolute path there
+resolves differently on Vercel and breaks the build with "Couldn't find any
+pages or app directory".
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

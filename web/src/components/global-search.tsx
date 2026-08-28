@@ -44,41 +44,51 @@ export function GlobalSearch() {
   const [results, setResults] = useState<SearchResults | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const openRef = useRef(false);
   const router = useRouter();
+
+  const openSearch = useCallback(() => {
+    setQuery("");
+    setResults(null);
+    setSelectedIndex(0);
+    setOpen(true);
+  }, []);
+
+  const closeSearch = useCallback(() => {
+    setOpen(false);
+  }, []);
+
+  // Mirror `open` into a ref so the (mount-once) key handler can branch on it.
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setOpen((prev) => !prev);
+        if (openRef.current) closeSearch();
+        else openSearch();
       }
-      if (e.key === "Escape") setOpen(false);
-    }
-    function handleOpenSearch() {
-      setOpen(true);
+      if (e.key === "Escape") closeSearch();
     }
     document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("open-search", handleOpenSearch);
+    document.addEventListener("open-search", openSearch);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("open-search", handleOpenSearch);
+      document.removeEventListener("open-search", openSearch);
     };
-  }, []);
+  }, [openSearch, closeSearch]);
 
+  // Focus the input when the dialog opens (DOM side-effect only).
   useEffect(() => {
-    if (open) {
-      setTimeout(() => inputRef.current?.focus(), 50);
-      setQuery("");
-      setResults(null);
-      setSelectedIndex(0);
-    }
+    if (!open) return;
+    const id = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(id);
   }, [open]);
 
   useEffect(() => {
-    if (!query || query.length < 2) {
-      setResults(null);
-      return;
-    }
+    if (query.length < 2) return;
 
     const timer = setTimeout(async () => {
       try {
@@ -100,7 +110,7 @@ export function GlobalSearch() {
   }, [results]);
 
   function handleSelect(result: SearchResult) {
-    setOpen(false);
+    closeSearch();
     router.push(result.href);
   }
 
@@ -125,7 +135,7 @@ export function GlobalSearch() {
   const hasResults = items.length > 0;
 
   return (
-    <div className="fixed inset-0 z-[200]" role="dialog" aria-label="Search" onClick={() => setOpen(false)}>
+    <div className="fixed inset-0 z-[200]" role="dialog" aria-label="Search" onClick={closeSearch}>
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" />
       <div className="fixed inset-x-0 top-[15vh] mx-auto max-w-lg px-4" onClick={(e) => e.stopPropagation()}>
         <div className="rounded-xl border border-border bg-background shadow-2xl overflow-hidden">
@@ -138,7 +148,14 @@ export function GlobalSearch() {
               type="text"
               placeholder="Search clients, sessions, messages..."
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setQuery(value);
+                if (value.length < 2) {
+                  setResults(null);
+                  setSelectedIndex(0);
+                }
+              }}
               onKeyDown={handleKeyDown}
               aria-label="Search clients, sessions, and messages"
               className="flex-1 py-3 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
