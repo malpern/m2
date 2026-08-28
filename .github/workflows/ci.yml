@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: web (lint, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.x
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      # Build must pass with NO secrets present: route collection may not
+      # require TURSO_DATABASE_URL et al. at module load. See src/db/index.ts.
+      - name: Build
+        run: npm run build
+
+      # Reports only: upstream advisories land independently of our changes,
+      # so a new CVE must not turn every unrelated PR red. Review the output.
+      - name: Audit (report only)
+        continue-on-error: true
+        run: npm audit --audit-level=moderate
