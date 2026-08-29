@@ -23,8 +23,10 @@ function makeClient(overrides: Partial<Client> & { id: number; name: string }): 
     email: null,
     calendarInviteOptIn: null,
     sessionReminders: null,
-    createdAt: null,
-    updatedAt: null,
+    // clients.created_at / updated_at are NOT NULL with a CURRENT_TIMESTAMP default,
+    // so the fixture must supply strings rather than null.
+    createdAt: "2026-01-01 00:00:00",
+    updatedAt: "2026-01-01 00:00:00",
     ...overrides,
   };
 }

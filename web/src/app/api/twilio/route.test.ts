@@ -26,9 +26,12 @@ const mockDbSelect = vi.fn(() => ({
 
 vi.mock("@/db", () => ({
   db: {
-    select: (...args: unknown[]) => mockDbSelect(...args),
-    insert: (...args: unknown[]) => mockDbInsert(...args),
-    update: (...args: unknown[]) => mockDbUpdate(...args),
+    // These stand-ins ignore their arguments; the tests assert on the chained
+    // builder, never on what was passed in. Forwarding nothing keeps the call
+    // signatures honest instead of spreading unknown[] into zero-arg mocks.
+    select: () => mockDbSelect(),
+    insert: () => mockDbInsert(),
+    update: () => mockDbUpdate(),
   },
 }));
 
@@ -173,7 +176,7 @@ function setupOutreachQuery(rows: ReturnType<typeof makeOutreach>[]) {
         get: () => rows[0] ?? null,
       }),
     }),
-  } as ReturnType<typeof mockDbSelect>);
+  } as unknown as ReturnType<typeof mockDbSelect>);
 }
 
 async function getResponseText(response: Response): Promise<string> {

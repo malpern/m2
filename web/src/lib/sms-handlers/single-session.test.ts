@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { makeSlots } from "@/test/slots";
 
 vi.mock("@/db", () => ({
   db: {
@@ -119,7 +120,7 @@ beforeEach(() => {
   mockSyncSessionToCalendar.mockResolvedValue(undefined);
   mockGetInvitePrompt.mockResolvedValue(null);
   mockCreditCancellation.mockResolvedValue(true);
-  mockAutoFillCancelledSlot.mockResolvedValue(undefined);
+  mockAutoFillCancelledSlot.mockResolvedValue({ offered: false });
   mockWhySlotUnavailable.mockResolvedValue("not_available");
   mockGetOpenSlots.mockResolvedValue([]);
   mockRankSlotsForClient.mockResolvedValue([]);
@@ -290,7 +291,7 @@ describe("handleSingleSessionReply", () => {
         interpretation: "selecting_offered_slot", confidence: 0.9,
         extractedDay: "Tuesday", extractedTime: "4pm",
       });
-      const slots = [{ day: "tuesday", date: "2026-06-02", slot: "4pm", time: "16:00" }];
+      const slots = makeSlots({ day: "tuesday", date: "2026-06-02", slot: "4pm", time: "16:00" });
       mockGetOpenSlots.mockResolvedValue(slots);
       mockRankSlotsForClient.mockResolvedValue(slots);
       mockTryBookSlot.mockResolvedValue(true);
@@ -310,10 +311,10 @@ describe("handleSingleSessionReply", () => {
         interpretation: "selecting_offered_slot", confidence: 0.9,
         extractedDay: "Tuesday", extractedTime: "4pm",
       });
-      const slots = [
+      const slots = makeSlots(
         { day: "tuesday", date: "2026-06-02", slot: "4pm", time: "16:00" },
         { day: "wednesday", date: "2026-06-03", slot: "5pm", time: "17:00" },
-      ];
+      );
       mockGetOpenSlots.mockResolvedValue(slots);
       mockRankSlotsForClient.mockResolvedValue(slots);
       mockTryBookSlot.mockResolvedValue(false);
@@ -334,7 +335,7 @@ describe("handleSingleSessionReply", () => {
         interpretation: "declined_wants_options", confidence: 0.9,
         extractedDay: "Wednesday",
       });
-      const slots = [{ day: "wednesday", date: "2026-06-03", slot: "5pm", time: "17:00" }];
+      const slots = makeSlots({ day: "wednesday", date: "2026-06-03", slot: "5pm", time: "17:00" });
       mockGetOpenSlots.mockResolvedValue(slots);
       mockTryBookSlot.mockResolvedValue(true);
 
@@ -352,7 +353,7 @@ describe("handleSingleSessionReply", () => {
         interpretation: "declined_wants_options", confidence: 0.9,
         extractedDay: "Saturday",
       });
-      const slots = [{ day: "monday", date: "2026-06-01", slot: "3pm", time: "15:00" }];
+      const slots = makeSlots({ day: "monday", date: "2026-06-01", slot: "3pm", time: "15:00" });
       mockGetOpenSlots.mockResolvedValue(slots);
       mockRankSlotsForClient.mockResolvedValue(slots);
       mockTryBookSlot.mockResolvedValue(false);
@@ -371,10 +372,10 @@ describe("handleSingleSessionReply", () => {
       mockClassifyReply.mockResolvedValue({
         interpretation: "declined_wants_options", confidence: 0.9,
       });
-      const slots = [
+      const slots = makeSlots(
         { day: "monday", date: "2026-06-01", slot: "3pm", time: "15:00" },
         { day: "wednesday", date: "2026-06-03", slot: "5pm", time: "17:00" },
-      ];
+      );
       mockGetOpenSlots.mockResolvedValue(slots);
       mockRankSlotsForClient.mockResolvedValue(slots);
 
