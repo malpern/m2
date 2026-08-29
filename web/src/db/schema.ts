@@ -126,6 +126,37 @@ export const sessions = sqliteTable("sessions", {
   index("sessions_date_status_idx").on(t.scheduledDate, t.status),
 ]);
 
+/**
+ * Who actually attended a semi-group session (#13).
+ *
+ * Sessions carry a single `clientId`, which is the wrong shape for a semi-group:
+ * neither source of truth records participants — Google Calendar events are owned
+ * by the trainer with no client names, and Sheets logs only a head count
+ * ("2 attended"). So attendance is recorded here, per session, rather than as
+ * standing membership: the Sheets data is per-session, and a per-session record
+ * can always be rolled up into a recurring roster later, while the reverse loses
+ * the week a regular missed.
+ *
+ * The owning `sessions.clientId` is left alone — it stays the row's anchor, and
+ * is included in the attendee list by the read helpers so callers see one roster.
+ */
+export const sessionAttendees = sqliteTable("session_attendees", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  sessionId: integer("session_id")
+    .notNull()
+    .references(() => sessions.id),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clients.id),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+}, (t) => [
+  // One row per person per session — adding the same client twice is a no-op,
+  // not a duplicate that inflates the head count.
+  uniqueIndex("session_attendees_session_client_idx").on(t.sessionId, t.clientId),
+  index("session_attendees_session_id_idx").on(t.sessionId),
+  index("session_attendees_client_id_idx").on(t.clientId),
+]);
+
 export const guideFeedback = sqliteTable("guide_feedback", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   xPercent: integer("x_percent").notNull(),
