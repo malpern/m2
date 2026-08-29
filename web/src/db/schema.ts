@@ -27,6 +27,10 @@ export const clients = sqliteTable("clients", {
   preferredTime: text("preferred_time"),
   maxSessionsPerWeek: integer("max_sessions_per_week").notNull().default(1),
   standingSlot: text("standing_slot"),
+  // #2 — this client's usual session length, applied to new sessions. Nullable:
+  // null means "no preference, use the system default" rather than 60, so the
+  // default can change later without silently rewriting every client.
+  defaultDurationMinutes: integer("default_duration_minutes"),
   sortOrder: integer("sort_order"),
   notes: text("notes"),
   googleSheetsName: text("google_sheets_name"),
@@ -103,6 +107,10 @@ export const sessions = sqliteTable("sessions", {
   sessionType: text("session_type", {
     enum: ["individual", "group", "late_cancel"],
   }),
+  // #2 — sessions were all assumed to be one hour. Stored per session rather than
+  // only per client so a one-off longer session does not require editing the
+  // client's default. NOT NULL with a default so every existing row reads 60.
+  durationMinutes: integer("duration_minutes").notNull().default(60),
   gcalEventId: text("gcal_event_id"),
   loggedToSheets: integer("logged_to_sheets", { mode: "boolean" })
     .notNull()

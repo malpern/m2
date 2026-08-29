@@ -25,6 +25,15 @@ export const SLOT_TIMES: Record<TimeSlot, string> = {
  */
 export const SLOT_TIMES_MAP: Record<string, string> = SLOT_TIMES;
 
+/** Slots in chronological order. A session can span several of them (#2). */
+export const SLOTS_IN_ORDER: TimeSlot[] = ["3pm", "4pm", "5pm", "6pm", "7pm"];
+
+/** Every slot is one hour wide, which is what makes a duration span countable. */
+export const SLOT_LENGTH_MINUTES = 60;
+
+/** Used when neither the session nor the client specifies one. */
+export const DEFAULT_SESSION_MINUTES = 60;
+
 // ---------------------------------------------------------------------------
 // Day helpers
 // ---------------------------------------------------------------------------

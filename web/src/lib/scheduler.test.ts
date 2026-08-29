@@ -14,6 +14,7 @@ function makeClient(overrides: Partial<Client> & { id: number; name: string }): 
     preferredTime: null,
     maxSessionsPerWeek: 1,
     standingSlot: null,
+    defaultDurationMinutes: null,
     sortOrder: null,
     notes: null,
     googleSheetsName: null,

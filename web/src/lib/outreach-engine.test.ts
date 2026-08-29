@@ -25,6 +25,7 @@ function makeSession(overrides: Record<string, unknown> = {}) {
     loggedToSheets: false,
     reconciled: false,
     // sessions.created_at is NOT NULL with a CURRENT_TIMESTAMP default.
+    durationMinutes: 60,
     createdAt: "2026-01-01 00:00:00",
     standingSlot: null,
     ...overrides,

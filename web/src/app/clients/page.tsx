@@ -32,6 +32,7 @@ export default async function ClientsPage() {
         preferredTime: clients.preferredTime,
         maxSessionsPerWeek: clients.maxSessionsPerWeek,
         standingSlot: clients.standingSlot,
+        defaultDurationMinutes: clients.defaultDurationMinutes,
         sortOrder: clients.sortOrder,
         notes: clients.notes,
         googleSheetsName: clients.googleSheetsName,

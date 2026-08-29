@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { DURATION_CHOICES, formatDuration } from "@/lib/session-duration";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -220,6 +221,21 @@ export function ClientForm({
           defaultValue={client?.standingSlot ?? ""}
           placeholder="e.g. Mon 3pm, Wed 3pm — auto-fills each week"
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="defaultDurationMinutes">Default Session Length</Label>
+        <select
+          id="defaultDurationMinutes"
+          name="defaultDurationMinutes"
+          defaultValue={client?.defaultDurationMinutes ?? ""}
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          <option value="">Use the default (1h)</option>
+          {DURATION_CHOICES.map((m) => (
+            <option key={m} value={m}>{formatDuration(m)}</option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-2">

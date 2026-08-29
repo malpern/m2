@@ -32,6 +32,9 @@ export async function createClient(formData: FormData) {
     preferredTime: (formData.get("preferredTime") as string) || null,
     maxSessionsPerWeek: parseInt(formData.get("maxSessionsPerWeek") as string) || 1,
     standingSlot: (formData.get("standingSlot") as string) || null,
+    // Empty select means "no preference" — stored as null so the system default
+    // applies, rather than freezing 60 onto the client (#2).
+    defaultDurationMinutes: parseInt(formData.get("defaultDurationMinutes") as string) || null,
     notes: (formData.get("notes") as string) || null,
     sessionRate: formData.get("sessionRate") ? Math.round(parseFloat(formData.get("sessionRate") as string) * 100) : null,
     sessionType: ((formData.get("sessionType") as string) || null) as "individual" | "dual" | "group" | null,
@@ -59,6 +62,9 @@ export async function updateClient(id: number, formData: FormData) {
       preferredTime: (formData.get("preferredTime") as string) || null,
       maxSessionsPerWeek: parseInt(formData.get("maxSessionsPerWeek") as string) || 1,
       standingSlot: (formData.get("standingSlot") as string) || null,
+      // Empty select means "no preference" — stored as null so the system default
+    // applies, rather than freezing 60 onto the client (#2).
+    defaultDurationMinutes: parseInt(formData.get("defaultDurationMinutes") as string) || null,
       notes: (formData.get("notes") as string) || null,
       sessionRate: formData.get("sessionRate") ? Math.round(parseFloat(formData.get("sessionRate") as string) * 100) : null,
       sessionType: ((formData.get("sessionType") as string) || null) as "individual" | "dual" | "group" | null,
@@ -86,7 +92,7 @@ export async function updateClientStatus(id: number, status: string) {
 const ALLOWED_FIELDS = new Set([
   "name", "phone", "category", "gradeLevel", "collegeBound",
   "behaviorScore", "preferredDays", "preferredTime", "maxSessionsPerWeek",
-  "standingSlot", "notes", "sessionRate", "sessionType", "parentGuardian", "email",
+  "standingSlot", "defaultDurationMinutes", "notes", "sessionRate", "sessionType", "parentGuardian", "email",
   "calendarInviteOptIn", "sessionReminders",
 ]);
 
@@ -104,7 +110,9 @@ export async function updateClientField(id: number, field: string, value: string
     }
   } else if (field === "collegeBound") {
     updates[field] = value;
-  } else if (field === "sessionRate") {
+  } else if (field === "sessionRate" || field === "defaultDurationMinutes") {
+    // Nullable numbers: an empty value means "unset", not 0. Without this branch
+    // the fallthrough would store the raw string.
     updates[field] = typeof value === "number" ? value : parseInt(value as string) || null;
   } else if (field === "behaviorScore" || field === "maxSessionsPerWeek") {
     updates[field] = typeof value === "number" ? value : parseInt(value as string);

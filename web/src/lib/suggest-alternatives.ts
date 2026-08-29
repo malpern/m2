@@ -5,6 +5,7 @@ import { listEvents, isConnected } from "@/lib/google-calendar";
 import { OUTREACH_DEFAULTS } from "./outreach-config";
 import { syslog } from "./logger";
 import { SLOT_TIMES, DAY_NAMES_BY_INDEX, DAY_LABELS, type TimeSlot } from "./constants";
+import { occupiedKeys } from "./session-duration";
 
 const SLOTS: TimeSlot[] = ["3pm", "4pm", "5pm", "6pm", "7pm"];
 
@@ -101,7 +102,13 @@ export async function getOpenSlots(
   const sunday = weekDates[weekDates.length - 1].date;
 
   const weekSessions = await db
-    .select({ date: sessions.scheduledDate, time: sessions.scheduledTime, status: sessions.status })
+    .select({
+      date: sessions.scheduledDate,
+      time: sessions.scheduledTime,
+      slot: sessions.slot,
+      durationMinutes: sessions.durationMinutes,
+      status: sessions.status,
+    })
     .from(sessions)
     .where(and(
       gte(sessions.scheduledDate, monday),
@@ -110,7 +117,12 @@ export async function getOpenSlots(
     ))
     .all();
 
-  const bookedKeys = new Set(weekSessions.map((s) => `${s.date}|${s.time}`));
+  // A session blocks every hour it runs through, not just the one it starts in
+  // (#2). Keying only on the start time left a 90-minute session's second hour
+  // looking free, so it could be offered to someone else and double-booked.
+  const bookedKeys = new Set(
+    weekSessions.flatMap((s) => occupiedKeys(s.date, s.slot, s.durationMinutes)),
+  );
 
   const gcalKeys = new Set<string>();
   try {
