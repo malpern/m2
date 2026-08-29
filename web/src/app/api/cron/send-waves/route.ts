@@ -1,12 +1,13 @@
 import { db } from "@/db";
-import { outreach, sessions, clients, weeklySkips } from "@/db/schema";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { outreach, sessions, clients, weeklySkips, sessionAttendees } from "@/db/schema";
+import { eq, and, gte, lte, sql } from "drizzle-orm";
 import { getMonday } from "@/lib/scheduler";
 import { buildOutreachQueue, getNextWaveToSend } from "@/lib/outreach-engine";
 import { sendSMS, isDevAllowed } from "@/lib/twilio";
 import { syslog } from "@/lib/logger";
 import { isVacationWeek } from "@/lib/vacation-detect";
 import { isCronAuthorized } from "@/lib/cron-auth";
+import { describeSession, sessionTypeTag } from "@/lib/session-description";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -92,6 +93,15 @@ export async function POST(request: NextRequest) {
     sessionCount: number;
   }> = [];
 
+  // Roster sizes (#13) so a group message can say how many others are in it.
+  const attendeeRows = await db
+    .select({ sessionId: sessionAttendees.sessionId, n: sql<number>`count(*)` })
+    .from(sessionAttendees)
+    .groupBy(sessionAttendees.sessionId)
+    .all();
+  // +1 for the owning client, who is on the roster but not in this table.
+  const attendeeCounts = new Map(attendeeRows.map((r) => [r.sessionId, Number(r.n) + 1]));
+
   const now = new Date().toISOString();
 
   for (const [clientId, clientItems] of byClient) {
@@ -109,13 +119,16 @@ export async function POST(request: NextRequest) {
     if (clientItems.length === 1) {
       const dayLabel = new Date(first.date + "T12:00:00Z")
         .toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });
-      message = `Hey ${firstName}, are you free ${dayLabel} at ${first.slot} for a session?`;
+      // #56 — "a session" for individuals (unchanged), "your group session with
+      // 2 others" for a semi-group. Counts only; no other client is named.
+      const others = Math.max(0, (attendeeCounts.get(first.sessionId) ?? 0) - 1);
+      message = `Hey ${firstName}, are you free ${dayLabel} at ${first.slot} for ${describeSession(first.sessionType, others)}?`;
     } else {
       const sorted = [...clientItems].sort((a, b) => a.date.localeCompare(b.date));
       const days = sorted.map((s) => {
         const d = new Date(s.date + "T12:00:00Z")
           .toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });
-        return `• ${d} at ${s.slot}`;
+        return `• ${d} at ${s.slot}${sessionTypeTag(s.sessionType)}`;
       });
       message = `Hey ${firstName}, here's your schedule this week:\n${days.join("\n")}\nAll good, or need to change anything?`;
     }

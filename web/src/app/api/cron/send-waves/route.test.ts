@@ -23,6 +23,7 @@ vi.mock("@/db/schema", () => ({
   sessions: { id: "id", clientId: "client_id", scheduledDate: "scheduled_date" },
   clients: { id: "id", name: "name", phone: "phone" },
   weeklySkips: { clientId: "client_id", weekOf: "week_of" },
+  sessionAttendees: { sessionId: "session_id", clientId: "client_id" },
 }));
 
 vi.mock("@/lib/scheduler", () => ({
@@ -71,6 +72,7 @@ beforeEach(() => {
   // Default db.select mock chain
   mockDbSelect.mockReturnValue({
     from: () => ({
+      groupBy: () => ({ all: () => [] }),
       innerJoin: () => ({
         where: () => ({
           all: () => [],
@@ -137,6 +139,7 @@ describe("POST /api/cron/send-waves", () => {
         // sessions query
         return {
           from: () => ({
+          groupBy: () => ({ all: () => [] }),
             innerJoin: () => ({
               where: () => ({
                 all: () => [],
@@ -149,6 +152,7 @@ describe("POST /api/cron/send-waves", () => {
         // outreach query
         return {
           from: () => ({
+          groupBy: () => ({ all: () => [] }),
             where: () => ({
               all: () => [],
             }),
@@ -158,6 +162,7 @@ describe("POST /api/cron/send-waves", () => {
       // weekly_skips query — return the client as skipped
       return {
         from: () => ({
+          groupBy: () => ({ all: () => [] }),
           where: () => ({
             all: () => [{ clientId: 1 }],
           }),
@@ -185,6 +190,7 @@ describe("POST /api/cron/send-waves", () => {
       if (selectCall <= 2) {
         return {
           from: () => ({
+          groupBy: () => ({ all: () => [] }),
             innerJoin: () => ({
               where: () => ({
                 all: () => [],
@@ -199,6 +205,7 @@ describe("POST /api/cron/send-waves", () => {
       // skips query — no skips
       return {
         from: () => ({
+          groupBy: () => ({ all: () => [] }),
           where: () => ({
             all: () => [],
           }),
@@ -229,6 +236,7 @@ describe("POST /api/cron/send-waves", () => {
       if (selectCall <= 2) {
         return {
           from: () => ({
+          groupBy: () => ({ all: () => [] }),
             innerJoin: () => ({
               where: () => ({
                 all: () => [],
@@ -242,6 +250,7 @@ describe("POST /api/cron/send-waves", () => {
       }
       return {
         from: () => ({
+          groupBy: () => ({ all: () => [] }),
           where: () => ({
             all: () => [],
           }),
@@ -270,6 +279,7 @@ describe("POST /api/cron/send-waves", () => {
       if (selectCall <= 2) {
         return {
           from: () => ({
+          groupBy: () => ({ all: () => [] }),
             innerJoin: () => ({
               where: () => ({
                 all: () => [],
@@ -283,6 +293,7 @@ describe("POST /api/cron/send-waves", () => {
       }
       return {
         from: () => ({
+          groupBy: () => ({ all: () => [] }),
           where: () => ({
             all: () => [],
           }),

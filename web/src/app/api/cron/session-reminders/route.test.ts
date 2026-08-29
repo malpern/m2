@@ -16,6 +16,7 @@ vi.mock("@/db/schema", () => ({
   sessions: { id: "id", clientId: "client_id", scheduledDate: "scheduled_date", status: "status", scheduledTime: "scheduled_time", slot: "slot" },
   clients: { id: "id", name: "name", phone: "phone", sessionReminders: "session_reminders", category: "category" },
   outreachSettings: {},
+  sessionAttendees: { sessionId: "session_id", clientId: "client_id" },
 }));
 
 vi.mock("@/lib/twilio", () => ({
@@ -71,6 +72,7 @@ describe("POST /api/cron/session-reminders", () => {
       // sessions query
       return {
         from: () => ({
+          groupBy: () => ({ all: () => [] }),
           innerJoin: () => ({
             where: () => ({
               all: () => [
@@ -113,6 +115,7 @@ describe("POST /api/cron/session-reminders", () => {
       }
       return {
         from: () => ({
+          groupBy: () => ({ all: () => [] }),
           innerJoin: () => ({
             where: () => ({
               all: () => [
@@ -153,6 +156,7 @@ describe("POST /api/cron/session-reminders", () => {
       }
       return {
         from: () => ({
+          groupBy: () => ({ all: () => [] }),
           innerJoin: () => ({
             where: () => ({
               all: () => [
@@ -194,6 +198,7 @@ describe("POST /api/cron/session-reminders", () => {
       }
       return {
         from: () => ({
+          groupBy: () => ({ all: () => [] }),
           innerJoin: () => ({
             where: () => ({
               all: () => [
@@ -235,6 +240,7 @@ describe("POST /api/cron/session-reminders", () => {
       }
       return {
         from: () => ({
+          groupBy: () => ({ all: () => [] }),
           innerJoin: () => ({
             where: () => ({
               all: () => [
@@ -275,6 +281,7 @@ describe("POST /api/cron/session-reminders", () => {
       }
       return {
         from: () => ({
+          groupBy: () => ({ all: () => [] }),
           innerJoin: () => ({
             where: () => ({
               all: () => [],
