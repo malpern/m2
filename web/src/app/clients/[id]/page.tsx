@@ -18,6 +18,8 @@ import { formatPhoneNumber } from "@/lib/utils";
 import { ClientActivityStats } from "./client-activity-stats";
 import { LastWeekCard } from "./last-week-card";
 import { SchedulePatternCard } from "./schedule-pattern-card";
+import { StandingSlotDriftCard } from "./standing-slot-drift-card";
+import { analyseStandingSlotDrift, formatStandingSlot } from "@/lib/standing-slot-drift";
 import { ClientProfileCard } from "./client-profile-card";
 import { ClientPackageCard } from "./client-package-card";
 
@@ -104,6 +106,10 @@ export default async function ClientDetailPage({
   // Schedule pattern computation
   const { scheduleGrid, maxDayTimeScore, allTimeSlots, coreHours } = computeSchedulePattern(allClientSessions);
 
+  // #25 — has this client quietly moved off their standing slot? Computed from
+  // the sessions already loaded above, so it costs no extra query. Reports only.
+  const drift = analyseStandingSlotDrift(client.standingSlot, allClientSessions, new Date());
+
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-8">
       <Link
@@ -176,6 +182,15 @@ export default async function ClientDetailPage({
         totalNoShow={totalNoShow}
         memberSince={memberSince}
       />
+
+      {drift.drifted && (
+        <StandingSlotDriftCard
+          clientId={clientId}
+          summary={drift.summary}
+          suggested={formatStandingSlot(drift.observed)}
+          weeksAnalysed={drift.weeksAnalysed}
+        />
+      )}
 
       <LastWeekCard sessions={allClientSessions} />
 
