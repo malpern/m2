@@ -40,6 +40,34 @@ The priority sort is in `src/lib/priority.ts`. Order:
 3. `gradeLevel` — senior > junior > sophomore > freshman > adult
 4. `behaviorScore` — higher is better (tiebreaker)
 
+## Scheduled jobs
+
+Only two of the four `/api/cron/*` routes are scheduled, in `vercel.json`:
+
+| Route | Schedule (UTC) | Local | Writes to the DB? |
+|---|---|---|---|
+| `session-reminders` | `0 14 * * *` | 07:00 PT | no |
+| `daily-digest` | `0 3 * * *` | 20:00 PT | no |
+| `send-waves` | **unscheduled** | — | **yes** |
+| `follow-ups` | **unscheduled** | **—** | **yes** |
+
+Vercel injects `Authorization: Bearer $CRON_SECRET` on cron invocations, which is what
+each route checks. With `CRON_SECRET` unset the routes fail closed and every invocation
+returns 401 — correct, but it means the jobs silently do nothing.
+
+### Do not schedule the other two yet — see #227
+
+`send-waves` and `follow-ups` mutate data, and while `OUTREACH_LIVE` is off they will
+**cancel real booked sessions for messages that were never sent**. `sendSMS` returns
+the string `"DEV_SKIPPED"` when the dev guard blocks a number, which resolves and is
+therefore indistinguishable from a real send; `send-waves` has already written the
+outreach row as `awaiting_reply` before it tries; `follow-ups` later sees no reply and
+sets the session to `cancelled`.
+
+The two scheduled routes were chosen because they only read. This holds for any
+scheduler, not just Vercel's — running them from a laptop or the mini is the same
+hazard. Fix #227 first.
+
 ## Database
 `src/db/schema.ts` is the single source of truth. The connection is libSQL
 (`@libsql/client`), built lazily in `src/db/index.ts` from `TURSO_DATABASE_URL` and
