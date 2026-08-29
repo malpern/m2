@@ -2,7 +2,7 @@ import { google } from "googleapis";
 import { db } from "@/db";
 import { googleTokens } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { getOAuth2Client, getAuthenticatedClient } from "@/lib/google-auth";
+import { getOAuth2Client, getAuthenticatedClient, getAuthenticatedClientWithEmail } from "@/lib/google-auth";
 
 export function getAuthUrl(): { url: string; state: string } {
   const state = crypto.randomUUID();
@@ -15,6 +15,9 @@ export function getAuthUrl(): { url: string; state: string } {
       "https://www.googleapis.com/auth/spreadsheets.readonly",
       "https://www.googleapis.com/auth/drive.readonly",
       "https://www.googleapis.com/auth/gmail.send",
+      // Without this, the userinfo lookup in handleCallback fails and the stored
+      // email stays null — so nothing records WHICH account is connected.
+      "https://www.googleapis.com/auth/userinfo.email",
     ],
     state,
   });
@@ -64,10 +67,30 @@ export async function handleCallback(code: string) {
   return email;
 }
 
-export async function isConnected(): Promise<{ connected: boolean; email?: string }> {
+/**
+ * Whether the Google connection actually works.
+ *
+ * This used to return `{connected: true}` for the mere existence of a row. The
+ * token expired on 2026-06-01 and the Settings badge reported "Connected" for
+ * three months while every calendar read silently failed and slot conflict
+ * detection quietly stopped seeing Google events. A status that reports the
+ * presence of a record rather than a working credential is worse than no status.
+ *
+ * authenticateCore refreshes an expired token and returns null when it cannot,
+ * so this now answers the question the badge claims to answer.
+ */
+export async function isConnected(): Promise<{ connected: boolean; email?: string; reason?: string }> {
   const stored = await db.select().from(googleTokens).get();
-  if (!stored) return { connected: false };
-  return { connected: true, email: stored.email ?? undefined };
+  if (!stored) return { connected: false, reason: "No Google account connected." };
+
+  const auth = await getAuthenticatedClientWithEmail();
+  if (!auth) {
+    return {
+      connected: false,
+      reason: "Stored Google credentials could not be refreshed — disconnect and reconnect.",
+    };
+  }
+  return { connected: true, email: auth.email ?? stored.email ?? undefined };
 }
 
 
@@ -110,7 +133,16 @@ export async function createCalendarEvent(
   const startStr = `${date}T${startTime}:00`;
   const endStr = `${date}T${String(endHours).padStart(2, "0")}:${String(endMinutes).padStart(2, "0")}:00`;
 
-  const attendees = opts?.attendeeEmail ? [{ email: opts.attendeeEmail }] : undefined;
+  // A calendar invite is outbound mail: Google sends it to the attendee directly,
+  // so it bypasses both isDevAllowed and sendSMS. OUTREACH_LIVE previously only
+  // changed the event TITLE, meaning a real client could receive an invite reading
+  // "IGNORE JUST TESTING" while outreach was supposedly off. Gate the attendee
+  // itself, so nothing reaches a client until outreach is deliberately enabled.
+  const attendeeEmail = IS_TESTING ? undefined : opts?.attendeeEmail;
+  const attendees = attendeeEmail ? [{ email: attendeeEmail }] : undefined;
+  if (IS_TESTING && opts?.attendeeEmail) {
+    console.log(`[DEV GUARD] Would invite ${opts.attendeeEmail} to ${clientName} on ${date}`);
+  }
 
   const description = attendees
     ? "M2 Performance & Therapy session.\n\nTo stop receiving calendar invites, reply STOP INVITES to your scheduling text."
@@ -118,7 +150,7 @@ export async function createCalendarEvent(
 
   const res = await calendar.events.insert({
     calendarId: CALENDAR_ID,
-    sendUpdates: opts?.attendeeEmail ? "all" : "none",
+    sendUpdates: attendeeEmail ? "all" : "none",
     requestBody: {
       summary: `${EVENT_PREFIX}${clientName}${TEST_SUFFIX}`,
       start: { dateTime: startStr, timeZone: "America/Los_Angeles" },
@@ -132,6 +164,13 @@ export async function createCalendarEvent(
 }
 
 export async function updateCalendarEventAttendee(eventId: string, email: string): Promise<boolean> {
+  // Same outbound path as createCalendarEvent: patching an attendee onto an event
+  // makes Google mail them. Gated for the same reason.
+  if (IS_TESTING) {
+    console.log(`[DEV GUARD] Would add ${email} as an attendee of event ${eventId}`);
+    return false;
+  }
+
   const auth = await getAuthenticatedClient();
   if (!auth) return false;
 
