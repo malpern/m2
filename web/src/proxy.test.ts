@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isPublicPath } from "./middleware";
+import { isPublicPath } from "./proxy";
 
 describe("isPublicPath", () => {
   it("allows login, OAuth start/callback, login/logout, and Twilio webhook", () => {

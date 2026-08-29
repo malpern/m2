@@ -31,6 +31,8 @@
 - `src/components/` — shared UI components
 - `src/db/` — Drizzle schema, database connection, seed script
 - `src/lib/` — business logic (priority ranking, scheduling rules, etc.)
+- `src/proxy.ts` — the password gate. Next 16 renamed the `middleware` file convention
+  to `proxy`; the matcher and `NextResponse` behaviour are unchanged.
 - `src/test/` — test helpers (setup, test DB factory)
 
 ## Priority Ranking Algorithm
