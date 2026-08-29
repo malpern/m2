@@ -106,9 +106,28 @@ neither reads `.env.local` the way Next does.
 ### Schema changes reach production only by hand
 
 There is **no `drizzle/` migrations directory and no migrate step in the build**, so
-`drizzle-kit push` against production is a deliberate, manual act. Nothing verifies that
-the deployed code and the production schema agree, and as of 2026-08-28 they do not —
-see #222. Treat a schema change as two separate deployments: the code, and the database.
+`drizzle-kit push` against production is a deliberate, manual act, and nothing verifies
+that the deployed code and the production schema agree. Treat a schema change as two
+separate deployments: the code, and the database.
+
+Production was reconciled on 2026-08-29 (#222). It had drifted badly while deploys were
+broken — **none of the 23 indexes existed**, and `clients.phone` was still `NOT NULL`.
+Two things that cost time and are worth knowing before the next push:
+
+- **`drizzle-kit push` cannot always do it in one pass.** Adding a `UNIQUE` index while
+  duplicate values exist fails, so the data has to be fixed first, in its own step.
+- **Rebuilding a table that others reference needs `PRAGMA foreign_keys=OFF` on a
+  persistent connection.** SQLite cannot `ALTER COLUMN`, so a nullability change is
+  create-copy-drop-rename — and `DROP TABLE` is blocked by the foreign keys from
+  `sessions`, `packages`, `outreach` and `weekly_skips`. A libSQL `batch()` will NOT
+  work for this: it wraps the statements in a transaction, where the pragma is ignored.
+  Issue the statements individually on one client, and check `PRAGMA foreign_key_check`
+  and `sqlite_sequence` afterwards — the latter carries the autoincrement counter and a
+  careless rebuild resets it, silently reusing ids.
+
+Still divergent, deliberately: `clients.created_at`, `clients.updated_at` and
+`sessions.created_at` are nullable in production where the schema says `NOT NULL`. Zero
+rows violate it; fold the fix into the next change that needs a rebuild anyway.
 
 `better-sqlite3` is used *only* by `src/test/db.ts`; nothing in `src/app` or `src/lib`
 imports it, and it is declared as a devDependency. Note it is still installed by
