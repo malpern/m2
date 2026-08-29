@@ -57,18 +57,20 @@ Vercel injects `Authorization: Bearer $CRON_SECRET` on cron invocations, which i
 each route checks. With `CRON_SECRET` unset the routes fail closed and every invocation
 returns 401 — correct, but it means the jobs silently do nothing.
 
-### Do not schedule the other two yet — see #227
+### The other two are still unscheduled, but the reason has changed
 
-`send-waves` and `follow-ups` mutate data, and while `OUTREACH_LIVE` is off they will
-**cancel real booked sessions for messages that were never sent**. `sendSMS` returns
-the string `"DEV_SKIPPED"` when the dev guard blocks a number, which resolves and is
-therefore indistinguishable from a real send; `send-waves` has already written the
-outreach row as `awaiting_reply` before it tries; `follow-ups` later sees no reply and
-sets the session to `cancelled`.
+**#227 is fixed.** `sendSMS` now returns a discriminated `SendResult`, and every caller
+that records outreach state demotes the row to `pending` when a send is skipped or
+fails. A row therefore only reaches `awaiting_reply` if a message actually went out, so
+`follow-ups` can no longer expire a phantom row and cancel the session behind it. That
+specific hazard is closed structurally, not by a guard.
 
-The two scheduled routes were chosen because they only read. This holds for any
-scheduler, not just Vercel's — running them from a laptop or the mini is the same
-hazard. Fix #227 first.
+They stay unscheduled for a different and simpler reason: **there is nothing useful for
+them to do yet.** `OUTREACH_LIVE` is off and every client phone number in production is
+the placeholder `+15550000000` (#17), so `send-waves` would skip every client on the dev
+guard and write nothing. Schedule them once #17 lands and outreach is genuinely live —
+and note that `follow-ups` cancelling an unanswered session is then *correct* behaviour,
+so turn it on deliberately rather than as an afterthought.
 
 ## Database
 `src/db/schema.ts` is the single source of truth. The connection is libSQL
@@ -103,4 +105,5 @@ the deployed code and the production schema agree, and as of 2026-08-28 they do 
 see #222. Treat a schema change as two separate deployments: the code, and the database.
 
 `better-sqlite3` is used *only* by `src/test/db.ts`; nothing in `src/app` or `src/lib`
-imports it. (It currently sits in `dependencies` rather than `devDependencies`.)
+imports it, and it is declared as a devDependency. Note it is still installed by
+`npm ci --omit=dev` regardless, because drizzle-orm pulls it in as a peer.
