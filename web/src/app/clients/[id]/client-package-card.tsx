@@ -22,15 +22,19 @@ export function ClientPackageCard({
   clientId,
   activePackage,
   transactionHistory,
+  renewalPrompt,
 }: {
   clientId: number;
   activePackage: PackageRow | undefined;
   transactionHistory: TransactionRow[];
+  /** Rendered in the header when the package is running low (#4). */
+  renewalPrompt?: React.ReactNode;
 }) {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base">Package</CardTitle>
+        {renewalPrompt}
       </CardHeader>
       <CardContent>
         {activePackage ? (

@@ -24,10 +24,13 @@ import {
 import { EmptyState } from "@/components/empty-state";
 import { SearchInput } from "@/components/search-input";
 import { StatCard } from "@/components/stat-card";
+import { RenewalPrompt } from "@/components/renewal-prompt";
+import { RENEWAL_THRESHOLD } from "@/lib/package-renewal";
 
 export type PackageRow = {
   clientId: number;
   clientName: string;
+  clientPhone: string | null;
   category: string;
   packageId: number;
   totalSessions: number;
@@ -201,7 +204,7 @@ export function PackagesTable({
     [unreconciled, query]
   );
 
-  const lowPackages = clientPackages.filter((p) => p.remaining <= 2);
+  const lowPackages = clientPackages.filter((p) => p.remaining <= RENEWAL_THRESHOLD);
   const totalUnreconciled = unreconciled.length;
 
   const thClass =
@@ -304,6 +307,13 @@ export function PackagesTable({
                   >
                     {p.remaining} left
                   </Badge>
+                  <RenewalPrompt
+                    clientId={p.clientId}
+                    clientName={p.clientName}
+                    remaining={p.remaining}
+                    hasPhone={!!p.clientPhone}
+                    variant="compact"
+                  />
                 </div>
               </div>
             ))}

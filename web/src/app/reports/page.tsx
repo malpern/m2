@@ -14,6 +14,7 @@ export default async function ReportsPage() {
       .select({
         clientId: clients.id,
         clientName: clients.name,
+        clientPhone: clients.phone,
         category: clients.category,
         packageId: packages.id,
         totalSessions: packages.totalSessions,
