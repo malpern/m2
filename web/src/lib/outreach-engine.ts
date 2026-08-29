@@ -18,6 +18,7 @@ export interface OutreachItem {
   clientId: number;
   clientName: string;
   clientPhone: string | null;
+  sessionType: "individual" | "group" | "late_cancel" | null;
   day: string;
   slot: string;
   date: string;
@@ -133,6 +134,7 @@ export function buildOutreachQueue(
       clientId: session.clientId,
       clientName: session.clientName,
       clientPhone: session.clientPhone,
+      sessionType: session.sessionType,
       day: session.scheduledDate,
       slot: session.slot,
       date: session.scheduledDate,

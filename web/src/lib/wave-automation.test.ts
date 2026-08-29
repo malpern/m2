@@ -6,7 +6,7 @@ function makeItem(overrides: Partial<OutreachItem>): OutreachItem {
   return {
     sessionId: 1, clientId: 1, clientName: "Test", clientPhone: "+1555",
     day: "", slot: "3pm", date: "2026-06-05", time: "15:00",
-    status: "pending", isStanding: false,
+    status: "pending", isStanding: false, sessionType: null,
     sentAt: null, repliedAt: null, replyText: null,
     interpretation: null, sendError: null, outreachId: null, wave: 1,
     isAutoFill: false, messageCount: 0, outreachGroupId: null, followUpAt: null,
