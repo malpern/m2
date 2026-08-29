@@ -1,7 +1,7 @@
 # Matt Scheduler — Web App
 
 ## Stack
-- Next.js 15 (App Router, React Server Components)
+- Next.js 16 (App Router, React Server Components)
 - shadcn/ui + Tailwind CSS v4
 - Drizzle ORM + SQLite (better-sqlite3)
 - Vitest for testing
