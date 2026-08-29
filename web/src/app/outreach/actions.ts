@@ -125,7 +125,22 @@ export async function sendOutreachBatch(sessionIds: number[], weekOf: string) {
     }
 
     try {
-      await sendSMS(first.clientPhone, message);
+      const result = await sendSMS(first.clientPhone, message);
+      if (result.status === "skipped") {
+        // Report the skip to the operator rather than a success they cannot
+        // see through, and demote the rows so follow-ups does not later expire
+        // them and cancel the sessions.
+        for (const row of outreachRows) {
+          await db.update(outreach).set({
+            status: "pending",
+            sendError: result.reason,
+          }).where(eq(outreach.id, row.id)).run();
+        }
+        for (const s of clientSessions) {
+          results.push({ sessionId: s.id, success: false, error: result.reason });
+        }
+        continue;
+      }
       for (const s of clientSessions) {
         results.push({ sessionId: s.id, success: true });
       }
@@ -164,7 +179,12 @@ export async function retrySend(outreachId: number) {
   if (!record) return { success: false, error: "Record not found" };
 
   try {
-    await sendSMS(record.clientPhone, record.messageText);
+    const result = await sendSMS(record.clientPhone, record.messageText);
+    if (result.status === "skipped") {
+      await db.update(outreach).set({ sendError: result.reason }).where(eq(outreach.id, outreachId)).run();
+      revalidatePath("/outreach");
+      return { success: false, error: result.reason };
+    }
     await db.update(outreach).set({
       status: "awaiting_reply",
       sendError: null,
@@ -206,18 +226,32 @@ export async function triggerFollowUpNow(outreachId: number) {
   const firstName = record.clientName.split(" ")[0];
   const reply = `Hey ${firstName}, circling back — did you want to keep your session this week?`;
 
-  await db.insert(outreach).values({
+  const inserted = await db.insert(outreach).values({
     clientId: record.clientId, sessionId: record.sessionId,
     weekOf: record.weekOf, direction: "sent",
     messageText: reply, status: "awaiting_reply",
     sentAt: new Date().toISOString(),
-  }).run();
+  }).returning().get();
 
   await db.update(outreach).set({ followUpAt: null }).where(eq(outreach.id, outreachId)).run();
 
+  // A skip and a failure both mean the client was not contacted, so neither may
+  // leave the row in awaiting_reply — follow-ups expires those and cancels the
+  // session. The row is captured above precisely so it can be demoted here.
   try {
-    await sendSMS(record.clientPhone, reply);
-  } catch { /* logged elsewhere */ }
+    const result = await sendSMS(record.clientPhone, reply);
+    if (result.status === "skipped") {
+      await db.update(outreach).set({
+        status: "pending",
+        sendError: result.reason,
+      }).where(eq(outreach.id, inserted.id)).run();
+    }
+  } catch (e) {
+    await db.update(outreach).set({
+      status: "pending",
+      sendError: e instanceof Error ? e.message : String(e),
+    }).where(eq(outreach.id, inserted.id)).run();
+  }
 
   revalidatePath("/outreach");
 }

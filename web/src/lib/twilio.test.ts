@@ -37,10 +37,10 @@ describe("sendSMS", () => {
     mockCreate.mockReset();
   });
 
-  it("blocks non-dev numbers and returns DEV_SKIPPED", async () => {
+  it("blocks non-dev numbers and reports the skip distinguishably", async () => {
     const { sendSMS } = await import("./twilio");
     const result = await sendSMS("+15551234567", "Hello test");
-    expect(result).toBe("DEV_SKIPPED");
+    expect(result).toEqual({ status: "skipped", reason: expect.stringContaining("dev guard") });
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
@@ -55,7 +55,7 @@ describe("sendSMS", () => {
     const { sendSMS } = await import("./twilio");
     const result = await sendSMS("+14082099509", "Session at 3pm");
 
-    expect(result).toBe("SM_test_sid_123");
+    expect(result).toEqual({ status: "sent", sid: "SM_test_sid_123" });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         body: "Session at 3pm",
@@ -75,7 +75,7 @@ describe("sendSMS", () => {
     const { sendSMS } = await import("./twilio");
     const result = await sendSMS("+14082099509", "WhatsApp msg");
 
-    expect(result).toBe("SM_whatsapp_sid");
+    expect(result).toEqual({ status: "sent", sid: "SM_whatsapp_sid" });
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         from: "whatsapp:+14155238886",
