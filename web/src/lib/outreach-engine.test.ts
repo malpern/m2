@@ -24,7 +24,8 @@ function makeSession(overrides: Record<string, unknown> = {}) {
     gcalEventId: null,
     loggedToSheets: false,
     reconciled: false,
-    createdAt: null,
+    // sessions.created_at is NOT NULL with a CURRENT_TIMESTAMP default.
+    createdAt: "2026-01-01 00:00:00",
     standingSlot: null,
     ...overrides,
   };
