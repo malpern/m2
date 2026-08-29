@@ -72,11 +72,12 @@ fails. A row therefore only reaches `awaiting_reply` if a message actually went 
 specific hazard is closed structurally, not by a guard.
 
 They stay unscheduled for a different and simpler reason: **there is nothing useful for
-them to do yet.** `OUTREACH_LIVE` is off and every client phone number in production is
-the placeholder `+15550000000` (#17), so `send-waves` would skip every client on the dev
-guard and write nothing. Schedule them once #17 lands and outreach is genuinely live —
-and note that `follow-ups` cancelling an unanswered session is then *correct* behaviour,
-so turn it on deliberately rather than as an afterthought.
+them to do yet.** `OUTREACH_LIVE` is off, and 55 of the 56 clients in production have no
+phone number at all — `phone IS NULL` since #221/#222 replaced the `+15550000000`
+placeholder — so `send-waves` would skip every one of them on the dev guard and write
+nothing. Schedule them once #17 lands and outreach is genuinely live, and note that
+`follow-ups` cancelling an unanswered session is then *correct* behaviour, so turn it on
+deliberately rather than as an afterthought.
 
 ## Database
 `src/db/schema.ts` is the single source of truth. The connection is libSQL
