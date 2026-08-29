@@ -49,9 +49,15 @@ Only two of the four `/api/cron/*` routes are scheduled, in `vercel.json`:
 | Route | Schedule (UTC) | Local | Writes to the DB? |
 |---|---|---|---|
 | `session-reminders` | `0 14 * * *` | 07:00 PT | no |
-| `daily-digest` | `0 3 * * *` | 20:00 PT | no |
+| `daily-digest` | **unscheduled** | — | no |
 | `send-waves` | **unscheduled** | — | **yes** |
 | `follow-ups` | **unscheduled** | **—** | **yes** |
+
+`daily-digest` is unscheduled by choice, not by hazard. It only reads, but it
+texts and emails `ALERT_PHONE`/`ALERT_EMAIL` — Micah's own number, which is on the
+dev allowlist, so unlike the client-facing routes it is *not* suppressed by
+`OUTREACH_LIVE`. Nightly notifications about a system with no live outreach yet
+are noise. Re-add it when outreach is live and the digest has something to say.
 
 Vercel injects `Authorization: Bearer $CRON_SECRET` on cron invocations, which is what
 each route checks. With `CRON_SECRET` unset the routes fail closed and every invocation
