@@ -60,7 +60,7 @@ const SLOT_ALIASES: Record<string, TimeSlot> = {
   "7pm": "7pm", "7": "7pm", "7:00": "7pm", "19:00": "7pm",
 };
 
-function parseStandingSlot(standing: string): { day: DayOfWeek; slot: TimeSlot }[] {
+export function parseStandingSlot(standing: string): { day: DayOfWeek; slot: TimeSlot }[] {
   const results: { day: DayOfWeek; slot: TimeSlot }[] = [];
   const parts = standing.split(/[,;]+/).map((s) => s.trim().toLowerCase());
   for (const part of parts) {
