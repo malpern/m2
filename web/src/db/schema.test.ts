@@ -1,7 +1,16 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { eq } from "drizzle-orm";
 import { createTestDb } from "@/test/db";
-import { clients, packages, sessions, outreach } from "./schema";
+import {
+  clients,
+  packages,
+  packageTransactions,
+  sessions,
+  outreach,
+  googleTokens,
+  outreachSettings,
+  guideFeedback,
+} from "./schema";
 
 function freshDb() {
   return createTestDb();
@@ -44,11 +53,12 @@ describe("clients table", () => {
   it("supports all grade levels including adult", () => {
     const grades = ["freshman", "sophomore", "junior", "senior", "post_grad", "adult"] as const;
 
-    for (const grade of grades) {
+    // clients.phone is UNIQUE, so each row needs its own number.
+    grades.forEach((grade, i) => {
       db.insert(clients)
-        .values({ name: `Grade ${grade}`, phone: "+1555", gradeLevel: grade })
+        .values({ name: `Grade ${grade}`, phone: `+1555000${i}`, gradeLevel: grade })
         .run();
-    }
+    });
 
     const result = db.select().from(clients).all();
     expect(result).toHaveLength(grades.length);
@@ -254,5 +264,63 @@ describe("outreach table", () => {
     const updated = db.select().from(outreach).where(eq(outreach.id, msg.id)).get();
     expect(updated!.interpretation).toBe("confirmed");
     expect(updated!.status).toBe("confirmed");
+  });
+});
+
+// The test database used to be built from a checked-in SQL snapshot that had
+// drifted from schema.ts: it was missing google_tokens, outreach_settings and
+// guide_feedback entirely, missing package_transactions.note, and missing the
+// UNIQUE on clients.phone. Pages querying those tables 500'd in production
+// while the suite stayed green. src/test/db.ts now derives the DDL from
+// schema.ts, and these cases assert the specific things that had gone missing.
+describe("test database matches src/db/schema.ts", () => {
+  let db: ReturnType<typeof freshDb>;
+
+  beforeEach(() => {
+    db = freshDb();
+  });
+
+  it("enforces UNIQUE on clients.phone", () => {
+    db.insert(clients).values({ name: "First", phone: "+15550001" }).run();
+
+    expect(() =>
+      db.insert(clients).values({ name: "Second", phone: "+15550001" }).run()
+    ).toThrow(/UNIQUE/i);
+  });
+
+  it("has a package_transactions.note column", () => {
+    const client = db
+      .insert(clients)
+      .values({ name: "Noted", phone: "+15550002" })
+      .returning()
+      .get();
+    const pkg = db
+      .insert(packages)
+      .values({ clientId: client.id, totalSessions: 10 })
+      .returning()
+      .get();
+
+    const txn = db
+      .insert(packageTransactions)
+      .values({
+        packageId: pkg.id,
+        delta: -1,
+        reason: "manual_adjustment",
+        previousBalance: 10,
+        newBalance: 9,
+        note: "comped a session",
+      })
+      .returning()
+      .get();
+
+    expect(txn.note).toBe("comped a session");
+  });
+
+  it.each([
+    ["google_tokens", googleTokens],
+    ["outreach_settings", outreachSettings],
+    ["guide_feedback", guideFeedback],
+  ])("has the %s table", (_name, table) => {
+    expect(() => db.select().from(table).all()).not.toThrow();
   });
 });
