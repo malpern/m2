@@ -28,6 +28,11 @@ describe("isDevAllowed", () => {
     const { isDevAllowed } = await import("./twilio");
     expect(isDevAllowed("+10000000000")).toBe(false);
   });
+
+  it("never treats a missing number as allowed (#221)", async () => {
+    const { isDevAllowed } = await import("./twilio");
+    expect(isDevAllowed(null)).toBe(false);
+  });
 });
 
 describe("sendSMS", () => {
@@ -35,6 +40,18 @@ describe("sendSMS", () => {
     vi.resetModules();
     vi.unstubAllEnvs();
     mockCreate.mockReset();
+  });
+
+  it("treats a client with no phone number as a skip, not an error (#221)", async () => {
+    // "We have no number for this client" is a real state now. It must not throw
+    // — that would break every caller — and must not look like a delivery.
+    const { sendSMS } = await import("./twilio");
+    const result = await sendSMS(null, "Are you free Tuesday?");
+    expect(result).toEqual({
+      status: "skipped",
+      reason: expect.stringContaining("no phone number"),
+    });
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it("blocks non-dev numbers and reports the skip distinguishably", async () => {

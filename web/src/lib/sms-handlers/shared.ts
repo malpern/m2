@@ -46,7 +46,7 @@ export function getDayLabel(scheduledDate: string): string {
   return new Date(scheduledDate + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Los_Angeles" });
 }
 
-export async function logAndSend(clientId: number, sessionId: number | null, weekOf: string, phone: string, message: string, followUpAt?: string) {
+export async function logAndSend(clientId: number, sessionId: number | null, weekOf: string, phone: string | null, message: string, followUpAt?: string) {
   const row = await db.insert(outreach).values({
     clientId,
     sessionId,

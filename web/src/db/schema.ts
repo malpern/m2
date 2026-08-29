@@ -4,7 +4,12 @@ import { sql } from "drizzle-orm";
 export const clients = sqliteTable("clients", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
-  phone: text("phone").notNull().unique(),
+  // Nullable on purpose: "we do not have a number for this client" is a real
+  // state, and the alternative was minting +15550000000 for everyone, which
+  // looked like a valid number to every caller (#221). SQLite treats NULLs as
+  // distinct in a UNIQUE index, so many clients can lack a phone while real
+  // numbers stay unique.
+  phone: text("phone").unique(),
   category: text("category", {
     enum: ["active", "inactive", "in_season", "on_break", "vacation"],
   })
