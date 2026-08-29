@@ -128,21 +128,31 @@ export async function clearAllSortOrders() {
 export async function sendDirectMessage(clientId: number, message: string) {
   const today = new Date().toISOString().split("T")[0];
 
-  await db.insert(outreach).values({
+  const row = await db.insert(outreach).values({
     clientId,
     weekOf: today,
     direction: "sent",
     messageText: message,
     status: "awaiting_reply",
     sentAt: new Date().toISOString(),
-  }).run();
+  }).returning().get();
 
   const client = await db.select().from(clients).where(eq(clients.id, clientId)).get();
   if (client) {
+    // A skip and a failure both mean the client was not contacted, so the row
+    // must not stay in awaiting_reply — follow-ups expires those and cancels
+    // the session.
+    const demote = async (reason: string) => {
+      await db.update(outreach).set({ status: "pending", sendError: reason })
+        .where(eq(outreach.id, row.id)).run();
+    };
     try {
-      await sendSMS(client.phone, message);
+      const result = await sendSMS(client.phone, message);
+      if (result.status === "skipped") await demote(result.reason);
     } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e);
       console.error(`Failed to send SMS to ${client.phone}:`, e);
+      await demote(reason);
     }
   }
 

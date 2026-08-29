@@ -24,10 +24,29 @@ export function isDevAllowed(phone: string): boolean {
   return DEV_ALLOWED_PHONES.has(phone);
 }
 
-export async function sendSMS(to: string, body: string): Promise<string> {
+/**
+ * The outcome of an attempted send.
+ *
+ * This is a discriminated union on purpose. sendSMS used to return the bare
+ * string "DEV_SKIPPED" when the dev guard blocked a number, which RESOLVES —
+ * so a skip was indistinguishable from a delivery to every caller, including
+ * the ones that only guard against a throw. Callers that record "sent" before
+ * awaiting the result therefore recorded messages that were never sent, and
+ * follow-ups later cancelled those sessions for going unanswered. Anything
+ * that can be mistaken for a successful send will eventually be mistaken for
+ * one, so the type no longer allows it.
+ */
+export type SendResult =
+  | { status: "sent"; sid: string }
+  | { status: "skipped"; reason: string };
+
+export async function sendSMS(to: string, body: string): Promise<SendResult> {
   if (!isDevAllowed(to)) {
     console.log(`[DEV GUARD] Would send to ${to}: "${body.slice(0, 80)}..."`);
-    return "DEV_SKIPPED";
+    return {
+      status: "skipped",
+      reason: "dev guard: number not on the allowlist and OUTREACH_LIVE is not enabled",
+    };
   }
   const from = USE_WHATSAPP
     ? WHATSAPP_SANDBOX
@@ -47,5 +66,5 @@ export async function sendSMS(to: string, body: string): Promise<string> {
     to: toNumber,
     ...(statusCallback && { statusCallback }),
   });
-  return message.sid;
+  return { status: "sent", sid: message.sid };
 }

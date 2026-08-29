@@ -96,7 +96,7 @@ function makeCtx(overrides?: Partial<WebhookContext>): WebhookContext {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockSendSMS.mockResolvedValue("SM123");
+  mockSendSMS.mockResolvedValue({ status: "sent", sid: "SM123" });
   mockComposeReply.mockResolvedValue("Got it, cancelled.");
   mockCreditCancellation.mockResolvedValue(true);
   mockSyncSessionToCalendar.mockResolvedValue(undefined);

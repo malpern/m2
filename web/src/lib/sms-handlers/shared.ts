@@ -60,7 +60,18 @@ export async function logAndSend(clientId: number, sessionId: number | null, wee
 
   const smsText = message.replace(/\n\[offered:[^\]]+\]/, "");
   try {
-    await sendSMS(phone, smsText);
+    const result = await sendSMS(phone, smsText);
+    if (result.status === "skipped") {
+      // Nothing was sent, so the row must not claim to be awaiting a reply the
+      // client was never asked for — follow-ups expires such rows and cancels
+      // the session. Treated exactly like a send failure, which is what it is.
+      await db.update(outreach).set({
+        status: "pending",
+        sendError: result.reason,
+      }).where(eq(outreach.id, row.id)).run();
+      syslog.info("twilio", `Message not sent`, `Skipped SMS to ${phone} (${result.reason}), outreach id=${row.id}`, { clientId, sessionId });
+      return;
+    }
     syslog.info("twilio", `Sent message to client`, `SMS sent to ${phone}, outreach id=${row.id}`, { clientId, sessionId });
   } catch (e) {
     const errorMsg = e instanceof Error ? e.message : String(e);
