@@ -103,6 +103,11 @@ rm -f m2-dev.db \
 Both env assignments are needed: `drizzle.config.ts` and `seed.ts` are plain Node, so
 neither reads `.env.local` the way Next does.
 
+**Restart `npm run dev` after rebuilding the file.** The running server holds an open
+handle to the deleted inode, so every page 500s with `no such column` against a database
+that is demonstrably correct when you inspect it with `sqlite3`. The error points at the
+schema; the cause is the stale connection.
+
 ### Schema changes reach production only by hand
 
 There is **no `drizzle/` migrations directory and no migrate step in the build**, so

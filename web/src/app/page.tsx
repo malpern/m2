@@ -63,7 +63,8 @@ export default async function DashboardPage() {
     db.select({ count: sql<number>`count(*)` }).from(sessions).where(and(eq(sessions.status, "completed"), eq(sessions.reconciled, false))).get(),
     db.select({
       id: sessions.id, clientId: sessions.clientId, clientName: clients.name,
-      date: sessions.scheduledDate, time: sessions.scheduledTime, slot: sessions.slot, status: sessions.status,
+      date: sessions.scheduledDate, time: sessions.scheduledTime, slot: sessions.slot,
+        durationMinutes: sessions.durationMinutes, status: sessions.status,
     }).from(sessions).innerJoin(clients, eq(clients.id, sessions.clientId)).where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd))).all(),
     db.select({ id: sessions.id, status: sessions.status }).from(sessions).where(and(gte(sessions.scheduledDate, nextWeekStart), lte(sessions.scheduledDate, nextWeekEnd))).all(),
     db.select().from(outreach).where(eq(outreach.weekOf, nextWeekStart)).all(),
@@ -72,7 +73,8 @@ export default async function DashboardPage() {
     db.select({
       id: sessions.id, clientId: sessions.clientId, clientName: clients.name, clientPhone: clients.phone,
       standingSlot: clients.standingSlot, packageId: sessions.packageId, scheduledDate: sessions.scheduledDate,
-      scheduledTime: sessions.scheduledTime, slot: sessions.slot, status: sessions.status,
+      scheduledTime: sessions.scheduledTime, slot: sessions.slot,
+        durationMinutes: sessions.durationMinutes, status: sessions.status,
       gcalEventId: sessions.gcalEventId, loggedToSheets: sessions.loggedToSheets, reconciled: sessions.reconciled, createdAt: sessions.createdAt,
       sessionType: sessions.sessionType,
     }).from(sessions).innerJoin(clients, eq(clients.id, sessions.clientId)).where(and(gte(sessions.scheduledDate, weekStart), lte(sessions.scheduledDate, weekEnd))).all(),

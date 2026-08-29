@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useTransition, useState, useEffect } from "react";
+import { endTime } from "@/lib/session-duration";
 import Link from "next/link";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -31,6 +32,7 @@ interface SessionEvent {
   clientName: string;
   scheduledDate: string;
   scheduledTime: string;
+  durationMinutes: number;
   status: string;
 }
 
@@ -180,7 +182,9 @@ export function ScheduleCalendar({
     id: String(s.id),
     title: s.clientName,
     start: `${s.scheduledDate}T${s.scheduledTime}`,
-    end: `${s.scheduledDate}T${String(parseInt(s.scheduledTime.split(":")[0]) + 1).padStart(2, "0")}:${s.scheduledTime.split(":")[1]}`,
+    // Was hardcoded to start + 1 hour, which drew every session as an hour long
+    // regardless of its actual length (#2).
+    end: `${s.scheduledDate}T${endTime(s.scheduledTime, s.durationMinutes)}`,
     extendedProps: { status: s.status, clientId: s.clientId, source: "m2" },
     ...statusColor(s.status),
   }));

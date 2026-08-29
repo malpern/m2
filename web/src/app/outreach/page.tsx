@@ -40,6 +40,7 @@ export default async function OutreachPage({
         scheduledDate: sessions.scheduledDate,
         scheduledTime: sessions.scheduledTime,
         slot: sessions.slot,
+        durationMinutes: sessions.durationMinutes,
         status: sessions.status,
         sessionType: sessions.sessionType,
         gcalEventId: sessions.gcalEventId,

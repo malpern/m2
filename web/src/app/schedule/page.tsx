@@ -36,6 +36,7 @@ export default async function SchedulePage({
         clientName: clients.name,
         scheduledDate: sessions.scheduledDate,
         scheduledTime: sessions.scheduledTime,
+        durationMinutes: sessions.durationMinutes,
         status: sessions.status,
       })
       .from(sessions)
