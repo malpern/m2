@@ -19,6 +19,8 @@ import { ClientActivityStats } from "./client-activity-stats";
 import { LastWeekCard } from "./last-week-card";
 import { SchedulePatternCard } from "./schedule-pattern-card";
 import { StandingSlotDriftCard } from "./standing-slot-drift-card";
+import { RenewalPrompt } from "@/components/renewal-prompt";
+import { needsRenewal } from "@/lib/package-renewal";
 import { analyseStandingSlotDrift, formatStandingSlot } from "@/lib/standing-slot-drift";
 import { ClientProfileCard } from "./client-profile-card";
 import { ClientPackageCard } from "./client-package-card";
@@ -102,6 +104,16 @@ export default async function ClientDetailPage({
     : "Unknown";
 
   const activePackage = clientPackages.find((p) => p.status === "active" || p.status === "unpaid" || p.status === "exhausted");
+
+  // #4 — prompt to re-up when the package is nearly used up. Derived from the
+  // package already loaded above rather than re-querying the balance.
+  const packageBalance = activePackage
+    ? {
+        remaining: activePackage.totalSessions - activePackage.sessionsUsed,
+        total: activePackage.totalSessions,
+        used: activePackage.sessionsUsed,
+      }
+    : null;
 
   // Schedule pattern computation
   const { scheduleGrid, maxDayTimeScore, allTimeSlots, coreHours } = computeSchedulePattern(allClientSessions);
@@ -222,6 +234,16 @@ export default async function ClientDetailPage({
           clientId={clientId}
           activePackage={activePackage}
           transactionHistory={transactionHistory}
+          renewalPrompt={
+            needsRenewal(packageBalance) && packageBalance ? (
+              <RenewalPrompt
+                clientId={clientId}
+                clientName={client.name}
+                remaining={packageBalance.remaining}
+                hasPhone={!!client.phone}
+              />
+            ) : undefined
+          }
         />
 
         <SessionHistoryCard sessions={allClientSessions} />

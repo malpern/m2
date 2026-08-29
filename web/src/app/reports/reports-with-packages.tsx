@@ -8,6 +8,7 @@ import type { RevenueStats } from "@/lib/revenue";
 interface PackageData {
   clientId: number;
   clientName: string;
+  clientPhone: string | null;
   category: string;
   packageId: number;
   totalSessions: number;
