@@ -295,6 +295,17 @@ function SortableRow({
             <Link href={`/clients/${client.id}`} className="font-semibold hover:underline">
               {client.name}
             </Link>
+            {!client.phone && (
+              // Since #221 a missing number is recorded as null rather than a
+              // placeholder that looks dialable. Surfaced here because these are
+              // exactly the clients outreach will silently skip.
+              <span
+                className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                title="No phone number on file — this client cannot be texted."
+              >
+                no phone
+              </span>
+            )}
             {sessions.length > 0 && (
               <button
                 onClick={onToggleExpand}

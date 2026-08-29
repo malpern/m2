@@ -421,7 +421,11 @@ export async function POST(request: Request) {
         .values(
           selectedClients.map((c, i) => ({
             name: c.name,
-            phone: "+15550000000",
+            // No number is imported from the sheet, and inventing one made every
+            // client look contactable while silently pointing at a number nobody
+            // owns (#221). Absence is now representable, so record it honestly —
+            // sendSMS treats a null phone as a skip and the UI flags it.
+            phone: null,
             category: (c.lastDate && c.lastDate >= cutoff ? "active" : "inactive") as "active" | "inactive",
             googleSheetsName: c.name,
             sessionRate: c.rate,

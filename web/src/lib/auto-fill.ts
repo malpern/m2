@@ -67,7 +67,9 @@ export async function getAutoFillCandidates(
   const sorted = sortByPriority(eligible);
 
   return sorted
-    .filter((c) => isDevAllowed(c.phone))
+    // isDevAllowed rejects null, so anything past this filter has a number —
+    // narrowed explicitly so the returned type does not have to be nullable.
+    .filter((c): c is typeof c & { phone: string } => isDevAllowed(c.phone))
     .map((c) => ({
       clientId: c.id,
       clientName: c.name,

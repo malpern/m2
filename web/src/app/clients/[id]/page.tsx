@@ -158,12 +158,21 @@ export default async function ClientDetailPage({
         <div className="flex flex-col items-end gap-1">
           <div className="flex items-center gap-3">
             <DeleteButton clientId={clientId} clientName={client.name} />
-            <a
-              href={`tel:${client.phone}`}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {formatPhoneNumber(client.phone)}
-            </a>
+            {client.phone ? (
+              <a
+                href={`tel:${client.phone}`}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {formatPhoneNumber(client.phone)}
+              </a>
+            ) : (
+              <span
+                className="text-sm text-amber-600 dark:text-amber-400"
+                title="This client cannot be contacted by SMS until a number is added."
+              >
+                No phone on file
+              </span>
+            )}
           </div>
           {client.email && (
             <a href={`mailto:${client.email}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">

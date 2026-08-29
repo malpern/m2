@@ -17,7 +17,7 @@ export interface OutreachItem {
   sessionId: number;
   clientId: number;
   clientName: string;
-  clientPhone: string;
+  clientPhone: string | null;
   day: string;
   slot: string;
   date: string;
@@ -38,7 +38,7 @@ export interface OutreachItem {
 }
 
 export function buildOutreachQueue(
-  sessions: (Session & { clientName: string; clientPhone: string; standingSlot: string | null })[],
+  sessions: (Session & { clientName: string; clientPhone: string | null; standingSlot: string | null })[],
   existingOutreach: Outreach[],
   config: OutreachConfig = OUTREACH_DEFAULTS,
 ): OutreachItem[] {

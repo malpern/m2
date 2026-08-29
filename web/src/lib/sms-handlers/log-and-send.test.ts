@@ -90,6 +90,21 @@ describe("logAndSend — a message that was not sent must not look sent (#227)",
     expect(updates.some((u) => u.set.status === "pending")).toBe(true);
   });
 
+  it("demotes the row when the client has no phone number at all (#221)", async () => {
+    // Since #221 a client can legitimately have no number. That reaches
+    // logAndSend as a skip, and must be treated like any other non-delivery —
+    // otherwise the phone-less clients become exactly the ones whose sessions
+    // get silently cancelled.
+    mockSendSMS.mockResolvedValue({ status: "skipped", reason: "no phone number on file" });
+
+    await logAndSend(1, 7, "2026-06-01", null, "Are you free Tuesday?");
+
+    const demotion = updates.find((u) => u.set.status === "pending");
+    expect(demotion).toBeDefined();
+    expect(demotion!.set.sendError).toContain("no phone number");
+    expect(updates.some((u) => u.set.status === "awaiting_reply")).toBe(false);
+  });
+
   it("leaves the row alone when the message really was sent", async () => {
     mockSendSMS.mockResolvedValue({ status: "sent", sid: "SM123" });
 
