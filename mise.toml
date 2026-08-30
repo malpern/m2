@@ -1,0 +1,13 @@
+# Pin the toolchain to the Node version CI actually uses (.github/workflows/ci.yml
+# sets node-version: 22.x).
+#
+# package.json says engines.node ">=22.0.0", which permits Node 26 — and under 26
+# the whole database test suite fails with:
+#
+#   better_sqlite3.node was compiled against a different Node.js version using
+#   NODE_MODULE_VERSION 127. This version of Node.js requires NODE_MODULE_VERSION 147
+#
+# That reads like a broken test suite rather than a wrong interpreter, and it costs
+# a debugging round every time. 27 tests "failed" this way on 2026-08-30.
+[tools]
+node = "22"
