@@ -311,7 +311,7 @@
         <span class="step-who who-matt">Matt</span>
       </div>
       <div class="step-body">
-        Go to <strong>Schedule → Availability</strong>. The grid shows Mon–Fri + Sun, with time slots 3pm–7pm. Toggle any slots where you're unavailable next week.
+        Go to <strong>Schedule → Availability</strong>. The grid shows Mon–Fri + Sun, with five one-hour slots a day: 3pm, 4pm, 5pm, 6pm and 7pm. Toggle any slots where you're unavailable next week.
         <div class="step-detail">
           <strong>Default availability</strong> persists week to week. Use <strong>weekly overrides</strong> (amber ring) for one-time changes like a dentist appointment on Wednesday.
         </div>
@@ -330,7 +330,7 @@
           <strong>College Commitment</strong> (weight 5) — College-bound athletes score highest<br>
           <strong>Grade Level</strong> (weight 3) — Seniors above freshmen<br>
           <strong>Effort & Attitude</strong> (weight 2) — Behavior score from 1–10<br><br>
-          You can also <strong>drag to manually reorder</strong>. Pinned clients always keep their rank regardless of score.
+          You can also <strong>drag to manually reorder</strong>. A client you drag becomes <strong>pinned</strong> &mdash; a small <strong>pinned &#10005;</strong> tag appears next to their name and they hold that spot whatever the score says. Click that tag to unpin just them.
         </div>
       </div>
     </div>
@@ -374,7 +374,7 @@
           <strong>Drag to move</strong> — Relocate a session to a different day/time<br>
           <strong>Click to cancel</strong> — Remove a session that doesn't work<br>
           <strong>Add Session</strong> — Manually add a one-off session<br><br>
-          This is the last chance to adjust before texts go out. Proposed sessions won't appear on Google Calendar until confirmed.
+          This is the last chance to adjust before texts go out. Proposed sessions won't appear on Google Calendar until confirmed — and while outreach is in testing, only test numbers actually receive anything (see <em>Who Can Actually Be Texted Right Now</em>).
         </div>
       </div>
     </div>
@@ -406,7 +406,8 @@
           <strong>Wave 2</strong> — 45 minutes after Wave 1 (next 8 clients)<br>
           <strong>Wave 3</strong> — 2 hours after Wave 1 (everyone else)<br>
           <strong>Follow-up</strong> — 1 hour after sending, non-responders get a nudge<br>
-          <strong>Expire</strong> — 3 hours after sending, unconfirmed slots are released
+          <strong>Expire</strong> — 3 hours after sending, unconfirmed slots are released<br><br>
+          <strong>Not switched on yet.</strong> These timings are built and tested, but the automatic trigger behind them is deliberately turned off until outreach goes live — there's no point auto-nudging clients who can't receive texts. Today you send each wave yourself from the Outreach page. Nothing is lost; the waves just wait for you.
         </div>
       </div>
     </div>
@@ -418,7 +419,7 @@
         <span class="step-who who-matt">Matt</span>
       </div>
       <div class="step-body">
-        As clients reply, the system classifies each response using AI (Claude Sonnet). Most are handled automatically:
+        As clients reply, the system classifies each response using AI (Claude Haiku). Most are handled automatically:
         <div class="step-detail">
           <strong>"Yes" / "Sounds good"</strong> → Auto-confirmed. Session turns green. ✅<br>
           <strong>"Can't do Friday, how about Monday?"</strong> → System checks if Monday is open. If yes, proposes it: "I have Monday at 3pm — does that work?" Client must confirm before it's booked. 🔄<br>
@@ -457,7 +458,7 @@
     </div>
     <div class="timeline-item">
       <div class="timeline-time">9:55 AM</div>
-      <div class="timeline-event"><strong>Wave 2 auto-sends</strong> — next 8 clients. Early replies from Wave 1 start arriving.</div>
+      <div class="timeline-event"><strong>Send Wave 2</strong> — next 8 clients. Early replies from Wave 1 start arriving.</div>
     </div>
     <div class="timeline-item">
       <div class="timeline-time">10:10 AM</div>
@@ -465,7 +466,7 @@
     </div>
     <div class="timeline-item">
       <div class="timeline-time">11:10 AM</div>
-      <div class="timeline-event"><strong>Wave 3 auto-sends</strong> — remaining clients. Matt handles reschedule/ambiguous replies.</div>
+      <div class="timeline-event"><strong>Send Wave 3</strong> — remaining clients. Matt handles reschedule/ambiguous replies.</div>
     </div>
     <div class="timeline-item">
       <div class="timeline-time">12:10 PM</div>
@@ -530,7 +531,7 @@
       <!-- AI Classification box -->
       <rect x="234" y="92" width="130" height="36" rx="8" fill="#f5f5f7" stroke="#d2d2d7" stroke-width="1"/>
       <text x="299" y="107" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="7" fill="#86868b" font-weight="600">AI CLASSIFICATION</text>
-      <text x="299" y="119" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="7" fill="#a0a1a7">Claude Sonnet</text>
+      <text x="299" y="119" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="7" fill="#a0a1a7">Claude Haiku</text>
 
       <!-- Path A: "How about Monday?" → Check slot → Propose → Client accepts → Confirm -->
       <line x1="234" y1="115" x2="138" y2="160" stroke="#86868b" stroke-width="1" marker-end="url(#arr)"/>
@@ -632,7 +633,7 @@
       <div class="rule-num">2</div>
       <div class="rule-content">
         <div class="rule-title">Grade Level</div>
-        <div class="rule-desc">Seniors score highest (4 × 2 × weight 3 = 24 pts). Freshmen get 6 pts. Adults get 0. Designed to prioritize athletes with imminent college deadlines.</div>
+        <div class="rule-desc">Post-grads score highest at 30 pts, then seniors (4 × 2 × weight 3 = 24 pts). Freshmen get 6 pts. Adults get 0. Designed to prioritize athletes with imminent college deadlines.</div>
       </div>
     </div>
     <div class="rule-item">
@@ -645,8 +646,15 @@
     <div class="rule-item">
       <div class="rule-num">4</div>
       <div class="rule-content">
+        <div class="rule-title">No-Shows Cost You</div>
+        <div class="rule-desc">Every recorded no-show subtracts 3 points. Two no-shows wipe out most of a perfect effort score, so someone who repeatedly doesn't turn up drifts down the list on their own.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">5</div>
+      <div class="rule-content">
         <div class="rule-title">Manual Override</div>
-        <div class="rule-desc">Drag-to-reorder on the Priority page bypasses the algorithm entirely. Pinned clients always keep their rank. Use this for VIPs or special circumstances.</div>
+        <div class="rule-desc">Drag-to-reorder bypasses the score entirely, and the order you set sticks. Use it for VIPs or special circumstances. Three controls are easy to mix up: <strong>pinned &#10005;</strong> beside a client unpins that one person; <strong>Reset ranking</strong> on the Clients page unpins everybody at once; <strong>Reset weights</strong> on the Priority page is a different thing entirely &mdash; it restores the scoring sliders and leaves pins alone.</div>
       </div>
     </div>
   </div>
@@ -677,16 +685,20 @@
 
   <div class="flow-list">
     <div class="flow-item">
+      <div class="flow-event">Wave 0</div>
+      <div class="flow-desc"><strong>Standing slots</strong> — not a wave at all. These clients are already booked and are never texted to ask.</div>
+    </div>
+    <div class="flow-item">
       <div class="flow-event">Wave 1</div>
       <div class="flow-desc"><strong>8 clients</strong> — highest priority. Sent when Matt clicks "Send Next Batch." These are the most important sessions to lock in first.</div>
     </div>
     <div class="flow-item">
       <div class="flow-event">Wave 2</div>
-      <div class="flow-desc"><strong>Next 8 clients</strong> — auto-sends 45 minutes later. By now, some Wave 1 replies are in and Matt can handle conflicts.</div>
+      <div class="flow-desc"><strong>Next 8 clients</strong> — send about 45 minutes after Wave 1. By now, some Wave 1 replies are in and Matt can handle conflicts.</div>
     </div>
     <div class="flow-item">
       <div class="flow-event">Wave 3</div>
-      <div class="flow-desc"><strong>Everyone else</strong> — auto-sends 2 hours after Wave 1. The schedule is mostly set; these fill remaining gaps.</div>
+      <div class="flow-desc"><strong>Everyone else</strong> — send about 2 hours after Wave 1. The schedule is mostly set; these fill remaining gaps.</div>
     </div>
     <div class="flow-item">
       <div class="flow-event">Follow-up</div>
@@ -745,7 +757,7 @@
 <section>
   <div class="section-label">Automated Replies</div>
   <h2>What the System Handles Without Matt</h2>
-  <div class="section-desc">Most decline scenarios are now handled automatically. The system uses AI (Claude Sonnet) to classify replies and respond with alternatives.</div>
+  <div class="section-desc">Most decline scenarios are now handled automatically. The system uses AI (Claude Haiku) to classify replies and respond with alternatives.</div>
 
   <div class="flow-list">
     <div class="flow-item">
@@ -842,6 +854,147 @@
         <div class="rule-desc">Session rate, type, effort score, standing slot, max sessions per week, and notes are all editable in place — click any value to change it. On the client list, grade and college-bound status are also inline-editable.</div>
       </div>
     </div>
+    <div class="rule-item">
+      <div class="rule-num">5</div>
+      <div class="rule-content">
+        <div class="rule-title">Ask to Re-Up</div>
+        <div class="rule-desc">When a client is down to <strong>2 sessions or fewer</strong> (including zero, or overdrawn), an <strong>"Ask to re-up"</strong> button appears on their package card. Clicking it opens a draft text — <em>"Hey Micah, you've got 2 sessions left on your package. Want to re-up?"</em> — which <strong>you can edit before sending</strong>. Nothing goes out until you press Send text. The same button sits on every low package in the amber <strong>Package Alerts</strong> card under Clients → Reports → Packages, so you can work through them in one pass. Asking doesn't change the balance, and the button is greyed out for a client with no phone number.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">6</div>
+      <div class="rule-content">
+        <div class="rule-title">Pattern Shift Detected</div>
+        <div class="rule-desc">If someone's recorded <strong>standing slot</strong> no longer matches when they're actually training, an amber <strong>"Pattern shift detected"</strong> card appears at the top of their page — <em>"now booking Tue 5pm, Fri 3pm instead of Mon 3pm, Thu 3pm"</em>. It only speaks up when it's confident: it looks at attended sessions over the <strong>last six weeks</strong>, needs at least four of those weeks to have sessions, and only counts a day and time that shows up in most of them — so one reschedule won't trigger it. The button is labelled with the new pattern, so pressing <strong>"Set to Tue 5pm, Fri 3pm"</strong> updates the standing slot in one click. <strong>Dismiss</strong> hides it for now; it comes back on reload. Nothing changes unless you press the button.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Session Length</div>
+  <h2>Not Every Session Is an Hour</h2>
+  <div class="section-desc">Sessions carry their own length. A longer session takes up more of the afternoon.</div>
+
+  <p>Every session has a length. Unless something says otherwise it is <strong>one hour</strong>, which is what almost every session on the calendar is today.</p>
+
+  <div class="rules">
+    <div class="rule-item">
+      <div class="rule-num">1</div>
+      <div class="rule-content">
+        <div class="rule-title">A Client Can Have a Usual Length</div>
+        <div class="rule-desc">On the client's add/edit form there's a <strong>Default Session Length</strong> dropdown: <em>Use the default (1h)</em>, 30m, 45m, 1h, 1h 30m, or 2h. Leave it alone for anyone who trains for an hour.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">2</div>
+      <div class="rule-content">
+        <div class="rule-title">Long Sessions Block the Next Slot</div>
+        <div class="rule-desc">The calendar is built out of one-hour slots. A 90-minute session starting at 3pm occupies <strong>both 3pm and 4pm</strong> — the system rounds up to whole slots, so nobody else gets offered 4pm. A two-hour session blocks exactly two. A 30-minute session still uses up its whole slot.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">3</div>
+      <div class="rule-content">
+        <div class="rule-title">Where You See It</div>
+        <div class="rule-desc">The week calendar draws each session ending at its real end time, so a long session is visibly taller. The Semi-Group roster cards print it too — "Wednesday, Sep 3 at 5pm · 1h 30m".</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-icon">⚠️</div>
+    <div class="callout-text">
+      <strong>Being straight with you about the current state:</strong> there is <strong>no way to change one session's length from the screen yet</strong>. Add Session, Generate Week and auto-fill all create one-hour sessions, and the client's default length isn't applied to them yet either. Lengths other than an hour only arrive with imported data. If you need a different length on a specific session, tell Micah — the plumbing is there, the button isn't.
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Semi-Groups</div>
+  <h2>Who Actually Showed Up to the Group</h2>
+  <div class="section-desc">Neither Google Calendar nor the Sheets export records who attends a semi-group session. That's what this page is for.</div>
+
+  <p>From the Schedule page, click <strong>"Semi-Groups"</strong> in the row of buttons next to Generate Week. That opens <strong>Semi-Group Rosters</strong> — one card per group session in the current week.</p>
+
+  <div class="rules">
+    <div class="rule-item">
+      <div class="rule-num">1</div>
+      <div class="rule-content">
+        <div class="rule-title">What Shows Up Here</div>
+        <div class="rule-desc">Only sessions whose <strong>type is Group</strong>, in <strong>this week</strong>, that haven't been cancelled. There's no week-picker — it's always the current week. If the page is empty it means no group sessions have been generated yet.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">2</div>
+      <div class="rule-content">
+        <div class="rule-title">Adding and Removing People</div>
+        <div class="rule-desc">Each card has a <strong>"Add someone…"</strong> dropdown listing every client not already on that roster, and an <strong>Add</strong> button. Anyone you've added has a <strong>Remove</strong> button next to their name. Changes save immediately — there's no Save button and no confirmation prompt.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">3</div>
+      <div class="rule-content">
+        <div class="rule-title">The Owner Can't Be Removed</div>
+        <div class="rule-desc">The session belongs to one client — that person is always first on the roster and shows a small <strong>owner</strong> tag instead of a Remove button. If the group really shouldn't be theirs, change or cancel the session on the Schedule page instead.</div>
+      </div>
+    </div>
+    <div class="rule-item">
+      <div class="rule-num">4</div>
+      <div class="rule-content">
+        <div class="rule-title">The Roster Doesn't Touch Packages</div>
+        <div class="rule-desc">Completing a group session deducts <strong>one session from the owner's package only</strong>. Adding three people to a roster does not draw down three packages. The roster is a record of who was there, plus it's what makes the reminder text read "your group session with 2 others" — the text never names the other people.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">Reality Check</div>
+  <h2>Who Can Actually Be Texted Right Now</h2>
+  <div class="section-desc">Two separate things stop a text from going out. Both are worth understanding before you wonder why a client went quiet.</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div class="step-title">Outreach is still in testing</div>
+        <span class="step-who who-system">System</span>
+      </div>
+      <div class="step-body">
+        Until outreach is switched on for real, <strong>only a short list of test numbers receives anything</strong> — Micah's, essentially. Everyone else's message is prepared, recorded, and then not sent.
+        <div class="step-detail">
+          Nothing is lost when this happens. The outreach entry drops back to <strong>waiting to send</strong> rather than pretending it went out, so no follow-up later "expires" a message the client never received and cancels their session out from under them. On the <strong>Outreach</strong> page the row shows <em>"Send failed:"</em> and the reason in red.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div class="step-title">Most clients have no phone number on file</div>
+        <span class="step-who who-matt">Matt</span>
+      </div>
+      <div class="step-body">
+        A client is allowed to have <strong>no phone number at all</strong> — that's a real state, not a broken record. Those clients show an amber <strong>"no phone"</strong> badge in the client list, and <em>"No phone on file"</em> on their own page.
+        <div class="step-detail">
+          <strong>As of today, 55 of 56 clients are in this state</strong>, because the old fake placeholder numbers were cleared out rather than left to look real. A client with no number can't be texted, can't be sent alternatives, and can't be asked to re-up — the Ask to re-up button is greyed out for them. There is no email fallback: adding the number is the fix. Edit the client and type it in.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-icon">🔎</div>
+    <div class="callout-text">
+      Either way, the reason is written down. <strong>Settings → System Logs</strong> records every attempt, including "Message not sent" and why. See Troubleshooting below.
+    </div>
   </div>
 </section>
 
@@ -856,12 +1009,12 @@
     <div class="pillar">
       <div class="pillar-icon">📊</div>
       <h4>Google Sheets</h4>
-      <p>Client rates, package sizes, payment status (DUE). The financial truth.</p>
+      <p>Where clients, rates and package sizes were <em>imported from</em>. A starting point, not a live feed — M2 doesn't read it day to day.</p>
     </div>
     <div class="pillar">
       <div class="pillar-icon">📅</div>
       <h4>Google Calendar</h4>
-      <p>Historical sessions, personal events. Used for pattern detection and schedule overlay.</p>
+      <p>M2 <em>reads</em> your booking calendar for what really happened, and <em>writes</em> confirmed sessions to a separate M2 calendar. Two calendars, on purpose.</p>
     </div>
     <div class="pillar">
       <div class="pillar-icon">🗓️</div>
@@ -894,7 +1047,7 @@
     <div style="display: flex; gap: 32px; flex-wrap: wrap;">
       <div>
         <div style="font-size: 0.82rem; color: var(--text-tertiary); margin-bottom: 4px;">Primary Slot</div>
-        <div style="font-size: 1.1rem; font-weight: 600;">Fri 1:15pm</div>
+        <div style="font-size: 1.1rem; font-weight: 600;">Fri 3pm</div>
         <div style="font-size: 0.78rem; color: var(--text-tertiary);">67% of all sessions (41 of 61)</div>
       </div>
       <div>
@@ -904,7 +1057,7 @@
       </div>
       <div>
         <div style="font-size: 0.82rem; color: var(--text-tertiary); margin-bottom: 4px;">Last 4 Sessions</div>
-        <div style="font-size: 1.1rem; font-weight: 600;">All Fri 1:15pm</div>
+        <div style="font-size: 1.1rem; font-weight: 600;">All Fri 3pm</div>
         <div style="font-size: 0.78rem; color: var(--text-tertiary);">Consistent pattern</div>
       </div>
     </div>
@@ -920,7 +1073,7 @@
     </div>
     <div class="flow-item">
       <div class="flow-event">Pass 2</div>
-      <div class="flow-desc">Micah's turn (based on priority rank). System checks his preferred days <code>["friday","monday","wednesday"]</code> and preferred time. <strong>Fri is tried first → 1:15pm slot is open → placed at Fri 1:15pm.</strong></div>
+      <div class="flow-desc">Micah's turn (based on priority rank). System checks his preferred days <code>["friday","monday","wednesday"]</code> and preferred time. <strong>Fri is tried first → 3pm slot is open → placed at Fri 3pm.</strong></div>
     </div>
     <div class="flow-item">
       <div class="flow-event">Pass 3</div>
@@ -951,7 +1104,7 @@
       <line x1="15" y1="108" x2="560" y2="108" stroke="#f0f0f2" stroke-width="0.5"/>
       <line x1="15" y1="138" x2="560" y2="138" stroke="#f0f0f2" stroke-width="0.5"/>
 
-      <!-- Micah's proposed session: Fri 1:15pm -->
+      <!-- Micah's proposed session: Fri 3pm -->
       <rect x="438" y="82" width="84" height="24" rx="6" fill="#dbeafe" stroke="#93c5fd" stroke-width="1.2"/>
       <text x="480" y="96" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="9" fill="#2563eb" font-weight="600">Micah A.</text>
 
@@ -964,12 +1117,12 @@
       <text x="270" y="96" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" fill="#2563eb" opacity="0.5">Other client</text>
 
       <!-- Label -->
-      <text x="480" y="170" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" fill="#2563eb" font-weight="500">← Proposed: Fri 1:15pm</text>
+      <text x="480" y="170" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="8" fill="#2563eb" font-weight="500">← Proposed: Fri 3pm</text>
     </svg>
   </div>
 
   <h3>Step 2: Review</h3>
-  <p>Matt sees Micah proposed at Fri 1:15pm — his usual slot. No adjustment needed. If the slot were taken, Matt could drag Micah to Monday (his secondary day).</p>
+  <p>Matt sees Micah proposed at Fri 3pm — his usual slot. No adjustment needed. If the slot were taken, Matt could drag Micah to Monday (his secondary day).</p>
 
   <h3>Step 3: Send Outreach</h3>
   <p>Matt clicks "Send Next Batch." Based on Micah's priority rank, he's in one of the three waves. The system sends:</p>
@@ -978,7 +1131,7 @@
   <div style="max-width: 340px; margin: 24px auto; background: var(--surface); border-radius: 18px; padding: 20px; border: 1px solid var(--border-light);">
     <div style="font-size: 0.7rem; color: var(--text-tertiary); text-align: center; margin-bottom: 12px;">SMS to Micah Alpern</div>
     <div style="background: #0071e3; color: white; padding: 10px 14px; border-radius: 14px 14px 4px 14px; font-size: 0.88rem; line-height: 1.45; max-width: 85%;">
-      Hey Micah, are you free Friday at 1:15pm for a session?
+      Hey Micah, are you free Friday at 3pm for a session?
     </div>
     <div style="font-size: 0.7rem; color: var(--text-tertiary); margin-top: 4px;">Sat 9:10 AM</div>
   </div>
@@ -1092,7 +1245,7 @@
   </div>
 
   <h3>Step 5: After the Session</h3>
-  <p>Assuming Scenario A — Micah trains Friday at 1:15pm. Matt marks the session as <strong>completed</strong>. The package updates: 2 sessions remaining.</p>
+  <p>Assuming Scenario A — Micah trains Friday at 3pm. Matt marks the session as <strong>completed</strong>. The package updates: 2 sessions remaining.</p>
 
   <div class="flow-list">
     <div class="flow-item">
@@ -1108,8 +1261,95 @@
   <div class="callout">
     <div class="callout-icon">🧪</div>
     <div class="callout-text">
-      <strong>Test plan:</strong> Run this exact flow with Micah's real phone number. Verify: (1) Generate places him at Fri 1:15pm, (2) SMS arrives, (3) reply is classified correctly, (4) session status updates on the calendar, (5) package count decrements on completion. The SMS thread above is the expected conversation.
+      <strong>Test plan:</strong> Run this exact flow with Micah's real phone number — his is the number on the test allowlist, so this works end to end today without switching outreach on for everyone else. Verify: (1) Generate places him at Fri 3pm, (2) SMS arrives, (3) reply is classified correctly, (4) session status updates on the calendar, (5) package count decrements on completion. The SMS thread above is the expected conversation.
     </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<section>
+  <div class="section-label">When Something Looks Wrong</div>
+  <h2>Troubleshooting</h2>
+  <div class="section-desc">The handful of things most likely to go sideways, and what to do about each one. No technical knowledge needed.</div>
+
+  <div class="steps">
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">?</div>
+        <div class="step-title">Google Calendar says Connected, but events aren't showing</div>
+      </div>
+      <div class="step-body">
+        Go to <strong>Settings → Google Calendar</strong> and click <strong>Disconnect</strong>, then <strong>Connect</strong> and sign in again. That fixes it almost every time.
+        <div class="step-detail">
+          The <strong>Connected</strong> badge is honest now — it doesn't just check that you signed in once, it actually re-checks with Google every time the page loads. So if it says Connected, the connection really is working, and the problem is somewhere else: the session may not be confirmed yet (only confirmed sessions get written to the calendar), or you may be looking at the wrong calendar. M2 <em>reads</em> from your own booking calendar and <em>writes</em> new sessions into the separate <strong>Micah – M2 Performance &amp; Therapy</strong> calendar, on purpose, so the two don't get tangled together. If a session you confirmed isn't visible, check that that calendar is ticked on in Google Calendar's sidebar before assuming anything is broken.<br><br>
+          <strong>And if the events are there but look odd —</strong> titled with a robot and ending in <em>"— IGNORE JUST TESTING"</em> — that's deliberate. While outreach is in testing, every event M2 creates is marked that way so nobody mistakes it for a real booking. It disappears once outreach goes live.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">?</div>
+        <div class="step-title">I sent a message but the client didn't get it</div>
+      </div>
+      <div class="step-body">
+        This is expected right now for almost everyone. <strong>Outreach is still in testing</strong> — only a small list of test numbers actually receives texts. Everyone else's message is written down and then held.
+        <div class="step-detail">
+          To see exactly what happened, go to <strong>Settings → System Logs</strong>. In the <strong>Activity</strong> view you'll see <em>"Message not sent"</em>. Switch the toggle to <strong>Technical</strong> and the same line spells out the reason — usually one of:<br><br>
+          <strong>"no phone number on file"</strong> — the client has no number. Edit the client and add one.<br>
+          <strong>"outreach is not live and this … is not on the test allowlist"</strong> — nothing is wrong; testing mode is doing its job.<br>
+          <strong>"…is not a usable sms address"</strong> — the number on file is too short or mistyped. Fix it on the client's page.<br><br>
+          The same reason shows in red on the <strong>Outreach</strong> page next to that client, as <em>"Send failed: …"</em>. Because the message was held rather than faked, nothing later cancels the session on the assumption the client ignored you.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">?</div>
+        <div class="step-title">A session didn't come off someone's package</div>
+      </div>
+      <div class="step-body">
+        A package only goes down when a session is marked <strong>completed</strong>. If it's still sitting as confirmed, that's the whole answer — mark it completed and the count drops.
+        <div class="step-detail">
+          <strong>Start on the client's page.</strong> The package card shows used, total and remaining.<br><br>
+          <strong>Then check Clients → Reports → Packages.</strong> Two things there answer this directly:<br>
+          • <strong>Recent Package Activity</strong> — the last 20 changes, each showing the client, what caused it (completed, cancelled, or a manual adjustment), and the balance before and after. If the deduction happened, it's listed here.<br>
+          • <strong>Unreconciled Sessions</strong> — sessions that were completed but never came off a package. This is the one to watch: it's where money quietly goes missing. The same count appears on the Reports tab as <em>"sessions need package deduction"</em>, in red when it isn't zero.<br><br>
+          You can correct a balance by hand from the <strong>All Packages</strong> table — it's recorded as a manual adjustment, so the history stays honest.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">?</div>
+        <div class="step-title">Where do I see what the system did?</div>
+      </div>
+      <div class="step-body">
+        <strong>Settings → System Logs.</strong> It's the activity log — the last 200 things the system did, newest first, refreshing itself every 30 seconds.
+        <div class="step-detail">
+          Leave it on the <strong>Activity</strong> view; that's plain English. <strong>Technical</strong> is there for when Micah asks what it says. The filter pills across the top — <strong>All</strong>, <strong>🛑 Errors</strong>, <strong>⚠️ Warnings</strong>, <strong>✅ Info</strong> — are the quickest way to answer "did anything actually go wrong this morning?": click <strong>Errors</strong>, and an empty list is good news.
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">?</div>
+        <div class="step-title">How do I report a problem?</div>
+      </div>
+      <div class="step-body">
+        <strong>Right here on this page.</strong> Click anywhere on this guide and a note box opens — type what's wrong and hit Submit.
+        <div class="step-detail">
+          That does more than leave a sticky note. Each note <strong>opens a ticket</strong> that Micah sees, and it drops an amber pin at the exact spot you clicked, so the note stays attached to the paragraph it's about. Click any existing pin to read the note and follow its ticket number.<br><br>
+          Anything is fair game: something that doesn't match how you actually work, a step that's out of date, a word that means something different in tennis than it does here. Being told the guide is wrong is the point of the guide having a comment box.
+        </div>
+      </div>
+    </div>
+
   </div>
 </section>
 
