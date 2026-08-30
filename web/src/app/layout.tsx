@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Nav } from "@/components/nav";
 import { GlobalSearch } from "@/components/global-search";
 import { SiteFooter } from "@/components/site-footer";
+import { Chrome } from "@/components/chrome";
 import { ToastProvider } from "@/components/toast";
 import "./globals.css";
 
@@ -44,10 +45,14 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ToastProvider>
-          <Nav />
-          <GlobalSearch />
+          <Chrome>
+            <Nav />
+            <GlobalSearch />
+          </Chrome>
           <main className="flex-1">{children}</main>
-          <SiteFooter />
+          <Chrome>
+            <SiteFooter />
+          </Chrome>
         </ToastProvider>
       </body>
     </html>
