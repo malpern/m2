@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { normalizeRedirect } from "@/lib/safe-redirect";
 
@@ -11,7 +11,6 @@ export function LoginForm() {
   const [shaking, setShaking] = useState(false);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = normalizeRedirect(searchParams.get("redirect"));
 
@@ -30,8 +29,20 @@ export function LoginForm() {
     if (res.ok) {
       setSuccess(true);
       setTimeout(() => {
-        router.push(redirect);
-        router.refresh();
+        // A full navigation, deliberately, not router.push().
+        //
+        // Symptom: router.push() left the user on the login screen holding a
+        // perfectly valid session. The server side was verified correct —
+        // /api/auth/login sets the cookie and / returns the dashboard when
+        // that cookie is presented — so the failure was entirely in the
+        // client router, which had resolved routes for this page while logged
+        // OUT and did not re-resolve them once the session existed.
+        //
+        // The precise cache mechanism was not pinned down. A hard navigation
+        // sidesteps all of it: signing in changes auth state that only the
+        // server can see (httpOnly cookie, gate in the proxy), so asking the
+        // server for the next page is the honest thing to do anyway.
+        window.location.assign(redirect);
       }, 800);
     } else {
       setShaking(true);
