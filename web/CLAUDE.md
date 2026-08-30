@@ -53,11 +53,11 @@ Only two of the four `/api/cron/*` routes are scheduled, in `vercel.json`:
 | `send-waves` | **unscheduled** | — | **yes** |
 | `follow-ups` | **unscheduled** | **—** | **yes** |
 
-`daily-digest` is unscheduled by choice, not by hazard. It only reads, but it
-texts and emails `ALERT_PHONE`/`ALERT_EMAIL` — Micah's own number, which is on the
-dev allowlist, so unlike the client-facing routes it is *not* suppressed by
-`OUTREACH_LIVE`. Nightly notifications about a system with no live outreach yet
-are noise. Re-add it when outreach is live and the digest has something to say.
+`daily-digest` is unscheduled by choice, not by hazard. It only reads, but it texts
+and emails `ALERT_PHONE`/`ALERT_EMAIL` — Micah's own number and inbox, both of which
+are on the test allowlist, so unlike client-facing sends it really does deliver while
+outreach is off. Nightly notifications about a system with no live outreach yet are
+noise. Re-add it when outreach is live and the digest has something to say.
 
 Vercel injects `Authorization: Bearer $CRON_SECRET` on cron invocations, which is what
 each route checks. With `CRON_SECRET` unset the routes fail closed and every invocation
@@ -72,12 +72,36 @@ fails. A row therefore only reaches `awaiting_reply` if a message actually went 
 specific hazard is closed structurally, not by a guard.
 
 They stay unscheduled for a different and simpler reason: **there is nothing useful for
-them to do yet.** `OUTREACH_LIVE` is off, and 55 of the 56 clients in production have no
-phone number at all — `phone IS NULL` since #221/#222 replaced the `+15550000000`
-placeholder — so `send-waves` would skip every one of them on the dev guard and write
-nothing. Schedule them once #17 lands and outreach is genuinely live, and note that
-`follow-ups` cancelling an unanswered session is then *correct* behaviour, so turn it on
-deliberately rather than as an afterthought.
+them to do yet.** 55 of the 56 clients in production have no phone number at all —
+`phone IS NULL` since #221/#222 replaced the `+15550000000` placeholder — so
+`send-waves` would refuse every one of them and write nothing. Schedule them once #17
+lands and outreach is genuinely live, and note that `follow-ups` cancelling an
+unanswered session is then *correct* behaviour, so turn it on deliberately rather than
+as an afterthought.
+
+## Who can be contacted — one policy, three channels
+
+`src/lib/outreach-policy.ts` answers "may we contact this person?" for **SMS, email and
+calendar invites alike**. Nothing else may decide it; a fourth channel asks here too.
+
+Before #242 the question had three different answers — SMS had a phone allowlist,
+invites consulted only `OUTREACH_LIVE`, and email consulted nothing — so "outreach is
+off" was true of one channel, approximate for the second and false for the third.
+
+**The allowlist is the primitive; `OUTREACH_LIVE` is a modifier on it.** That ordering
+is the point. A boolean cannot express "deliver to Micah so he can test the real thing,
+and to nobody else", so testing an invite used to mean flipping `OUTREACH_LIVE`, which
+simultaneously opened SMS to every client.
+
+- While outreach is off, only addresses on the test allowlist receive anything — and
+  they receive the **real** message, so the flow can be exercised end to end.
+- `OUTREACH_TEST_RECIPIENTS` (comma-separated, phones and emails mixed) adds testers
+  without a deploy. It is strictly additive: a typo cannot remove Micah from his own
+  alerts.
+- Going live requires `NODE_ENV=production` **and** `OUTREACH_LIVE=true`. A missing or
+  malformed address is refused even then — being live is not a licence to send nowhere.
+- Phones match on their last 10 digits, because the same number arrives as E.164 from
+  the schema, formatted from a form, and `whatsapp:`-prefixed from Twilio.
 
 ## Google Calendar — reads and writes target DIFFERENT calendars
 
