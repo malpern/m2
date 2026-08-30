@@ -45,15 +45,19 @@ def send_imessage(phone_number: str, message: str) -> bool:
             timeout=30,
         )
         if result.returncode == 0:
+            # codeql[py/clear-text-logging-sensitive-data] — redacted to last 4 by redact_phone;
+            # CodeQL tracks the dataflow from phone_number and cannot see the sanitizer.
             logger.info(f"Sent iMessage to {redact_phone(phone_number)}")
             return True
         else:
             logger.error(f"AppleScript error: {result.stderr.strip()}")
             return False
     except subprocess.TimeoutExpired:
+        # codeql[py/clear-text-logging-sensitive-data] — redacted, see above.
         logger.error(f"Timeout sending to {redact_phone(phone_number)}")
         return False
     except Exception as e:
+        # codeql[py/clear-text-logging-sensitive-data] — redacted, see above.
         logger.error(f"Failed to send to {redact_phone(phone_number)}: {e}")
         return False
     finally:
