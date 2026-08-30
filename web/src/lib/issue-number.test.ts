@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isValidIssueNumber } from "./issue-number";
+import { isValidIssueNumber, findIssue } from "./issue-number";
 
 describe("isValidIssueNumber", () => {
   it("accepts a real issue number", () => {
@@ -32,5 +32,34 @@ describe("isValidIssueNumber", () => {
     for (const v of [null, undefined, {}, [], [1]]) {
       expect(isValidIssueNumber(v), JSON.stringify(v)).toBe(false);
     }
+  });
+});
+
+describe("findIssue", () => {
+  const items = [{ number: 12, title: "a" }, { number: 34, title: "b" }];
+
+  it("returns the item when the number is one of ours", () => {
+    expect(findIssue(items, 34)).toEqual({ number: 34, title: "b" });
+  });
+
+  it("refuses an issue that exists in the repo but is not feedback", () => {
+    // The authorization gap: deleteFeedback(42) would previously have closed
+    // issue #42 and relabelled it feedback+deleted, whatever it actually was.
+    expect(findIssue(items, 42)).toBeUndefined();
+  });
+
+  it("refuses the path-injection payloads outright", () => {
+    for (const v of ["12", "12/../../../user", "../../orgs", null, undefined, {}]) {
+      expect(findIssue(items, v), String(v)).toBeUndefined();
+    }
+  });
+
+  it("does not match a string that looks like a real number", () => {
+    // Guards against a loose == comparison creeping in later.
+    expect(findIssue(items, "34")).toBeUndefined();
+  });
+
+  it("returns undefined on an empty list rather than throwing", () => {
+    expect(findIssue([], 12)).toBeUndefined();
   });
 });

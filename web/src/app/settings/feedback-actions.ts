@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { isValidIssueNumber } from "@/lib/issue-number";
+import { findIssue } from "@/lib/issue-number";
 
 const REPO = "malpern/m2";
 
@@ -81,13 +81,18 @@ export async function getFeedbackItems(): Promise<FeedbackItem[]> {
 }
 
 export async function deleteFeedback(issueNumber: number) {
-  // A network boundary — see isValidIssueNumber for why the type is not enough.
-  if (!isValidIssueNumber(issueNumber)) {
-    throw new Error(`Invalid issue number: ${String(issueNumber)}`);
+  // A server action is a network boundary: this argument is deserialized from
+  // a request and TypeScript's `number` is erased at runtime. Resolve it
+  // against the feedback issues on record rather than trusting it — see
+  // findIssue. Note this only sees the most recent 50, which is far more
+  // feedback than this app has ever collected.
+  const target = findIssue(await getFeedbackItems(), issueNumber);
+  if (!target) {
+    throw new Error(`No feedback item with number ${String(issueNumber)}`);
   }
 
   // GitHub doesn't support deleting issues via API, so we close it with a label
-  await ghFetch(`/issues/${issueNumber}`, {
+  await ghFetch(`/issues/${target.number}`, {
     method: "PATCH",
     body: JSON.stringify({ state: "closed", labels: ["feedback", "deleted"] }),
   });
