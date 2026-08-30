@@ -222,7 +222,7 @@ describe("POST /api/cron/session-reminders", () => {
     const res = await POST(makeRequest("test-secret"));
     const body = await res.json();
 
-    expect(body.results).toContain("skipped (dev guard): Dave Guard");
+    expect(body.results).toContain("skipped (outreach policy): Dave Guard");
     expect(mockSendSMS).not.toHaveBeenCalled();
   });
 

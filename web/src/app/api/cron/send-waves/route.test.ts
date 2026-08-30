@@ -262,7 +262,7 @@ describe("POST /api/cron/send-waves", () => {
     const body = await res.json();
 
     expect(body.sent).toBe(0);
-    expect(body.results[0]).toContain("skipped (dev guard)");
+    expect(body.results[0]).toContain("skipped (outreach policy)");
     expect(mockSendSMS).not.toHaveBeenCalled();
   });
 

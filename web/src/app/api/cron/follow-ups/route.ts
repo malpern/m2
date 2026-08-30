@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       if (alreadyFollowedUp) continue;
 
       if (!isDevAllowed(sent.clientPhone)) {
-        results.push(`follow-up-skipped (dev guard): ${sent.clientName}`);
+        results.push(`follow-up-skipped (outreach policy): ${sent.clientName}`);
         continue;
       }
 
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     if (hasReply) continue;
 
     if (!isDevAllowed(deferred.clientPhone)) {
-      results.push(`deferred-skipped (dev guard): ${deferred.clientName}`);
+      results.push(`deferred-skipped (outreach policy): ${deferred.clientName}`);
       continue;
     }
 
