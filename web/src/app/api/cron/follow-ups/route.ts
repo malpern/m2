@@ -9,6 +9,7 @@ import { OUTREACH_DEFAULTS } from "@/lib/outreach-config";
 import { formatSlotsText } from "@/lib/constants";
 import { cascadeAutoFill } from "@/lib/auto-fill";
 import { isCronAuthorized } from "@/lib/cron-auth";
+import { recordCronRun } from "@/lib/cron-heartbeat";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -149,5 +150,21 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  await recordCronRun("follow-ups", `${results.length} processed`);
+
   return Response.json({ processed: results.length, results });
 }
+
+/**
+ * Vercel Cron invokes scheduled jobs with **GET**, not POST.
+ *
+ * This route was POST-only, so every scheduled invocation was answered with
+ * 405 and the job never ran once — a scheduled cron that has never executed,
+ * with nothing anywhere reporting a problem. Confirmed against production on
+ * 2026-08-30: GET returned 405, POST returned 200.
+ *
+ * Both verbs are kept: GET is what the platform sends, POST is what manual
+ * runs and the existing tests use. Both are CRON_SECRET-authenticated, so
+ * exposing GET adds no reachable surface.
+ */
+export const GET = POST;

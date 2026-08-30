@@ -63,6 +63,14 @@ Vercel injects `Authorization: Bearer $CRON_SECRET` on cron invocations, which i
 each route checks. With `CRON_SECRET` unset the routes fail closed and every invocation
 returns 401 — correct, but it means the jobs silently do nothing.
 
+**Vercel Cron invokes with GET. Every route must export `GET`.** All four were POST-only
+until 2026-08-30, so the one scheduled job answered **405 to every invocation and had
+never run once** — with nothing anywhere reporting a problem, because a job that is never
+invoked logs nothing and a job that logs nothing looks like a quiet day. Verified against
+production: `GET` returned 405, `POST` returned 200. Each route now does
+`export const GET = POST`, and `cron-methods.test.ts` asserts it. Both verbs are
+CRON_SECRET-authenticated, so GET adds no reachable surface.
+
 ### The other two are still unscheduled, but the reason has changed
 
 **#227 is fixed.** `sendSMS` now returns a discriminated `SendResult`, and every caller
@@ -135,6 +143,48 @@ mixed into them.
 Connected-account access matters as much as the ID: `malpern@gmail.com` is `reader` on
 `f4lathletics@gmail.com` and `owner` on the M2 calendar. Reads work either way; writes
 need owner or writer.
+
+## Timestamps: `created_at` is NOT ISO-8601
+
+`created_at` columns default to `CURRENT_TIMESTAMP`, which SQLite writes as
+`2026-08-30 17:08:57` — UTC, space-separated, **no timezone marker**. They are TEXT
+columns, so every comparison is lexicographic. Treating them as ISO caused two live bugs,
+both fixed on 2026-08-30 and both worth not reintroducing:
+
+- **`created_at >= someDate.toISOString()` matches NOTHING on the same day.** The ISO
+  string has `T` (0x54) where the stored value has a space (0x20), so a same-date row
+  always compares LESS than the threshold. `checkAndAlert` counted zero recent errors on
+  every single invocation and had therefore **never sent an alert**; `getDailyDigest`
+  reported zero of everything, every day. Both looked like a healthy quiet system.
+- **`Date.parse("2026-08-30 17:08:57")` reads it as LOCAL time.** On a PT machine that
+  lands 7h in the future, so a staleness check returned a *negative* age and a stale
+  heartbeat read as fresh — failing in the one direction a staleness check must not.
+
+Use `lib/sql-time.ts` for both directions: `toSqlTimestamp(date)` to build a comparable
+threshold, `parseSqlTimestamp(stored)` to read one back. Note `outreach.sentAt` is
+written by application code as a real ISO string and is a different case — check which
+kind of column you have before comparing.
+
+## Monitoring: `/api/health` and the external watchdog
+
+`/api/health` is the app's positive statement about itself — env, database, Google
+Calendar (via the *validating* `isConnected`), cron freshness, recent error volume, and
+outreach posture. It is CRON_SECRET-authenticated so the unattended watchdog can reach it
+without a session, returns 503 when any check fails and 200 otherwise, and every probe is
+individually timed out so one hanging dependency cannot hang the answer. A check that
+throws becomes a `fail`, never a missing check — the recurring bug in this codebase is a
+green status that reported the presence of a record rather than a working thing.
+
+Freshness comes from the heartbeat each cron writes on **every** success path, including
+the no-op ones (`vacation_week`, "no wave ready", "all items skipped"). Those are exactly
+the cases that previously wrote nothing at all, making "ran fine, nothing to do"
+indistinguishable from "has not run since June".
+
+**In-app alerting is the fast signal, not the reliable one.** `checkAndAlert` only fires
+on error bursts, it alerts through Twilio and Resend — the app's own dependencies, so it
+is down whenever the app is — and its throttle is per-instance memory that a cold start
+resets. The `watchdog-vercel` job on the mini polls from outside and pages via Pushover,
+which is the path that works when the app does not.
 
 ## Database
 `src/db/schema.ts` is the single source of truth. The connection is libSQL

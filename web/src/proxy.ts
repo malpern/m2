@@ -9,14 +9,45 @@ const PUBLIC_EXACT = new Set([
   "/api/auth/login",
   "/api/auth/logout",
   "/api/twilio", // Twilio webhook (signature-verified in-route)
+  "/api/health", // watchdog health probe (CRON_SECRET-authenticated in-route)
+  "/manifest.json", // PWA manifest, fetched before any session exists
 ]);
 
 // Cron routes authenticate themselves via CRON_SECRET (see lib/cron-auth.ts).
+// /api/health does the same, so the external watchdog can reach it without an
+// app session — it is the endpoint that has to answer when the app is unwell.
 const PUBLIC_PREFIXES = ["/api/cron/"];
 
 export function isPublicPath(pathname: string): boolean {
   if (PUBLIC_EXACT.has(pathname)) return true;
   return PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+}
+
+/**
+ * Static assets servable without a session.
+ *
+ * This is an allowlist of EXTENSIONS, and deliberately so. It used to be
+ * `pathname.includes(".")`, which meant *any* path containing a dot skipped
+ * the gate entirely — that is why the help guide at /guide.html was readable
+ * by anyone with the URL, and it would have silently exposed the next .html,
+ * .csv or .pdf anybody added too. Assets are images, fonts, styles and
+ * scripts; documents and data are not assets and stay behind the password.
+ *
+ * manifest.json is listed as an exact public path rather than allowing the
+ * whole .json extension, so a future data export cannot inherit an exemption.
+ */
+const PUBLIC_ASSET_EXTENSIONS = new Set([
+  "svg", "png", "jpg", "jpeg", "gif", "webp", "avif", "ico",
+  "css", "js", "mjs", "map",
+  "woff", "woff2", "ttf", "otf", "eot",
+  "txt", "xml",
+]);
+
+export function isPublicAsset(pathname: string): boolean {
+  const lastSegment = pathname.slice(pathname.lastIndexOf("/") + 1);
+  const dot = lastSegment.lastIndexOf(".");
+  if (dot <= 0) return false; // no extension, or a dotfile like /.env
+  return PUBLIC_ASSET_EXTENSIONS.has(lastSegment.slice(dot + 1).toLowerCase());
 }
 
 async function hashPassword(password: string): Promise<string> {
@@ -33,7 +64,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/_next") || pathname.startsWith("/m2logo") || pathname.includes(".")) {
+  if (pathname.startsWith("/_next") || isPublicAsset(pathname)) {
     return NextResponse.next();
   }
 
