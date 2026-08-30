@@ -80,10 +80,14 @@ def interpret_reply(
             "reasoning": "Failed to parse AI response",
         }
     except Exception as e:
-        logger.error(f"Claude API error: {e}")
+        # The detail goes to the log, not into the return value. This dict is
+        # returned straight to an HTTP caller by api.py's /interpret, so
+        # interpolating the exception leaked internal state — key names, paths,
+        # upstream error text — to whoever posted the request.
+        logger.exception("Claude API error: %s", e)
         return {
             "interpretation": "ambiguous",
             "suggested_time": None,
             "confidence": 0.0,
-            "reasoning": f"API error: {e}",
+            "reasoning": "API error — see server logs",
         }

@@ -449,7 +449,10 @@ export async function POST(request: Request) {
         const preview = selectedClients[i];
         const pkgSize = preview.packageSize > 1 ? preview.packageSize : 10;
 
-        const pkgMatch = preview.lastPackage.match(/(\d+)\s*of\s*(\d+)/);
+        // Bounded quantifiers: `\d+\s*of` backtracks quadratically on a long run
+        // of digits with no "of", and lastPackage comes from an uploaded file.
+        // Session counts are never more than four digits.
+        const pkgMatch = preview.lastPackage.match(/(\d{1,4})\s*of\s*(\d{1,4})/);
         const sessionsUsed = pkgMatch ? parseInt(pkgMatch[1]) : 0;
 
         await tx

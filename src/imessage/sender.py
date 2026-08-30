@@ -6,6 +6,18 @@ import os
 logger = logging.getLogger(__name__)
 
 
+def redact_phone(phone_number: str) -> str:
+    """Mask a phone number for logging.
+
+    Logs are a lower-trust store than the database — they get shipped, tailed
+    and pasted into issues — so a client's number does not belong in one in
+    clear text. The last four digits are kept because they are what makes a
+    log line useful when tracing a single failed send.
+    """
+    digits = "".join(c for c in phone_number if c.isdigit())
+    return f"***{digits[-4:]}" if len(digits) >= 4 else "***"
+
+
 def send_imessage(phone_number: str, message: str) -> bool:
     """Send an iMessage via AppleScript. Returns True on success."""
     escaped_phone = phone_number.replace('"', '')
@@ -33,16 +45,16 @@ def send_imessage(phone_number: str, message: str) -> bool:
             timeout=30,
         )
         if result.returncode == 0:
-            logger.info(f"Sent iMessage to {phone_number}")
+            logger.info(f"Sent iMessage to {redact_phone(phone_number)}")
             return True
         else:
             logger.error(f"AppleScript error: {result.stderr.strip()}")
             return False
     except subprocess.TimeoutExpired:
-        logger.error(f"Timeout sending to {phone_number}")
+        logger.error(f"Timeout sending to {redact_phone(phone_number)}")
         return False
     except Exception as e:
-        logger.error(f"Failed to send to {phone_number}: {e}")
+        logger.error(f"Failed to send to {redact_phone(phone_number)}: {e}")
         return False
     finally:
         os.unlink(tmp_path)

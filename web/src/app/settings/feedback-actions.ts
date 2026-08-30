@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isValidIssueNumber } from "@/lib/issue-number";
 
 const REPO = "malpern/m2";
 
@@ -80,6 +81,11 @@ export async function getFeedbackItems(): Promise<FeedbackItem[]> {
 }
 
 export async function deleteFeedback(issueNumber: number) {
+  // A network boundary — see isValidIssueNumber for why the type is not enough.
+  if (!isValidIssueNumber(issueNumber)) {
+    throw new Error(`Invalid issue number: ${String(issueNumber)}`);
+  }
+
   // GitHub doesn't support deleting issues via API, so we close it with a label
   await ghFetch(`/issues/${issueNumber}`, {
     method: "PATCH",

@@ -9,6 +9,13 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Least privilege for GITHUB_TOKEN. This job only checks out, installs, and
+# runs lint/test/build — it never writes to the repo, so a compromised
+# dependency in the install step cannot push commits, open PRs or edit issues
+# with the ambient token. Grant more only to a job that demonstrably needs it.
+permissions:
+  contents: read
+
 jobs:
   web:
     name: web (lint, test, build)
