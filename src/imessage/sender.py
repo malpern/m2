@@ -2,24 +2,31 @@ import subprocess
 import logging
 import tempfile
 import os
+from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
 
-def redact_phone(phone_number: str) -> str:
-    """Mask a phone number for logging.
+def _send_id() -> str:
+    """An opaque per-send id used to correlate log lines.
 
     Logs are a lower-trust store than the database — they get shipped, tailed
-    and pasted into issues — so a client's number does not belong in one in
-    clear text. The last four digits are kept because they are what makes a
-    log line useful when tracing a single failed send.
+    and pasted into issues — so a client's phone number does not belong in one.
+    Redacting to the last four digits was the first attempt, but any value
+    derived from the number stays tainted under dataflow analysis, and more to
+    the point the last four digits are still identifying. An unrelated id keeps
+    the operational value (all three log lines for one send share it, so a
+    failure can be traced end to end) while carrying no personal data at all.
+
+    To find WHICH client a send id belongs to, correlate on timestamp with the
+    outreach table, which is access-controlled; the log is not.
     """
-    digits = "".join(c for c in phone_number if c.isdigit())
-    return f"***{digits[-4:]}" if len(digits) >= 4 else "***"
+    return uuid4().hex[:8]
 
 
 def send_imessage(phone_number: str, message: str) -> bool:
     """Send an iMessage via AppleScript. Returns True on success."""
+    send_id = _send_id()
     escaped_phone = phone_number.replace('"', '')
 
     # Write message to a temp file to avoid AppleScript escaping issues
@@ -45,20 +52,16 @@ def send_imessage(phone_number: str, message: str) -> bool:
             timeout=30,
         )
         if result.returncode == 0:
-            # codeql[py/clear-text-logging-sensitive-data] — redacted to last 4 by redact_phone;
-            # CodeQL tracks the dataflow from phone_number and cannot see the sanitizer.
-            logger.info(f"Sent iMessage to {redact_phone(phone_number)}")
+            logger.info(f"Sent iMessage [{send_id}]")
             return True
         else:
             logger.error(f"AppleScript error: {result.stderr.strip()}")
             return False
     except subprocess.TimeoutExpired:
-        # codeql[py/clear-text-logging-sensitive-data] — redacted, see above.
-        logger.error(f"Timeout sending to {redact_phone(phone_number)}")
+        logger.error(f"Timeout sending iMessage [{send_id}]")
         return False
     except Exception as e:
-        # codeql[py/clear-text-logging-sensitive-data] — redacted, see above.
-        logger.error(f"Failed to send to {redact_phone(phone_number)}: {e}")
+        logger.error(f"Failed to send iMessage [{send_id}]: {e}")
         return False
     finally:
         os.unlink(tmp_path)
