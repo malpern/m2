@@ -7,6 +7,12 @@ describe("isChromeFree", () => {
     expect(isChromeFree("/terms")).toBe(true);
   });
 
+  it("hides it on /login too, so nothing prefetches gated routes while logged out", () => {
+    // Those prefetches resolve to redirects back to /login and get cached,
+    // which then defeats the post-login navigation.
+    expect(isChromeFree("/login")).toBe(true);
+  });
+
   it("keeps the chrome on every app page", () => {
     for (const p of ["/", "/schedule", "/clients", "/clients/1", "/outreach", "/settings"]) {
       expect(isChromeFree(p), p).toBe(false);
@@ -22,6 +28,6 @@ describe("isChromeFree", () => {
     // Both lists describe the same set of public pages. If one grows without
     // the other, either the page 302s to login or it renders with a nav full
     // of links the visitor cannot follow.
-    expect([...CHROME_FREE_PATHS].sort()).toEqual(["/privacy", "/terms"]);
+    expect([...CHROME_FREE_PATHS].sort()).toEqual(["/login", "/privacy", "/terms"]);
   });
 });
