@@ -88,3 +88,22 @@ describe("isPublicAsset", () => {
     expect(isPublicPath("/api/health")).toBe(true);
   });
 });
+
+describe("the public legal pages", () => {
+  it("serves /privacy and /terms without a session", () => {
+    // Linked from the Google OAuth consent screen, so the reader is typically
+    // signed out and may not be a client at all.
+    expect(isPublicPath("/privacy")).toBe(true);
+    expect(isPublicPath("/terms")).toBe(true);
+  });
+
+  it("does not open anything underneath them", () => {
+    expect(isPublicPath("/privacy/edit")).toBe(false);
+    expect(isPublicPath("/terms/admin")).toBe(false);
+  });
+
+  it("is not fooled by lookalike paths", () => {
+    expect(isPublicPath("/privacy-policy")).toBe(false);
+    expect(isPublicPath("/settings/privacy")).toBe(false);
+  });
+});

@@ -11,6 +11,12 @@ const PUBLIC_EXACT = new Set([
   "/api/twilio", // Twilio webhook (signature-verified in-route)
   "/api/health", // watchdog health probe (CRON_SECRET-authenticated in-route)
   "/manifest.json", // PWA manifest, fetched before any session exists
+  // The legal pages are linked from the Google OAuth consent screen, so they
+  // must render for people who are not signed in and are not clients. Google
+  // stores these URLs as literal strings and never re-discovers them — if
+  // either path changes, update the consent screen by hand.
+  "/privacy",
+  "/terms",
 ]);
 
 // Cron routes authenticate themselves via CRON_SECRET (see lib/cron-auth.ts).
