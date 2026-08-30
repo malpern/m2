@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     const first = clientItems[0];
 
     if (!isDevAllowed(first.clientPhone)) {
-      results.push(`skipped (dev guard): ${first.clientName}`);
+      results.push(`skipped (outreach policy): ${first.clientName}`);
       continue;
     }
 

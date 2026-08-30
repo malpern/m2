@@ -217,7 +217,7 @@ describe("POST /api/cron/follow-ups", () => {
     const res = await POST(makeRequest("test-secret"));
     const body = await res.json();
 
-    expect(body.results[0]).toContain("follow-up-skipped (dev guard)");
+    expect(body.results[0]).toContain("follow-up-skipped (outreach policy)");
     expect(mockSendSMS).not.toHaveBeenCalled();
   });
 

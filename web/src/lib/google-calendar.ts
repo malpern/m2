@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { googleTokens } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getOAuth2Client, getAuthenticatedClient, getAuthenticatedClientWithEmail } from "@/lib/google-auth";
+import { canContact } from "@/lib/outreach-policy";
 
 export function getAuthUrl(): { url: string; state: string } {
   const state = crypto.randomUUID();
@@ -133,15 +134,18 @@ export async function createCalendarEvent(
   const startStr = `${date}T${startTime}:00`;
   const endStr = `${date}T${String(endHours).padStart(2, "0")}:${String(endMinutes).padStart(2, "0")}:00`;
 
-  // A calendar invite is outbound mail: Google sends it to the attendee directly,
-  // so it bypasses both isDevAllowed and sendSMS. OUTREACH_LIVE previously only
-  // changed the event TITLE, meaning a real client could receive an invite reading
-  // "IGNORE JUST TESTING" while outreach was supposedly off. Gate the attendee
-  // itself, so nothing reaches a client until outreach is deliberately enabled.
-  const attendeeEmail = IS_TESTING ? undefined : opts?.attendeeEmail;
+  // A calendar invite is outbound mail — Google delivers it to the attendee — so
+  // it asks the same policy as SMS and email (#242). Per-recipient rather than
+  // all-or-nothing: an address on the test allowlist still receives the invite
+  // while outreach is off, so the real flow can be exercised end to end without
+  // any client being reachable.
+  const inviteDecision = opts?.attendeeEmail
+    ? canContact({ channel: "email", address: opts.attendeeEmail })
+    : ({ allowed: false, reason: "no attendee" } as const);
+  const attendeeEmail = inviteDecision.allowed ? opts?.attendeeEmail : undefined;
   const attendees = attendeeEmail ? [{ email: attendeeEmail }] : undefined;
-  if (IS_TESTING && opts?.attendeeEmail) {
-    console.log(`[DEV GUARD] Would invite ${opts.attendeeEmail} to ${clientName} on ${date}`);
+  if (opts?.attendeeEmail && !inviteDecision.allowed) {
+    console.log(`[OUTREACH GUARD] Would invite ${opts.attendeeEmail} to ${clientName} on ${date}: ${inviteDecision.reason}`);
   }
 
   const description = attendees
@@ -165,9 +169,10 @@ export async function createCalendarEvent(
 
 export async function updateCalendarEventAttendee(eventId: string, email: string): Promise<boolean> {
   // Same outbound path as createCalendarEvent: patching an attendee onto an event
-  // makes Google mail them. Gated for the same reason.
-  if (IS_TESTING) {
-    console.log(`[DEV GUARD] Would add ${email} as an attendee of event ${eventId}`);
+  // makes Google mail them, so it asks the same policy.
+  const decision = canContact({ channel: "email", address: email });
+  if (!decision.allowed) {
+    console.log(`[OUTREACH GUARD] Would add ${email} to event ${eventId}: ${decision.reason}`);
     return false;
   }
 

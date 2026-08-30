@@ -57,7 +57,7 @@ describe("sendSMS", () => {
   it("blocks non-dev numbers and reports the skip distinguishably", async () => {
     const { sendSMS } = await import("./twilio");
     const result = await sendSMS("+15551234567", "Hello test");
-    expect(result).toEqual({ status: "skipped", reason: expect.stringContaining("dev guard") });
+    expect(result).toEqual({ status: "skipped", reason: expect.stringContaining("not on the test allowlist") });
     expect(mockCreate).not.toHaveBeenCalled();
   });
 

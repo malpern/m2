@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     if (!shouldRemind) continue;
 
     if (!isDevAllowed(s.clientPhone)) {
-      results.push(`skipped (dev guard): ${s.clientName}`);
+      results.push(`skipped (outreach policy): ${s.clientName}`);
       continue;
     }
 

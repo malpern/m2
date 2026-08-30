@@ -65,6 +65,10 @@ describe("createCalendarEvent — invite gating", () => {
   });
 
   it("DOES invite once OUTREACH_LIVE is explicitly enabled", async () => {
+    // The shared policy (#242) requires production AND the flag — the old
+    // calendar-only check ignored NODE_ENV, which meant a stray local flag
+    // could have sent real invites.
+    vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OUTREACH_LIVE", "true");
     const { createCalendarEvent } = await import("./google-calendar");
     await createCalendarEvent("Luke Alexander", "2026-09-01", "15:00", {
@@ -73,6 +77,21 @@ describe("createCalendarEvent — invite gating", () => {
 
     const body = mockInsert.mock.calls[0][0];
     expect(body.requestBody.attendees).toEqual([{ email: "client@example.com" }]);
+    expect(body.sendUpdates).toBe("all");
+  });
+
+  it("DOES invite an allowlisted address while outreach is off — the point of #242", async () => {
+    // This is what a boolean could not express. Micah receives the real invite so
+    // the flow can be exercised end to end, while every client address is still
+    // refused. Before this, testing an invite meant flipping OUTREACH_LIVE, which
+    // simultaneously opened SMS to every client.
+    const { createCalendarEvent } = await import("./google-calendar");
+    await createCalendarEvent("Micah Alpern", "2026-09-01", "15:00", {
+      attendeeEmail: "malpern@gmail.com",
+    });
+
+    const body = mockInsert.mock.calls[0][0];
+    expect(body.requestBody.attendees).toEqual([{ email: "malpern@gmail.com" }]);
     expect(body.sendUpdates).toBe("all");
   });
 
@@ -92,6 +111,10 @@ describe("updateCalendarEventAttendee — the second invite path", () => {
   });
 
   it("patches once outreach is live", async () => {
+    // The shared policy (#242) requires production AND the flag — the old
+    // calendar-only check ignored NODE_ENV, which meant a stray local flag
+    // could have sent real invites.
+    vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("OUTREACH_LIVE", "true");
     const { updateCalendarEventAttendee } = await import("./google-calendar");
     const ok = await updateCalendarEventAttendee("evt_1", "client@example.com");
