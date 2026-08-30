@@ -160,6 +160,75 @@
     padding: 48px 24px;
     margin: 36px 0;
     display: flex; justify-content: center;
+    /* The diagrams are dense; they are meant to be opened. */
+    cursor: zoom-in;
+    position: relative;
+    transition: border-color 0.15s ease;
+  }
+  .diagram-wrap:hover,
+  .diagram-wrap:focus-visible {
+    border-color: var(--accent, #2563eb);
+    outline: none;
+  }
+  .diagram-wrap:focus-visible { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35); }
+
+  /* Hint, so the affordance does not rely on the cursor alone. */
+  .diagram-wrap::after {
+    content: "Click to enlarge";
+    position: absolute;
+    right: 12px; bottom: 10px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-tertiary, #94a3b8);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+  }
+  .diagram-wrap:hover::after,
+  .diagram-wrap:focus-visible::after { opacity: 1; }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(15, 23, 42, 0.82);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 3vh 3vw;
+    cursor: zoom-out;
+  }
+  .lightbox[open] { display: flex; }
+  .lightbox-inner {
+    background: #fff;
+    border-radius: 10px;
+    padding: 24px;
+    max-width: 96vw;
+    max-height: 94vh;
+    overflow: auto;
+    cursor: default;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.4);
+  }
+  /* Let the diagram use the space it just gained. */
+  .lightbox-inner svg { width: 100%; height: auto; max-width: none; }
+
+  .lightbox-close {
+    position: fixed;
+    top: 18px; right: 22px;
+    background: #fff;
+    border: 1px solid var(--border-light, #e2e8f0);
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1;
+    padding: 9px 13px;
+    cursor: pointer;
+    color: #0f172a;
+  }
+  .lightbox-close:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .diagram-wrap, .diagram-wrap::after { transition: none; }
   }
 
   /* ── Rules ── */
@@ -1499,5 +1568,71 @@
 })();
 </script>
 
+
+<!-- Diagram lightbox: the two flow diagrams are dense enough that they need
+     opening. Cloned into an overlay rather than transformed in place, so the
+     page layout underneath is untouched. -->
+<div class="lightbox" id="diagramLightbox" role="dialog" aria-modal="true" aria-label="Enlarged diagram">
+  <button class="lightbox-close" id="lightboxClose" type="button" aria-label="Close enlarged diagram">Close &#10005;</button>
+  <div class="lightbox-inner" id="lightboxInner"></div>
+</div>
+
+<script>
+(function () {
+  var box    = document.getElementById('diagramLightbox');
+  var inner  = document.getElementById('lightboxInner');
+  var closeB = document.getElementById('lightboxClose');
+  if (!box || !inner || !closeB) return;
+
+  var lastFocused = null;
+
+  function open(wrap) {
+    var svg = wrap.querySelector('svg');
+    if (!svg) return;
+    lastFocused = document.activeElement;
+    inner.innerHTML = '';
+    var clone = svg.cloneNode(true);
+    // The inline diagrams carry fixed width/height; drop them so the clone can
+    // scale to the overlay. viewBox keeps the aspect ratio.
+    clone.removeAttribute('width');
+    clone.removeAttribute('height');
+    // The source SVGs carry an inline style="max-width:580px", which beats any
+    // stylesheet rule. Without overriding it on the clone, "enlarge" would cap
+    // the diagram at its original width and do almost nothing.
+    clone.style.maxWidth = 'none';
+    clone.style.width = '100%';
+    clone.style.height = 'auto';
+    inner.appendChild(clone);
+    box.setAttribute('open', '');
+    document.body.style.overflow = 'hidden';
+    closeB.focus();
+  }
+
+  function close() {
+    box.removeAttribute('open');
+    inner.innerHTML = '';
+    document.body.style.overflow = '';
+    if (lastFocused && lastFocused.focus) lastFocused.focus();
+  }
+
+  document.querySelectorAll('.diagram-wrap').forEach(function (wrap) {
+    // Reachable by keyboard as well as pointer.
+    wrap.setAttribute('tabindex', '0');
+    wrap.setAttribute('role', 'button');
+    wrap.setAttribute('aria-label', 'Enlarge diagram');
+    wrap.addEventListener('click', function () { open(wrap); });
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(wrap); }
+    });
+  });
+
+  closeB.addEventListener('click', close);
+  // Clicking the backdrop closes; clicking the diagram itself does not.
+  box.addEventListener('click', function (e) { if (e.target === box) close(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && box.hasAttribute('open')) close();
+  });
+})();
+</script>
 </body>
 </html>
