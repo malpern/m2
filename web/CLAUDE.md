@@ -79,6 +79,39 @@ nothing. Schedule them once #17 lands and outreach is genuinely live, and note t
 `follow-ups` cancelling an unanswered session is then *correct* behaviour, so turn it on
 deliberately rather than as an afterthought.
 
+## Google Calendar — reads and writes target DIFFERENT calendars
+
+This is deliberate now, but it was an accident until 2026-08-29 and is easy to
+misread, so it is written down.
+
+| | Env var | Falls back to |
+|---|---|---|
+| **Reads** (`listEvents`) | `GOOGLE_CALENDAR_EMAIL` | `f4lathletics@gmail.com` — Matt's own booking calendar, which Acuity syncs into |
+| **Writes** (`createCalendarEvent`, attendee patches, deletes) | `GOOGLE_CALENDAR_ID` | `"primary"` — whatever account is connected |
+
+Reads point at Matt's calendar because that is where the truth about what actually
+happened lives — it is what `getOpenSlots` uses for conflict detection and what the
+reconciler in `calendar-match.ts` reads.
+
+Writes point at **"Micah - M2 Performance & Therapy"** (`GOOGLE_CALENDAR_ID`, set in
+Vercel), so sessions m2 creates stay separate from Matt's own bookings instead of being
+mixed into them.
+
+**Two traps here, both already hit:**
+
+- **`"primary"` is not a calendar, it is "whoever is connected".** The app authenticates
+  as `malpern@gmail.com`, so before `GOOGLE_CALENDAR_ID` was set, a confirmed session
+  would have written a client's training session into Micah's personal calendar. The
+  first symptom of this class of mistake, back on 2026-05-30, was
+  `GCal create failed: You need to have writer access to this calendar` — the account
+  had only reader access to the calendar it was asked to write to.
+- **Reads and writes are configured by different variables.** Setting one does not move
+  the other. If the intent ever becomes "one calendar for everything", both must change.
+
+Connected-account access matters as much as the ID: `malpern@gmail.com` is `reader` on
+`f4lathletics@gmail.com` and `owner` on the M2 calendar. Reads work either way; writes
+need owner or writer.
+
 ## Database
 `src/db/schema.ts` is the single source of truth. The connection is libSQL
 (`@libsql/client`), built lazily in `src/db/index.ts` from `TURSO_DATABASE_URL` and
