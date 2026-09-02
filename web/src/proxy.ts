@@ -10,6 +10,9 @@ const PUBLIC_EXACT = new Set([
   "/api/auth/logout",
   "/api/twilio", // Twilio webhook (signature-verified in-route)
   "/api/health", // watchdog health probe (CRON_SECRET-authenticated in-route)
+  // Credential-free traffic light for an external uptime monitor. Public by
+  // design — see the route for what it deliberately does and does not reveal.
+  "/api/health/summary",
   "/manifest.json", // PWA manifest, fetched before any session exists
   // The legal pages are linked from the Google OAuth consent screen, so they
   // must render for people who are not signed in and are not clients. Google
