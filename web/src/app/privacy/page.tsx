@@ -37,13 +37,27 @@ export default function PrivacyPage() {
       </p>
       <p>
         You can opt out of text messages at any time by replying STOP. After opting out, you will no longer
-        receive scheduling texts. You may opt back in by contacting us directly.
+        receive scheduling texts. Reply HELP at any time for assistance, or contact us at the number below.
+        You may opt back in by contacting us directly.
+      </p>
+      <p>
+        <strong>
+          No mobile information will be shared with third parties or affiliates for marketing or promotional
+          purposes.
+        </strong>{" "}
+        Information sharing to subcontractors in support services, such as our messaging provider, is
+        permitted. All other use case categories exclude text messaging originator opt-in data and consent;
+        this information will not be shared with any third parties.
       </p>
 
       <h2>Information Sharing</h2>
       <p>
         We do not sell, trade, or rent your personal information to third parties. We may share information
         with service providers (such as our messaging platform) solely to deliver our services.
+      </p>
+      <p>
+        Phone numbers and text-message consent are never shared with third parties or affiliates for
+        marketing or promotional purposes, and are not sold under any circumstances.
       </p>
 
       <h2>Data Security</h2>
