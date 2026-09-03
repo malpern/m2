@@ -8,7 +8,8 @@ import { lastCronRunAt } from "@/lib/cron-heartbeat";
 import { toSqlTimestamp } from "@/lib/sql-time";
 import {
   buildReport, checkEnv, checkCronFreshness, checkErrorRate, checkGoogle,
-  checkOutreach, failedCheck, type HealthCheck,
+  checkOutreach, checkTwilio, checkAnthropic, unconfigured, failedCheck,
+  type HealthCheck, type CredentialProbe,
 } from "@/lib/health";
 
 /**
@@ -50,6 +51,44 @@ async function probe(name: string, work: () => Promise<HealthCheck>): Promise<He
   }
 }
 
+
+/**
+ * Prove a credential works by using it, rather than by observing that it is set.
+ *
+ * Both calls are read-only and free: Twilio's account fetch and Anthropic's
+ * model list. Neither sends a message, and neither consumes tokens — this
+ * endpoint is polled every ten minutes and must not cost anything to run.
+ */
+async function probeTwilio(): Promise<CredentialProbe> {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  if (!sid || !token) return { ok: false, reason: "not configured" };
+  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}.json`, {
+    headers: { Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}` },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    // Twilio answers a bad credential with 401 and a JSON body. Report the
+    // status, never the credential.
+    return { ok: false, status: res.status, reason: res.status === 401 ? "authentication rejected" : res.statusText };
+  }
+  const body = (await res.json()) as { friendly_name?: string; status?: string };
+  return { ok: true, detail: `Account reachable — ${body.friendly_name ?? "unnamed"} (${body.status ?? "unknown"})` };
+}
+
+async function probeAnthropic(): Promise<CredentialProbe> {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return { ok: false, reason: "not configured" };
+  const res = await fetch("https://api.anthropic.com/v1/models?limit=1", {
+    headers: { "x-api-key": key, "anthropic-version": "2023-06-01" },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    return { ok: false, status: res.status, reason: res.status === 401 ? "authentication rejected" : res.statusText };
+  }
+  return { ok: true, detail: "API key valid" };
+}
+
 export async function GET(request: Request) {
   if (!isCronAuthorized(request)) {
     return new Response("Unauthorized", { status: 401 });
@@ -76,7 +115,9 @@ export async function GET(request: Request) {
     };
   });
 
-  const [googleCheck, cronCheck, errorCheck] = await Promise.all([
+  const outreachLive = isOutreachLive();
+
+  const [googleCheck, cronCheck, errorCheck, twilioCheck, anthropicCheck] = await Promise.all([
     probe("google_calendar", async () => checkGoogle(await isConnected())),
     probe("cron", async () => checkCronFreshness(await lastCronRunAt(), now)),
     probe("errors", async () => {
@@ -88,6 +129,20 @@ export async function GET(request: Request) {
         .get();
       return checkErrorRate(Number(rows?.n ?? 0));
     }),
+    probe("twilio", async () => {
+      const p = await probeTwilio();
+      if (!p.ok && p.reason === "not configured") {
+        return unconfigured("twilio", "the app cannot text anyone");
+      }
+      return checkTwilio(p, outreachLive);
+    }),
+    probe("anthropic", async () => {
+      const p = await probeAnthropic();
+      if (!p.ok && p.reason === "not configured") {
+        return unconfigured("anthropic", "replies will not be classified automatically");
+      }
+      return checkAnthropic(p);
+    }),
   ]);
 
   const checks: HealthCheck[] = [
@@ -96,7 +151,9 @@ export async function GET(request: Request) {
     googleCheck,
     cronCheck,
     errorCheck,
-    checkOutreach(isOutreachLive(), clientsWithPhone),
+    twilioCheck,
+    anthropicCheck,
+    checkOutreach(outreachLive, clientsWithPhone),
   ];
 
   const report = buildReport(checks, now);

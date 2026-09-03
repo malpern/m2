@@ -209,3 +209,56 @@ export function failedCheck(name: string, error: unknown): HealthCheck {
   const message = error instanceof Error ? error.message : String(error);
   return { name, status: "fail", detail: `Check itself failed: ${message}` };
 }
+
+/**
+ * The result of actually calling a third-party API with our stored credential.
+ *
+ * `checkEnv` above only proves a variable is *present*. That is the same
+ * mistake `isConnected()` made for Google — it confirmed a row existed while
+ * the token behind it had been dead since June. Presence is not validity, and
+ * for the services m2 depends on to do its job, only an authenticated round
+ * trip settles the question.
+ */
+export type CredentialProbe =
+  | { ok: true; detail?: string }
+  | { ok: false; status?: number; reason: string };
+
+/**
+ * Twilio. Severity depends on whether outreach is live, because the same dead
+ * credential means different things: while testing it is a latent problem, and
+ * once outreach is on it means every message silently fails to send.
+ */
+export function checkTwilio(probe: CredentialProbe, outreachLive: boolean): HealthCheck {
+  if (probe.ok) {
+    return { name: "twilio", status: "ok", detail: probe.detail ?? "Credentials valid" };
+  }
+  const code = probe.status ? ` (HTTP ${probe.status})` : "";
+  return {
+    name: "twilio",
+    status: outreachLive ? "fail" : "warn",
+    detail: outreachLive
+      ? `Twilio rejected our credentials${code} — outreach is LIVE, so messages are not being delivered: ${probe.reason}`
+      : `Twilio rejected our credentials${code} — harmless while outreach is off, but sending would fail today: ${probe.reason}`,
+  };
+}
+
+/**
+ * Anthropic. Always a warning, never a failure: reply classification degrades
+ * to needing Matt's attention, which is inconvenient rather than broken.
+ */
+export function checkAnthropic(probe: CredentialProbe): HealthCheck {
+  if (probe.ok) {
+    return { name: "anthropic", status: "ok", detail: probe.detail ?? "Credentials valid" };
+  }
+  const code = probe.status ? ` (HTTP ${probe.status})` : "";
+  return {
+    name: "anthropic",
+    status: "warn",
+    detail: `Anthropic rejected our key${code} — replies will not be classified automatically: ${probe.reason}`,
+  };
+}
+
+/** A credential that was never configured. Distinct from one that is rejected. */
+export function unconfigured(name: string, consequence: string): HealthCheck {
+  return { name, status: "warn", detail: `Not configured — ${consequence}` };
+}
