@@ -389,6 +389,9 @@ export function ScheduleCalendar({
           <Link href="/schedule/groups">
             <Button variant="outline" size="sm">Semi-Groups</Button>
           </Link>
+          <Link href="/schedule/priority">
+            <Button variant="outline" size="sm">Priority</Button>
+          </Link>
           <Button onClick={handleGenerate} disabled={isPending} size="sm">
             Generate Week
           </Button>
