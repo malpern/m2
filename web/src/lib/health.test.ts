@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   summarize, buildReport, checkEnv, checkCronFreshness, checkErrorRate,
-  checkGoogle, checkOutreach, failedCheck, needsAuthToken, REQUIRED_ENV, FEATURE_ENV,
+  checkGoogle, checkOutreach, checkTwilio, checkAnthropic, unconfigured,
+  failedCheck, needsAuthToken, REQUIRED_ENV, FEATURE_ENV,
 } from "./health";
 
 const ok = (name: string) => ({ name, status: "ok" as const, detail: "" });
@@ -211,5 +212,78 @@ describe("needsAuthToken", () => {
   it("is false when there is no URL at all — the missing URL is the error to report", () => {
     expect(needsAuthToken(undefined)).toBe(false);
     expect(needsAuthToken("")).toBe(false);
+  });
+});
+
+describe("checkTwilio", () => {
+  it("passes on a working credential and says which account", () => {
+    const c = checkTwilio({ ok: true, detail: "Account reachable — M2 (active)" }, false);
+    expect(c).toMatchObject({ name: "twilio", status: "ok" });
+    expect(c.detail).toContain("M2");
+  });
+
+  it("only WARNS about a dead credential while outreach is off", () => {
+    // Nothing is being sent, so it is a latent problem rather than an outage.
+    const c = checkTwilio({ ok: false, status: 401, reason: "authentication rejected" }, false);
+    expect(c.status).toBe("warn");
+    expect(c.detail).toContain("401");
+    expect(c.detail).toContain("outreach is off");
+  });
+
+  it("FAILS on a dead credential once outreach is live", () => {
+    // The same credential now means every message silently fails to send —
+    // exactly the class of thing this probe exists to catch.
+    const c = checkTwilio({ ok: false, status: 401, reason: "authentication rejected" }, true);
+    expect(c.status).toBe("fail");
+    expect(c.detail).toContain("not being delivered");
+  });
+
+  it("reports a non-401 rejection too", () => {
+    const c = checkTwilio({ ok: false, status: 503, reason: "Service Unavailable" }, true);
+    expect(c.status).toBe("fail");
+    expect(c.detail).toContain("503");
+  });
+
+  it("never puts the credential in the detail", () => {
+    const c = checkTwilio({ ok: false, status: 401, reason: "authentication rejected" }, true);
+    expect(JSON.stringify(c)).not.toMatch(/AC[0-9a-f]{32}/);
+  });
+});
+
+describe("checkAnthropic", () => {
+  it("passes on a working key", () => {
+    expect(checkAnthropic({ ok: true }).status).toBe("ok");
+  });
+
+  it("only warns on a dead key — scheduling still works without it", () => {
+    const c = checkAnthropic({ ok: false, status: 401, reason: "authentication rejected" });
+    expect(c.status).toBe("warn");
+    expect(c.detail).toContain("not be classified");
+  });
+});
+
+describe("unconfigured", () => {
+  it("distinguishes 'never set' from 'rejected'", () => {
+    const c = unconfigured("twilio", "the app cannot text anyone");
+    expect(c).toMatchObject({ name: "twilio", status: "warn" });
+    expect(c.detail).toContain("Not configured");
+  });
+});
+
+describe("the probes change the overall status correctly", () => {
+  it("a dead Twilio while LIVE takes the whole report down", () => {
+    const checks = [
+      { name: "database", status: "ok" as const, detail: "" },
+      checkTwilio({ ok: false, status: 401, reason: "rejected" }, true),
+    ];
+    expect(summarize(checks)).toBe("down");
+  });
+
+  it("a dead Twilio while testing only degrades it", () => {
+    const checks = [
+      { name: "database", status: "ok" as const, detail: "" },
+      checkTwilio({ ok: false, status: 401, reason: "rejected" }, false),
+    ];
+    expect(summarize(checks)).toBe("degraded");
   });
 });
