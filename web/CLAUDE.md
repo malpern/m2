@@ -111,6 +111,44 @@ simultaneously opened SMS to every client.
 - Phones match on their last 10 digits, because the same number arrives as E.164 from
   the schema, formatted from a form, and `whatsapp:`-prefixed from Twilio.
 
+## Confirmed opt-in — the second gate, after the allowlist
+
+`outreach-policy.ts` answers "may we contact this ADDRESS?". `sms-consent.ts`
+answers "has this PERSON agreed?". Both must pass.
+
+Matt collects numbers verbally at signup. That is lawful for transactional
+scheduling messages, but it produces no artifact — nothing a carrier reviewer,
+or we ourselves, can inspect to show a particular person agreed. The A2P 10DLC
+campaign was rejected partly on exactly that (error 30896, "rejected because of
+provided Opt-in information"), alongside 30927 (brand registered to Micah
+rather than to M2) and 30908 (privacy policy not verifiable).
+
+So a verbally-collected number now buys permission to send **one** question.
+The client's reply is the record:
+
+- `unknown` → never asked. Blocks scheduling.
+- `pending` → asked, waiting. Blocks scheduling.
+- `confirmed` → replied YES. The only state that permits scheduling messages.
+- `declined` → replied STOP/NO. Blocks everything, permanently, including
+  being asked again.
+
+**The gate lives inside `sendSMS`, not at the call sites.** There are fourteen
+of them, and #227 is the standing lesson that a rule which has to be remembered
+at each is a rule that will be missed at one. `purpose` defaults to
+`scheduling`, the restricted kind, so a caller that says nothing gets the safe
+behaviour; `consent_request` and `operational` are the deliberate exemptions.
+When a caller does not supply the status, `sendSMS` looks it up by phone —
+"the caller forgot" must not mean "no check happened". A number matching no
+client reads as `unknown` and is refused.
+
+Only a **bare** keyword counts as a consent reply. "no thanks, can we do
+Thursday?" is a scheduling message that happens to begin with "no", and reading
+it as an opt-out would silently cut a client off. See `interpretConsentReply`.
+
+**The status only moves to `pending` when the request was actually sent.** A
+client marked pending who was never texted would sit un-contactable forever,
+waiting to answer a question they never received.
+
 ## Google Calendar — reads and writes target DIFFERENT calendars
 
 This is deliberate now, but it was an accident until 2026-08-29 and is easy to

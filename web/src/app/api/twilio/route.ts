@@ -1,4 +1,5 @@
 import { db } from "@/db";
+import { interpretConsentReply, confirmedReply, declinedReply } from "@/lib/sms-consent";
 import { outreach, clients } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { NextRequest } from "next/server";
@@ -96,6 +97,42 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
 
   if (lower === "help" || lower === "info") {
     return twiml(`M2 Performance & Therapy — session scheduling texts. Reply STOP to opt out. Contact: ${process.env.BUSINESS_CONTACT_PHONE ?? "(408) 599-1777"}`);
+  }
+
+  // Confirmed opt-in. Numbers are collected verbally, which leaves no artifact
+  // a carrier reviewer can inspect — the A2P campaign was rejected partly on
+  // that (30896). We ask once; THIS reply is the record.
+  //
+  // Placed ahead of the START handler below, which answers the same keywords
+  // but only talks — it records nothing, so a client could "opt in" forever
+  // without anything in the database changing.
+  const consentClient = await getClient();
+  if (consentClient) {
+    const verdict = interpretConsentReply(body);
+    const now = new Date().toISOString();
+
+    // A decline is honoured whatever state we thought they were in. Twilio
+    // enforces STOP at the carrier level, so this may never arrive — but when
+    // it does, recording it is what stops us asking again next month.
+    if (verdict === "decline") {
+      await db.update(clients)
+        .set({ smsConsentStatus: "declined", smsConsentAt: now, smsConsentMethod: "sms_reply" })
+        .where(eq(clients.id, consentClient.id)).run();
+      await syslog.info("twilio", `${consentClient.name} opted out of texts`,
+        `Consent declined by reply from client ${consentClient.id}`, { clientId: consentClient.id });
+      return twiml(declinedReply());
+    }
+
+    // A confirmation only counts if we actually asked. Otherwise a stray "ok"
+    // in a scheduling conversation would silently manufacture consent.
+    if (verdict === "confirm" && consentClient.smsConsentStatus === "pending") {
+      await db.update(clients)
+        .set({ smsConsentStatus: "confirmed", smsConsentAt: now, smsConsentMethod: "sms_reply" })
+        .where(eq(clients.id, consentClient.id)).run();
+      await syslog.info("twilio", `${consentClient.name} confirmed texts`,
+        `Consent confirmed by reply from client ${consentClient.id}`, { clientId: consentClient.id });
+      return twiml(confirmedReply());
+    }
   }
 
   if (lower === "start" || lower === "subscribe" || (lower === "yes" && !await getClient())) {
