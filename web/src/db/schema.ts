@@ -42,6 +42,20 @@ export const clients = sqliteTable("clients", {
   email: text("email"),
   calendarInviteOptIn: integer("calendar_invite_opt_in", { mode: "boolean" }),
   sessionReminders: integer("session_reminders", { mode: "boolean" }),
+  // Confirmed opt-in for texting. Numbers are collected verbally at signup,
+  // which leaves no artifact anyone can inspect afterwards — and the A2P
+  // campaign was rejected partly on that (error 30896). The verbal ask now
+  // buys permission to send ONE confirmation request; the client's reply is
+  // the record. Defaults to "unknown" so every existing row starts
+  // un-messaged rather than being silently grandfathered in.
+  smsConsentStatus: text("sms_consent_status", {
+    enum: ["unknown", "pending", "confirmed", "declined"],
+  })
+    .notNull()
+    .default("unknown"),
+  smsConsentAt: text("sms_consent_at"),
+  // How consent was obtained, for the record a reviewer would ask to see.
+  smsConsentMethod: text("sms_consent_method"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
