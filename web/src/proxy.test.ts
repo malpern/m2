@@ -87,6 +87,17 @@ describe("isPublicAsset", () => {
   it("lets the watchdog reach the health probe", () => {
     expect(isPublicPath("/api/health")).toBe(true);
   });
+
+  it("lets an external monitor reach the credential-free summary", () => {
+    // A third-party monitor cannot hold CRON_SECRET, so the traffic light is
+    // public while the detailed probe stays authenticated.
+    expect(isPublicPath("/api/health/summary")).toBe(true);
+  });
+
+  it("does not open anything else under /api/health", () => {
+    expect(isPublicPath("/api/health/detail")).toBe(false);
+    expect(isPublicPath("/api/health/summary/raw")).toBe(false);
+  });
 });
 
 describe("the public legal pages", () => {
