@@ -28,6 +28,23 @@ npm run lint     # eslint — must be error-free (warnings are allowed, see belo
 npm run build    # next build — must succeed
 ```
 
+### Node version
+
+The repo pins **Node 24** (`.nvmrc`, `mise.toml`, and CI), because that is what
+Vercel runs in production. `package.json` permits `>=22.0.0 <25.0.0` — the upper
+bound is load-bearing, since `better-sqlite3` does not work under Node 26.
+
+**After switching Node versions, rebuild the native module:**
+
+```bash
+npm rebuild better-sqlite3
+```
+
+Skip it and the whole database suite fails with `NODE_MODULE_VERSION 127 ...
+requires 147` (or the reverse). That names a native module, so it reads like a
+corrupt checkout rather than a stale build against the wrong interpreter — it has
+cost a debugging round before.
+
 ### Environment
 
 - **Tests** need no environment — they use an in-memory SQLite database via
