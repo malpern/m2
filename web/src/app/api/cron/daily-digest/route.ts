@@ -1,12 +1,11 @@
 import { NextRequest } from "next/server";
 import { getDailyDigest } from "@/lib/alerting";
 import { sendSMS, isDevAllowed } from "@/lib/twilio";
-import { sendEmail } from "@/lib/email";
+import { sendPush } from "@/lib/push";
 import { isCronAuthorized } from "@/lib/cron-auth";
 import { recordCronRun } from "@/lib/cron-heartbeat";
 
 const ALERT_PHONE = process.env.ALERT_PHONE_NUMBER ?? "+14082099509";
-const ALERT_EMAIL = process.env.ALERT_EMAIL ?? "malpern@gmail.com";
 
 export async function POST(request: NextRequest) {
   if (!isCronAuthorized(request)) {
@@ -25,13 +24,13 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  try {
-    const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    await sendEmail(ALERT_EMAIL, `📊 M2 Daily Digest — ${today}`, digest);
-    results.email = "sent";
-  } catch (e) {
-    results.email = `failed: ${e}`;
-  }
+  // Priority 0: a digest is a daily read, not an interruption.
+  const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const push = await sendPush(`M2 Daily Digest — ${today}`, digest, 0);
+  // Report the transport's own verdict rather than "sent" for anything that did
+  // not throw. sendPush returns `skipped` for an unconfigured or rejecting
+  // Pushover, and recording that as success is how a silent outage starts.
+  results.push = push.status === "sent" ? "sent" : `skipped: ${push.reason}`;
 
   await recordCronRun("daily-digest", "digest delivered");
 

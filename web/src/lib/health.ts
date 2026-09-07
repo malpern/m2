@@ -85,6 +85,11 @@ export const FEATURE_ENV = [
   "ANTHROPIC_API_KEY",
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
+  // The alert transport. Listed so an unconfigured Pushover shows up as a warn
+  // rather than as silence — the failure mode of an alerting path is that
+  // nothing happens, which looks identical to nothing being wrong.
+  "PUSHOVER_TOKEN",
+  "PUSHOVER_USER_KEY",
 ] as const;
 
 export function checkEnv(env: Record<string, string | undefined>): HealthCheck {

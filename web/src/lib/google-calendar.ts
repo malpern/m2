@@ -14,6 +14,12 @@ export function getAuthUrl(): { url: string; state: string } {
     scope: [
       "https://www.googleapis.com/auth/calendar",
       "https://www.googleapis.com/auth/spreadsheets.readonly",
+      // gmail.send was requested here until 2026-09-07. It is RESTRICTED, the
+      // tier that turns verification into a paid annual CASA assessment, and its
+      // only job was mailing the operator a digest and an alert — both now go
+      // through Pushover (lib/push.ts). Dropping it leaves three scopes, none
+      // restricted.
+      //
       // drive.readonly was requested here until 2026-09-06 and never used —
       // there is not one Drive API call in the codebase (sheets, calendar and
       // gmail are the only three). It is a RESTRICTED scope, which is the tier
@@ -21,7 +27,6 @@ export function getAuthUrl(): { url: string; state: string } {
       // assessment, so it was buying nothing and costing the most expensive
       // thing on the menu. Sheets are read through spreadsheets.readonly, which
       // does not require Drive.
-      "https://www.googleapis.com/auth/gmail.send",
       // Without this, the userinfo lookup in handleCallback fails and the stored
       // email stays null — so nothing records WHICH account is connected.
       "https://www.googleapis.com/auth/userinfo.email",
