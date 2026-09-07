@@ -14,7 +14,13 @@ export function getAuthUrl(): { url: string; state: string } {
     scope: [
       "https://www.googleapis.com/auth/calendar",
       "https://www.googleapis.com/auth/spreadsheets.readonly",
-      "https://www.googleapis.com/auth/drive.readonly",
+      // drive.readonly was requested here until 2026-09-06 and never used —
+      // there is not one Drive API call in the codebase (sheets, calendar and
+      // gmail are the only three). It is a RESTRICTED scope, which is the tier
+      // that escalates Google verification into a paid third-party CASA security
+      // assessment, so it was buying nothing and costing the most expensive
+      // thing on the menu. Sheets are read through spreadsheets.readonly, which
+      // does not require Drive.
       "https://www.googleapis.com/auth/gmail.send",
       // Without this, the userinfo lookup in handleCallback fails and the stored
       // email stays null — so nothing records WHICH account is connected.
