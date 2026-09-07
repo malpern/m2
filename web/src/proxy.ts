@@ -20,6 +20,19 @@ const PUBLIC_EXACT = new Set([
   // either path changes, update the consent screen by hand.
   "/privacy",
   "/terms",
+  // Google Search Console ownership proof for m2scheduler.com. Google fetches
+  // this anonymously, so behind the gate it answers 307 to /login and
+  // verification fails — which is exactly what happened on the first deploy.
+  //
+  // Listed as an EXACT path rather than allowing the .html extension: that
+  // extension is excluded on purpose (see isPublicAsset — it is why
+  // /guide.html was once readable by anyone), and one verification file is not
+  // a reason to reopen it for every future document.
+  //
+  // Must not be removed. Google re-checks it periodically and un-verifies the
+  // property if it disappears, which would silently invalidate the consent
+  // screen's authorized domain.
+  "/google753b0869b8fe2f63.html",
 ]);
 
 // Cron routes authenticate themselves via CRON_SECRET (see lib/cron-auth.ts).
