@@ -2,11 +2,10 @@ import { db } from "@/db";
 import { systemLogs } from "@/db/schema";
 import { gte, eq, and } from "drizzle-orm";
 import { sendSMS, isDevAllowed } from "./twilio";
-import { sendEmail } from "./email";
+import { sendPush } from "./push";
 import { toSqlTimestamp } from "./sql-time";
 
 const ALERT_PHONE = process.env.ALERT_PHONE_NUMBER ?? "+14082099509";
-const ALERT_EMAIL = process.env.ALERT_EMAIL ?? "malpern@gmail.com";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://web-jet-mu-62.vercel.app";
 const THROTTLE_MS = 10 * 60 * 1000;
 
@@ -19,7 +18,7 @@ let lastAlertAt = 0;
  *  - It only runs when something calls `syslog.error`, so it is blind to
  *    absence — a cron that stopped, a token that expired, a deploy that never
  *    shipped. `/api/health` plus the external watchdog cover those.
- *  - It alerts through Twilio and Resend, the app's own dependencies. If the
+ *  - It alerts through Twilio and Pushover, the app's own dependencies. If the
  *    thing that is broken is the app, the alert path is broken too. The
  *    watchdog on the mini pages via Pushover, out of band, for that reason.
  *  - `lastAlertAt` is per-instance memory. On serverless each cold start gets
@@ -89,9 +88,11 @@ async function deliver(body: string, subject: string, technicalMessage: string):
   }
 
   try {
-    await sendEmail(ALERT_EMAIL, subject, `${body}\n\nTechnical: ${technicalMessage}`);
+    // Priority 1 bypasses quiet hours. An error burst is the one thing here
+    // worth waking someone for; the daily digest deliberately is not.
+    await sendPush(subject, `${body}\n\nTechnical: ${technicalMessage}`, 1);
   } catch (e) {
-    console.error("Failed to send email alert:", e);
+    console.error("Failed to send push alert:", e);
   }
 }
 

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockSendSMS = vi.fn();
 const mockIsDevAllowed = vi.fn();
 const mockDbSelect = vi.fn();
-const mockSendEmail = vi.fn();
+const mockSendPush = vi.fn();
 
 vi.mock("@/db", () => ({
   db: {
@@ -15,8 +15,8 @@ vi.mock("@/db/schema", () => ({
   systemLogs: { id: "id", severity: "severity", category: "category", createdAt: "created_at" },
 }));
 
-vi.mock("@/lib/email", () => ({
-  sendEmail: (...args: unknown[]) => mockSendEmail(...args),
+vi.mock("@/lib/push", () => ({
+  sendPush: (...args: unknown[]) => mockSendPush(...args),
 }));
 
 vi.mock("@/lib/twilio", () => ({
@@ -30,7 +30,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockIsDevAllowed.mockReturnValue(true);
   mockSendSMS.mockResolvedValue("SM123");
-  mockSendEmail.mockResolvedValue({ status: "sent" });
+  mockSendPush.mockResolvedValue({ status: "sent" });
 });
 
 /**
@@ -72,7 +72,7 @@ describe("checkAndAlert", () => {
     await fresh("something broke", "stack trace");
     expect(mockSendSMS).toHaveBeenCalledOnce();
     expect(mockSendSMS.mock.calls[0][1]).toContain("3 errors");
-    expect(mockSendEmail).toHaveBeenCalledOnce();
+    expect(mockSendPush).toHaveBeenCalledOnce();
   });
 
   it("ALERTS when the database itself is unreachable", async () => {
@@ -86,24 +86,24 @@ describe("checkAndAlert", () => {
     expect(mockSendSMS).toHaveBeenCalledOnce();
     expect(mockSendSMS.mock.calls[0][1]).toContain("database is unreachable");
     expect(mockSendSMS.mock.calls[0][1]).toContain("connection refused");
-    expect(mockSendEmail).toHaveBeenCalledOnce();
+    expect(mockSendPush).toHaveBeenCalledOnce();
   });
 
-  it("still emails when SMS throws — one dead channel must not eat the alert", async () => {
+  it("still pushes when SMS throws — one dead channel must not eat the alert", async () => {
     errorsInDb(5);
     mockSendSMS.mockRejectedValue(new Error("twilio down"));
     const { checkAndAlert: fresh } = await freshAlerting();
     await expect(fresh("broke", "tech")).resolves.toBeUndefined();
-    expect(mockSendEmail).toHaveBeenCalledOnce();
+    expect(mockSendPush).toHaveBeenCalledOnce();
   });
 
-  it("still emails when the alert phone is not allowlisted", async () => {
+  it("still pushes when the alert phone is not allowlisted", async () => {
     errorsInDb(5);
     mockIsDevAllowed.mockReturnValue(false);
     const { checkAndAlert: fresh } = await freshAlerting();
     await fresh("broke", "tech");
     expect(mockSendSMS).not.toHaveBeenCalled();
-    expect(mockSendEmail).toHaveBeenCalledOnce();
+    expect(mockSendPush).toHaveBeenCalledOnce();
   });
 
   it("throttles a second alert in the same window", async () => {
