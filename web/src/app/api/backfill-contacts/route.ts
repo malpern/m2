@@ -22,6 +22,7 @@ import { db } from "@/db";
 import { clients } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { readSheet } from "@/lib/google-sheets";
+import { getAuthenticatedClient } from "@/lib/google-auth";
 import { planBackfill, type SheetContact, type ExistingClient } from "@/lib/backfill-contacts";
 
 const SPREADSHEET_ID =
@@ -39,8 +40,40 @@ function normalizeName(raw: string): string {
     .join(" ");
 }
 
+/**
+ * Thrown when the sheet could not be READ, as distinct from being empty.
+ *
+ * `readSheet` returns `[]` when `getAuthenticatedClient()` yields null — which
+ * happens whenever the stored Google credentials cannot be refreshed. That makes
+ * a dead OAuth connection indistinguishable from a tab with no rows, and the
+ * planner then reports an immaculate `0 to write, 0 skipped, 0 unmatched`. A
+ * check that cannot run is not a check that passed: this backfill would have
+ * announced "nothing to do" for 56 clients whose numbers were sitting right
+ * there, and the operator would have believed it.
+ *
+ * Caught live on 2026-09-06: production's Google credentials had expired, and
+ * the first preview run returned exactly that tidy set of zeros.
+ */
+class SheetUnreadableError extends Error {}
+
 async function readSheetContacts(): Promise<SheetContact[]> {
+  // Asked explicitly rather than inferred from an empty result, so the two
+  // causes stay distinguishable.
+  const auth = await getAuthenticatedClient();
+  if (!auth) {
+    throw new SheetUnreadableError(
+      "Google credentials could not be refreshed, so the sheet could not be read. " +
+        "Reconnect the Google account in Settings, then retry. Nothing was changed.",
+    );
+  }
+
   const rows = await readSheet(SPREADSHEET_ID, `'${CLIENT_INFO_TAB}'`);
+  if (rows.length === 0) {
+    throw new SheetUnreadableError(
+      `The "${CLIENT_INFO_TAB}" tab returned no rows. That is more likely a wrong ` +
+        "tab name or a permissions problem than a genuinely empty sheet. Nothing was changed.",
+    );
+  }
   const out: SheetContact[] = [];
   for (const row of rows.slice(1)) {
     const first = row[COL.first]?.trim();
@@ -74,6 +107,9 @@ export async function GET() {
     const plan = planBackfill(sheet, existing);
     return NextResponse.json({ preview: true, ...plan });
   } catch (e) {
+    if (e instanceof SheetUnreadableError) {
+      return NextResponse.json({ error: "sheet_unreadable", detail: e.message }, { status: 503 });
+    }
     console.error("Backfill preview failed:", e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : String(e) },
@@ -131,6 +167,9 @@ export async function POST(request: Request) {
       counts: plan.counts,
     });
   } catch (e) {
+    if (e instanceof SheetUnreadableError) {
+      return NextResponse.json({ error: "sheet_unreadable", detail: e.message }, { status: 503 });
+    }
     console.error("Backfill failed:", e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : String(e) },
