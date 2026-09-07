@@ -12,7 +12,20 @@ export function getAuthUrl(): { url: string; state: string } {
     access_type: "offline",
     prompt: "consent",
     scope: [
-      "https://www.googleapis.com/auth/calendar",
+      // calendar.events, not the full `calendar` scope. Everything this file
+      // does is events on ONE calendar (CALENDAR_ID from env): events.list,
+      // insert, get, patch, delete. It never enumerates calendarList and never
+      // touches calendar metadata, so the broader scope bought nothing.
+      //
+      // The difference is what the user is asked to agree to. Full `calendar`
+      // reads on the consent screen as "See, edit, share, and permanently
+      // delete ALL the calendars you can access"; calendar.events reads as
+      // "View and edit events on all your calendars". Matt sees that sentence.
+      //
+      // It also makes the verification justification true: Google asks why a
+      // narrower scope will not do, and for full `calendar` the honest answer
+      // was that one would.
+      "https://www.googleapis.com/auth/calendar.events",
       "https://www.googleapis.com/auth/spreadsheets.readonly",
       // gmail.send was requested here until 2026-09-07. It is RESTRICTED, the
       // tier that turns verification into a paid annual CASA assessment, and its
