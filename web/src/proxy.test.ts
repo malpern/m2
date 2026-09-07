@@ -118,3 +118,16 @@ describe("the public legal pages", () => {
     expect(isPublicPath("/settings/privacy")).toBe(false);
   });
 });
+
+describe("Search Console verification file", () => {
+  it("is public — Google fetches it anonymously", () => {
+    expect(isPublicPath("/google753b0869b8fe2f63.html")).toBe(true);
+  });
+
+  it("does NOT make .html public in general", () => {
+    // The guide.html lesson: an extension allowlist, not a dot check.
+    expect(isPublicAsset("/google753b0869b8fe2f63.html")).toBe(false);
+    expect(isPublicPath("/guide.html")).toBe(false);
+    expect(isPublicAsset("/guide.html")).toBe(false);
+  });
+});
