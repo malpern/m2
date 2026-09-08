@@ -9,6 +9,8 @@ import { DEFAULT_WEIGHTS } from "@/lib/priority";
 import { DAY_NAMES_BY_INDEX } from "@/lib/constants";
 import { revalidatePath } from "next/cache";
 import { deductSession } from "@/lib/package-accounting";
+import { syncSessionToCalendar } from "@/lib/gcal-sync";
+import { deleteCalendarEvent } from "@/lib/google-calendar";
 
 
 export async function generateSchedule(weekStartISO: string) {
@@ -136,13 +138,27 @@ export async function addManualSession(clientId: number, date: string, time: str
   type Slot = "3pm" | "4pm" | "5pm" | "6pm" | "7pm";
   const slot = (slotMap[hour] ?? "5pm") as Slot;
 
-  await db.insert(sessions).values({
+  const result = await db.insert(sessions).values({
     clientId,
     scheduledDate: date,
     scheduledTime: time,
     slot,
     status: "confirmed",
   }).run();
+
+  // A session added by hand is confirmed by definition — Matt typed it in — so it
+  // belongs on his Google Calendar exactly as a text-confirmed one does. Until now
+  // only the SMS and Outreach paths synced; anything entered here stayed in the
+  // app's database and never reached the calendar he actually looks at.
+  //
+  // Awaited, not fire-and-forget: the page revalidates right after, and the event
+  // should exist by the time the schedule re-renders. syncSessionToCalendar is
+  // already a no-op when Google is not connected and logs its own failures, so a
+  // calendar problem can never turn a successful insert into an error here.
+  const sessionId = Number(result.lastInsertRowid);
+  if (Number.isFinite(sessionId) && sessionId > 0) {
+    await syncSessionToCalendar(sessionId).catch(() => {});
+  }
 
   revalidatePath("/schedule");
 }
@@ -164,6 +180,17 @@ export async function cancelSession(sessionId: number) {
 }
 
 export async function deleteSession(sessionId: number) {
+  // Deleting the row used to orphan its calendar event: the session vanished from
+  // the app while the block stayed on Matt's Google Calendar, with nothing left
+  // pointing at it. Remove the event first, while the id is still on the row.
+  const existing = await db
+    .select({ gcalEventId: sessions.gcalEventId })
+    .from(sessions)
+    .where(eq(sessions.id, sessionId))
+    .get();
+  if (existing?.gcalEventId) {
+    await deleteCalendarEvent(existing.gcalEventId).catch(() => false);
+  }
   await db.delete(sessions).where(eq(sessions.id, sessionId)).run();
   revalidatePath("/schedule");
 }
