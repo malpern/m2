@@ -16,7 +16,7 @@
  * Kept as data rather than a check inside each component so that the set of
  * public pages is stated in one place, next to the proxy's PUBLIC_EXACT.
  */
-export const CHROME_FREE_PATHS = new Set(["/login", "/privacy", "/terms"]);
+export const CHROME_FREE_PATHS = new Set(["/login", "/privacy", "/terms", "/text-signup"]);
 
 export function isChromeFree(pathname: string): boolean {
   return CHROME_FREE_PATHS.has(pathname);

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="May 23, 2026">
+    <LegalPage title="Privacy Policy" updated="September 8, 2026">
       <p>
         M2 Performance and Therapy (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;) operates a
         scheduling and communication platform for athletic training services. This policy describes how we
@@ -32,8 +32,12 @@ export default function PrivacyPage() {
 
       <h2>Text Messaging</h2>
       <p>
-        By providing your phone number, you consent to receive text messages related to session scheduling,
-        reminders, and updates. Message frequency varies. Message and data rates may apply.
+        Clients sign up for text messages themselves at{" "}
+        <a href="/text-signup">m2scheduler.com/text-signup</a>, and confirm by replying YES to a single
+        verification text. We record the signup, the confirmation reply, and when each happened. By signing
+        up, you consent to receive text messages related to session scheduling, reminders, and updates.
+        Message frequency varies. Message and data rates may apply. Consent to text messaging is optional
+        and is not a condition of purchasing training.
       </p>
       <p>
         You can opt out of text messages at any time by replying STOP. After opting out, you will no longer

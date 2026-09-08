@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms of Service" updated="May 23, 2026">
+    <LegalPage title="Terms of Service" updated="September 8, 2026">
       <p>
         These terms govern your use of text messaging services provided by M2 Performance and Therapy
         (&ldquo;M2,&rdquo; &ldquo;we,&rdquo; &ldquo;us&rdquo;) for session scheduling and communication.
@@ -23,7 +23,8 @@ export default function TermsPage() {
 
       <h2>Text Messaging</h2>
       <ul>
-        <li>By providing your phone number, you agree to receive text messages from M2 related to scheduling and session management.</li>
+        <li>You opt in to text messages yourself at <a href="/text-signup">m2scheduler.com/text-signup</a> and confirm by replying YES. Consent to text messaging is optional and is not a condition of purchasing training.</li>
+        <li>Once confirmed, you agree to receive text messages from M2 related to scheduling and session management.</li>
         <li>Message frequency varies based on your training schedule.</li>
         <li>Message and data rates may apply depending on your carrier plan.</li>
         <li>Text STOP at any time to opt out of messages.</li>
