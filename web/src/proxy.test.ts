@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { isPublicPath, isPublicAsset } from "./proxy";
+import { isPublicPath, isPublicAsset, proxy } from "./proxy";
+import { NextRequest } from "next/server";
+import { vi } from "vitest";
 
 describe("isPublicPath", () => {
   it("allows login, OAuth start/callback, login/logout, and Twilio webhook", () => {
@@ -129,5 +131,29 @@ describe("Search Console verification file", () => {
     expect(isPublicAsset("/google753b0869b8fe2f63.html")).toBe(false);
     expect(isPublicPath("/guide.html")).toBe(false);
     expect(isPublicAsset("/guide.html")).toBe(false);
+  });
+});
+
+describe("the root path for anonymous visitors", () => {
+  it("serves the public landing page at / by rewrite, keeping the URL", async () => {
+    vi.stubEnv("APP_PASSWORD", "secret");
+    const res = await proxy(new NextRequest("https://m2scheduler.com/"));
+    // A rewrite, not a redirect: Google's review fetches "/" and must get a
+    // 200 page that explains the app, not a 307 to /login.
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-middleware-rewrite")).toContain("/welcome");
+    vi.unstubAllEnvs();
+  });
+
+  it("still sends every OTHER protected path to /login", async () => {
+    vi.stubEnv("APP_PASSWORD", "secret");
+    const res = await proxy(new NextRequest("https://m2scheduler.com/schedule"));
+    expect(res.status).toBe(307);
+    expect(res.headers.get("location")).toContain("/login?redirect=%2Fschedule");
+    vi.unstubAllEnvs();
+  });
+
+  it("lists /welcome as public so the rewrite target is not itself gated", () => {
+    expect(isPublicPath("/welcome")).toBe(true);
   });
 });
