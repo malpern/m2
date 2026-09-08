@@ -8,6 +8,9 @@ import { getMonday } from "@/lib/scheduler";
 import { syslog } from "@/lib/logger";
 import { OUTREACH_HISTORY_LIMIT } from "@/lib/constants";
 import twilio from "twilio";
+
+/** Number shown in HELP / unknown-sender replies. Set BUSINESS_CONTACT_PHONE to override. */
+const CONTACT_PHONE = process.env.BUSINESS_CONTACT_PHONE ?? "(408) 209-9509";
 import {
   findClient,
   logAndSend,
@@ -96,7 +99,7 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
   }
 
   if (lower === "help" || lower === "info") {
-    return twiml(`M2 Performance & Therapy — session scheduling texts. Reply STOP to opt out. Contact: ${process.env.BUSINESS_CONTACT_PHONE ?? "(408) 599-1777"}`);
+    return twiml(`M2 Performance & Therapy — session scheduling texts. Reply STOP to opt out. Contact: ${CONTACT_PHONE}`);
   }
 
   // Confirmed opt-in. Numbers are collected verbally, which leaves no artifact
@@ -142,7 +145,7 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
   const client = await getClient();
 
   if (!client) {
-    return twiml(`This number is for M2 Performance scheduling. If you're a client, contact Matt at ${process.env.BUSINESS_CONTACT_PHONE ?? "(408) 599-1777"} to get set up.`);
+    return twiml(`This number is for M2 Performance scheduling. If you're a client, contact Matt at ${CONTACT_PHONE} to get set up.`);
   }
 
   const recentOutreach = await db
