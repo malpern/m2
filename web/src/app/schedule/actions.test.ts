@@ -15,7 +15,7 @@ vi.mock("@/lib/google-calendar", () => ({ deleteCalendarEvent: (...a: unknown[])
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const { db } = await import("@/db");
-const { addManualSession, deleteSession } = await import("./actions");
+const { addManualSession, deleteSession, cancelSession } = await import("./actions");
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -85,5 +85,23 @@ describe("deleteSession", () => {
 
     await deleteSession(s.id);
     expect(await db.select().from(sessions).all()).toHaveLength(0);
+  });
+});
+
+describe("cancelSession", () => {
+  it("marks the session cancelled AND asks the calendar sync to remove its event", async () => {
+    const c = await db.insert(clients).values({ name: "Demo Client", phone: "+14085550105" }).returning().get();
+    const s = await db.insert(sessions).values({
+      clientId: c.id, scheduledDate: "2026-09-13", scheduledTime: "10:00", slot: "3pm",
+      status: "confirmed", gcalEventId: "evt_cancel",
+    }).returning().get();
+
+    await cancelSession(s.id);
+
+    const row = await db.select().from(sessions).where(eq(sessions.id, s.id)).get();
+    expect(row?.status).toBe("cancelled");
+    // The sync is what deletes the event for a cancelled session; the bug was
+    // that this path never invoked it.
+    expect(mockSync).toHaveBeenCalledWith(s.id);
   });
 });

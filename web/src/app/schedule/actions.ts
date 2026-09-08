@@ -176,6 +176,12 @@ export async function cancelSession(sessionId: number) {
     .set({ status: "cancelled" })
     .where(eq(sessions.id, sessionId))
     .run();
+  // Cancelling from the schedule flipped the status and left the event on Matt's
+  // Google Calendar — the same orphan deleteSession used to create. The sync
+  // already knows what to do with a cancelled session that has an event id
+  // (delete it); it just was never asked from this path. Outreach's
+  // mark-declined has called it for exactly this reason all along.
+  await syncSessionToCalendar(sessionId).catch(() => {});
   revalidatePath("/schedule");
 }
 
