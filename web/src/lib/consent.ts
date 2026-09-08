@@ -322,5 +322,32 @@ export async function unmatchedSignups(): Promise<UnmatchedSignup[]> {
   return out;
 }
 
+/**
+ * Matt clicked "Create client" on an unmatched signup. Creates the row from
+ * what the client typed, then links the events so the status carries over.
+ * The only path by which the public form's data becomes a client, and it
+ * runs behind Matt's login, on his click.
+ */
+export async function createClientFromSignup(phone: string): Promise<{ clientId: number; status: ConsentStatus }> {
+  const signup = await db.select().from(consentEvents)
+    .where(and(eq(consentEvents.phone, phone), eq(consentEvents.event, "signed_up"), isNull(consentEvents.clientId)))
+    .orderBy(desc(consentEvents.id))
+    .limit(1)
+    .get();
+  if (!signup) throw new Error(`No unmatched signup for ${phone}`);
+  const existing = await findClientByPhone(phone);
+  if (existing) {
+    const status = await linkSignupToClient(phone, existing.id);
+    return { clientId: existing.id, status };
+  }
+  const created = await db.insert(clients).values({
+    name: signup.submittedName ?? "New client",
+    phone,
+    parentGuardian: signup.guardianName ?? null,
+  }).returning({ id: clients.id }).get();
+  const status = await linkSignupToClient(phone, created.id);
+  return { clientId: created.id, status };
+}
+
 /** The event that made the current status what it is, for a one-line summary. */
 export { latestEvent as latestConsentEvent };
