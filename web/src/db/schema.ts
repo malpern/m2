@@ -39,6 +39,11 @@ export const clients = sqliteTable("clients", {
     enum: ["individual", "dual", "group"],
   }),
   parentGuardian: text("parent_guardian"),
+  // The parent or guardian's own mobile, E.164. Set from the signup form when
+  // a minor signs up. Consent for THIS number lives in consent_events keyed by
+  // the number itself (role "guardian"), not in the sms_consent_* columns,
+  // which describe the client's own phone.
+  parentPhone: text("parent_phone"),
   email: text("email"),
   calendarInviteOptIn: integer("calendar_invite_opt_in", { mode: "boolean" }),
   sessionReminders: integer("session_reminders", { mode: "boolean" }),
@@ -239,9 +244,17 @@ export const consentEvents = sqliteTable("consent_events", {
     enum: ["web_form", "sms_reply", "sms_keyword", "manual", "phone_changed"],
   }).notNull(),
   actor: text("actor", { enum: ["client", "matt", "system"] }).notNull(),
+  // Whose number this row is about. A minor's signup produces events on two
+  // numbers: the athlete's ("client") and the parent's ("guardian"). Both
+  // attach to the same client row once matched; the role keeps them apart in
+  // the history and keeps guardian numbers out of the signups-to-match queue.
+  role: text("role", { enum: ["client", "guardian"] }).notNull().default("client"),
   consentTextVersion: text("consent_text_version"),
   submittedName: text("submitted_name"),
   guardianName: text("guardian_name"),
+  // On the athlete's signed_up row: the parent's number, so linking the
+  // athlete to a client can also claim the parent's events.
+  guardianPhone: text("guardian_phone"),
   // The inbound text verbatim plus its Twilio MessageSid; a hash of the
   // submitting IP and user agent for form submissions; the note for manual
   // events. Free text on purpose — evidence is whatever we had at the time.

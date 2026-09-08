@@ -25,7 +25,7 @@ import { analyseStandingSlotDrift, formatStandingSlot } from "@/lib/standing-slo
 import { ClientProfileCard } from "./client-profile-card";
 import { ClientPackageCard } from "./client-package-card";
 import { ConsentCard } from "./consent-card";
-import { consentHistory } from "@/lib/consent";
+import { consentHistory, phoneStatus } from "@/lib/consent";
 import { signupLink } from "@/lib/consent-labels";
 import type { ConsentStatus } from "@/lib/sms-consent";
 
@@ -93,6 +93,7 @@ export default async function ClientDetailPage({
       .all(),
     consentHistory(clientId),
   ]);
+  const parentConsent = client.parentPhone ? await phoneStatus(client.parentPhone) : null;
 
   // Use accurate SQL counts instead of filtering limited rows
   const countByStatus = new Map(sessionCounts.map((r) => [r.status, r.count]));
@@ -258,6 +259,7 @@ export default async function ClientDetailPage({
           hasPhone={!!client.phone}
           history={consentEvents}
           signupLink={signupLink()}
+          parent={client.parentPhone && parentConsent ? { name: client.parentGuardian, phone: client.parentPhone, status: parentConsent } : null}
         />
 
         <SessionHistoryCard sessions={allClientSessions} />

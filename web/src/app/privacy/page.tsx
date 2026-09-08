@@ -37,7 +37,9 @@ export default function PrivacyPage() {
         verification text. We record the signup, the confirmation reply, and when each happened. By signing
         up, you consent to receive text messages related to session scheduling, reminders, and updates.
         Message frequency varies. Message and data rates may apply. Consent to text messaging is optional
-        and is not a condition of purchasing training.
+        and is not a condition of purchasing training. For athletes under 18, a parent or guardian signs up,
+        agrees on the athlete&rsquo;s behalf, and provides their own mobile number; each number is verified
+        separately by a YES reply before it receives anything further.
       </p>
       <p>
         You can opt out of text messages at any time by replying STOP. After opting out, you will no longer

@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { interpretConsentReply, confirmedReply, declinedReply, keywordConfirmedReply, unknownNumberReply, helpReply, type ConsentStatus } from "@/lib/sms-consent";
-import { recordReply } from "@/lib/consent";
+import { recordReply, phoneStatus } from "@/lib/consent";
 import { outreach, clients } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { NextRequest } from "next/server";
@@ -99,6 +99,10 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
       });
       await syslog.info("twilio", `${stopClient.name} opted out of texts`,
         `Carrier STOP from client ${stopClient.id}`, { clientId: stopClient.id });
+    } else if ((await phoneStatus(from)) !== "unknown") {
+      // A parent's number, or a signup not yet matched to a client.
+      await recordReply({ phone: from, clientId: null, currentStatus: await phoneStatus(from),
+        verdict: "decline", body, messageSid: params.MessageSid ?? null });
     }
     return twiml();
   }
@@ -144,10 +148,28 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
       // "ignored": a bare "ok" from someone we never asked, or a repeat YES.
       // Fall through — it may be a scheduling reply.
     }
-  } else if (lower === "start" || lower === "subscribe" || lower === "yes" || lower === "unstop") {
-    // Unknown number opting in: point at the form, store nothing. We never
-    // create a client from an inbound text.
-    return twiml(unknownNumberReply());
+  } else {
+    const verdict = interpretConsentReply(body);
+    if (verdict) {
+      // Not a client's number — but a parent's number that signed up on the
+      // form has its own pending verification, and its YES or NO is recorded
+      // against that number. Only a number with history counts; a stranger's
+      // "yes" is not.
+      const status = await phoneStatus(from);
+      if (status !== "unknown") {
+        const result = await recordReply({
+          phone: from, clientId: null, currentStatus: status,
+          verdict, body, messageSid: params.MessageSid ?? null,
+        });
+        if (result.outcome === "declined") return twiml(declinedReply());
+        if (result.outcome === "confirmed") return twiml(confirmedReply());
+      }
+    }
+    if (lower === "start" || lower === "subscribe" || lower === "yes" || lower === "unstop") {
+      // Unknown number opting in: point at the form, store nothing. We never
+      // create a client from an inbound text.
+      return twiml(unknownNumberReply());
+    }
   }
 
   const client = await getClient();

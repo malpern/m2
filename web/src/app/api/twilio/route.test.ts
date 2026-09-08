@@ -76,8 +76,10 @@ vi.mock("@/lib/sms-handlers", () => ({
 }));
 
 const mockRecordReply = vi.fn();
+const mockPhoneStatus = vi.fn();
 vi.mock("@/lib/consent", () => ({
   recordReply: (...a: unknown[]) => mockRecordReply(...a),
+  phoneStatus: (...a: unknown[]) => mockPhoneStatus(...a),
 }));
 
 vi.mock("@/lib/sms-handlers/shared", () => ({
@@ -195,6 +197,7 @@ async function getResponseText(response: Response): Promise<string> {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockPhoneStatus.mockResolvedValue("unknown");
   mockValidateRequest.mockReturnValue(true);
   mockFindClient.mockResolvedValue(null);
   mockIsBalanceInquiry.mockReturnValue(false);
@@ -349,6 +352,30 @@ describe("POST /api/twilio", () => {
         expect(mockDbInsert).not.toHaveBeenCalled();
       });
     }
+
+    it("records a YES from a parent's number that has its own pending verification", async () => {
+      mockFindClient.mockResolvedValue(null);
+      mockPhoneStatus.mockResolvedValue("pending");
+      mockRecordReply.mockResolvedValue({ outcome: "confirmed", method: "sms_reply" });
+
+      const response = await POST(makeRequest({ From: "+15550001111", Body: "YES", MessageSid: "SMg" }));
+
+      expect(await getResponseText(response)).toContain("Thanks! You");
+      expect(mockRecordReply).toHaveBeenCalledWith(expect.objectContaining({
+        phone: "+15550001111", clientId: null, currentStatus: "pending", verdict: "confirm", messageSid: "SMg",
+      }));
+    });
+
+    it("records a carrier STOP from a parent's number", async () => {
+      mockFindClient.mockResolvedValue(null);
+      mockPhoneStatus.mockResolvedValue("confirmed");
+      mockRecordReply.mockResolvedValue({ outcome: "declined" });
+
+      const response = await POST(makeRequest({ From: "+15550001111", Body: "stop" }));
+
+      expect(await getResponseText(response)).toBe("<Response/>");
+      expect(mockRecordReply).toHaveBeenCalledWith(expect.objectContaining({ clientId: null, verdict: "decline" }));
+    });
 
     it("confirms a known client who texts START unprompted, with the keyword wording", async () => {
       mockFindClient.mockResolvedValue({ ...TEST_CLIENT, smsConsentStatus: "unknown" } as Awaited<ReturnType<typeof findClient>>);

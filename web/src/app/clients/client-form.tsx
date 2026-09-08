@@ -82,6 +82,14 @@ export function ClientForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
+          <Label htmlFor="parentPhone">Parent / Guardian mobile</Label>
+          <Input id="parentPhone" name="parentPhone" type="tel" defaultValue={client?.parentPhone ?? ""} />
+          <p className="text-xs text-muted-foreground">Texted only after they reply YES to their own verification text.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
           <Label htmlFor="sessionRate">Session Rate ($)</Label>
           <Input
             id="sessionRate"

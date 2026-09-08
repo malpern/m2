@@ -41,6 +41,7 @@ export default async function ClientsPage() {
         sessionRate: clients.sessionRate,
         sessionType: clients.sessionType,
         parentGuardian: clients.parentGuardian,
+        parentPhone: clients.parentPhone,
         email: clients.email,
         calendarInviteOptIn: clients.calendarInviteOptIn,
         sessionReminders: clients.sessionReminders,

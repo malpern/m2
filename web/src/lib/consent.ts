@@ -19,7 +19,7 @@ import { db } from "@/db";
 import { clients, consentEvents, type ConsentEvent } from "@/db/schema";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { sendSMS } from "./twilio";
-import { canSend, confirmationMessage, CONSENT_TEXT_VERSION, type ConsentStatus } from "./sms-consent";
+import { canSend, confirmationMessage, guardianConfirmationMessage, CONSENT_TEXT_VERSION, type ConsentStatus } from "./sms-consent";
 import { syslog } from "./logger";
 
 /** How long a number waits before the form or Matt may send the verification text again. */
@@ -94,26 +94,62 @@ export async function recordSignup(input: {
   phone: string;
   name: string;
   guardianName?: string | null;
+  /** The parent or guardian's own mobile, when a minor signed up. Gets its own events. */
+  guardianPhone?: string | null;
   evidence?: string | null;
 }): Promise<SignupOutcome> {
   const client = await findClientByPhone(input.phone);
   const status = client ? (client.smsConsentStatus as ConsentStatus) : await phoneStatus(input.phone);
   if (status === "declined") return { outcome: "declined" };
 
+  const at = nowIso();
   await db.insert(consentEvents).values({
     phone: input.phone,
     clientId: client?.id ?? null,
     event: "signed_up",
     method: "web_form",
     actor: "client",
+    role: "client",
     consentTextVersion: CONSENT_TEXT_VERSION,
     submittedName: input.name,
     guardianName: input.guardianName ?? null,
+    guardianPhone: input.guardianPhone ?? null,
     evidence: input.evidence ?? null,
-    createdAt: nowIso(),
+    createdAt: at,
   }).run();
 
+  // The parent consented for the athlete AND for their own number. The
+  // second is a separate consent to a separate number, and is recorded as
+  // such — unless that number has opted out, in which case it is left alone.
+  if (input.guardianPhone && input.guardianPhone !== input.phone) {
+    const gStatus = await phoneStatus(input.guardianPhone);
+    if (gStatus !== "declined") {
+      await db.insert(consentEvents).values({
+        phone: input.guardianPhone,
+        clientId: client?.id ?? null,
+        event: "signed_up",
+        method: "web_form",
+        actor: "client",
+        role: "guardian",
+        consentTextVersion: CONSENT_TEXT_VERSION,
+        submittedName: input.guardianName ?? null,
+        evidence: `parent/guardian of ${input.name} (${input.phone})${input.evidence ? ` · ${input.evidence}` : ""}`,
+        createdAt: at,
+      }).run();
+    }
+    if (client) await db.update(clients).set({ parentPhone: input.guardianPhone }).where(eq(clients.id, client.id)).run();
+  }
+
   return { outcome: "recorded", clientId: client?.id ?? null };
+}
+
+/** The most recent signup row for a number, used to word its verification text. */
+async function latestSignup(phone: string) {
+  return db.select().from(consentEvents)
+    .where(and(eq(consentEvents.phone, phone), eq(consentEvents.event, "signed_up")))
+    .orderBy(desc(consentEvents.id))
+    .limit(1)
+    .get();
 }
 
 export type VerificationResult =
@@ -146,7 +182,15 @@ export async function sendVerification(phone: string): Promise<VerificationResul
   if (recent) return { status: "skipped", reason: `verification text already sent in the last ${VERIFICATION_RESEND_HOURS} hours` };
 
   const privacyUrl = process.env.PRIVACY_POLICY_URL ?? undefined;
-  const result = await sendSMS(phone, confirmationMessage({ privacyUrl }), {
+  // A guardian's number gets a text that says why it arrived: they signed
+  // someone else up. Everything else about the two paths is identical.
+  const signup = await latestSignup(phone);
+  const isGuardian = signup?.role === "guardian";
+  const athlete = isGuardian ? (signup?.evidence?.match(/^parent\/guardian of (\S+)/)?.[1] ?? "your athlete") : null;
+  const message = isGuardian
+    ? guardianConfirmationMessage(athlete!, { privacyUrl })
+    : confirmationMessage({ privacyUrl });
+  const result = await sendSMS(phone, message, {
     purpose: "consent_request",
     consent: status,
   });
@@ -158,8 +202,8 @@ export async function sendVerification(phone: string): Promise<VerificationResul
 
   const at = nowIso();
   await db.insert(consentEvents).values({
-    phone, clientId: client?.id ?? null, event: "request_sent", method: "web_form", actor: "system",
-    evidence: result.sid, createdAt: at,
+    phone, clientId: client?.id ?? signup?.clientId ?? null, event: "request_sent", method: "web_form", actor: "system",
+    role: isGuardian ? "guardian" : "client", evidence: result.sid, createdAt: at,
   }).run();
   if (client) await setClientStatus(client.id, "pending", "web_form", null);
 
@@ -193,11 +237,16 @@ export async function recordReply(input: {
 }): Promise<ReplyOutcome> {
   const evidence = `${input.body.trim()}${input.messageSid ? ` · ${input.messageSid}` : ""}`;
   const at = nowIso();
+  // A number with no client of its own may still be a guardian's: its events
+  // say so, and carry the client they belong to.
+  const prior = input.clientId === null ? await latestEvent(input.phone) : undefined;
+  const role = prior?.role ?? "client";
+  const clientId = input.clientId ?? prior?.clientId ?? null;
 
   if (input.verdict === "decline") {
     await db.insert(consentEvents).values({
-      phone: input.phone, clientId: input.clientId, event: "declined", method: "sms_reply",
-      actor: "client", evidence, createdAt: at,
+      phone: input.phone, clientId, event: "declined", method: "sms_reply",
+      actor: "client", role, evidence, createdAt: at,
     }).run();
     if (input.clientId !== null) await setClientStatus(input.clientId, "declined", "sms_reply", at);
     return { outcome: "declined" };
@@ -215,8 +264,8 @@ export async function recordReply(input: {
   else return { outcome: "ignored", reason: "not asked, and not an opt-in keyword" };
 
   await db.insert(consentEvents).values({
-    phone: input.phone, clientId: input.clientId, event: "confirmed", method,
-    actor: "client", evidence, createdAt: at,
+    phone: input.phone, clientId, event: "confirmed", method,
+    actor: "client", role, evidence, createdAt: at,
   }).run();
   if (input.clientId !== null) await setClientStatus(input.clientId, "confirmed", method, at);
   return { outcome: "confirmed", method };
@@ -262,6 +311,15 @@ export async function linkSignupToClient(phone: string, clientId: number): Promi
     .set({ clientId })
     .where(and(eq(consentEvents.phone, phone), isNull(consentEvents.clientId)))
     .run();
+  // A minor's signup named a parent's number; those events belong to the same client.
+  const signup = await latestSignup(phone);
+  if (signup?.guardianPhone) {
+    await db.update(consentEvents)
+      .set({ clientId })
+      .where(and(eq(consentEvents.phone, signup.guardianPhone), isNull(consentEvents.clientId)))
+      .run();
+    await db.update(clients).set({ parentPhone: signup.guardianPhone }).where(eq(clients.id, clientId)).run();
+  }
   const status = await phoneStatus(phone);
   const at = nowIso();
   await db.insert(consentEvents).values({
@@ -298,7 +356,7 @@ export type UnmatchedSignup = {
 /** Form signups that no client row claims yet — Matt's queue. */
 export async function unmatchedSignups(): Promise<UnmatchedSignup[]> {
   const rows = await db.select().from(consentEvents)
-    .where(isNull(consentEvents.clientId))
+    .where(and(isNull(consentEvents.clientId), eq(consentEvents.role, "client")))
     .orderBy(desc(consentEvents.id))
     .all();
   const byPhone = new Map<string, ConsentEvent[]>();

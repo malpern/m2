@@ -56,7 +56,11 @@ async function lookupConsent(phone: string): Promise<ConsentStatus> {
   try {
     const { findClient } = await import("./sms-handlers/shared");
     const client = await findClient(phone);
-    return (client?.smsConsentStatus as ConsentStatus | undefined) ?? "unknown";
+    if (client) return client.smsConsentStatus as ConsentStatus;
+    // Not a client's own number — but it may be a parent's, whose consent
+    // lives only in the events keyed by the number.
+    const { phoneStatus } = await import("./consent");
+    return phoneStatus(phone);
   } catch (e) {
     console.error("Consent lookup failed; refusing to send:", e);
     return "unknown";

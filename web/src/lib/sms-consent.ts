@@ -101,10 +101,10 @@ export const CONSENT_LABEL =
   "not required to train with M2.";
 
 export const GUARDIAN_CONSENT_LABEL =
-  "I am the parent or guardian of the athlete named above and I agree to receive text " +
-  "messages from M2 Performance and Therapy about scheduling their training sessions at the " +
-  "number above. Message frequency varies. Message and data rates may apply. Reply STOP at " +
-  "any time to opt out, or HELP for help. Texting is optional and not required to train with M2.";
+  "I am the parent or guardian of the athlete named above. I agree that M2 Performance and Therapy " +
+  "may send text messages about scheduling their training sessions to the athlete's number above, " +
+  "and to my own number above. Message frequency varies. Message and data rates may apply. Reply STOP " +
+  "at any time to opt out, or HELP for help. Texting is optional and not required to train with M2.";
 
 const DEFAULT_PRIVACY = "m2scheduler.com/privacy";
 export const SIGNUP_PATH = "/text-signup";
@@ -122,6 +122,19 @@ export function confirmationMessage(opts?: { privacyUrl?: string }): string {
     "M2 Performance and Therapy: you signed up for session scheduling texts at m2scheduler.com. " +
     "Reply YES to confirm this is your number. Msg frequency varies, msg & data rates may apply. " +
     `Reply STOP to opt out, HELP for help. Privacy: ${privacy}`
+  );
+}
+
+/**
+ * The verification text for a parent or guardian's own number. They did not
+ * sign themselves up for training, so the text says why it arrived.
+ */
+export function guardianConfirmationMessage(athleteFirstName: string, opts?: { privacyUrl?: string }): string {
+  const privacy = opts?.privacyUrl ?? DEFAULT_PRIVACY;
+  return (
+    `M2 Performance and Therapy: you signed ${athleteFirstName} up for session scheduling texts at m2scheduler.com ` +
+    "and gave this number as the parent or guardian. Reply YES to confirm we may text you here too. " +
+    `Msg frequency varies, msg & data rates may apply. Reply STOP to opt out, HELP for help. Privacy: ${privacy}`
   );
 }
 
