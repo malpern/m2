@@ -20,6 +20,10 @@ const PUBLIC_EXACT = new Set([
   // either path changes, update the consent screen by hand.
   "/privacy",
   "/terms",
+  // The public front door. Google's branding review requires the home page to
+  // load without a sign-in and to say what the app is for; "/" is the dashboard
+  // and does neither, so unauthenticated visits to "/" are rewritten here.
+  "/welcome",
   // Google Search Console ownership proof for m2scheduler.com. Google fetches
   // this anonymously, so behind the gate it answers 307 to /login and
   // verification fails — which is exactly what happened on the first deploy.
@@ -103,6 +107,14 @@ export async function proxy(request: NextRequest) {
     if (authCookie.value === expected) {
       return NextResponse.next();
     }
+  }
+
+  // An anonymous visit to the root gets the public landing page, not a login
+  // prompt. A REWRITE, not a redirect: the address bar stays m2scheduler.com/,
+  // which is the URL the OAuth consent screen and Google's review both point at.
+  // Every other protected path still goes to /login with a return redirect.
+  if (pathname === "/") {
+    return NextResponse.rewrite(new URL("/welcome", request.url));
   }
 
   const loginUrl = new URL("/login", request.url);
