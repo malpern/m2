@@ -1,5 +1,6 @@
 import { db } from "@/db";
-import { interpretConsentReply, confirmedReply, declinedReply } from "@/lib/sms-consent";
+import { interpretConsentReply, confirmedReply, declinedReply, keywordConfirmedReply, unknownNumberReply, helpReply, type ConsentStatus } from "@/lib/sms-consent";
+import { recordReply } from "@/lib/consent";
 import { outreach, clients } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { NextRequest } from "next/server";
@@ -77,17 +78,30 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
 
   const lower = body.toLowerCase().trim();
 
-  // Carrier-level opt-out keywords — Twilio handles these, just acknowledge
-  if (lower === "stop" || lower === "unsubscribe" || lower === "cancel" || lower === "quit") {
-    return twiml();
-  }
-
   // Cache findClient so we only query once per request
   let cachedClient: Awaited<ReturnType<typeof findClient>> | undefined;
   const getClient = async () => {
     if (cachedClient === undefined) cachedClient = await findClient(from);
     return cachedClient;
   };
+
+  // Carrier-level opt-out keywords. Twilio sends the opt-out reply itself, so
+  // we answer with nothing — but we still RECORD it. Until this was added a
+  // STOP left the app believing the client was confirmed, and our own record
+  // of who declined is what stops us asking them again next month.
+  if (lower === "stop" || lower === "unsubscribe" || lower === "cancel" || lower === "quit" || lower === "stopall") {
+    const stopClient = await getClient();
+    if (stopClient) {
+      await recordReply({
+        phone: stopClient.phone ?? from, clientId: stopClient.id,
+        currentStatus: stopClient.smsConsentStatus as ConsentStatus,
+        verdict: "decline", body, messageSid: params.MessageSid ?? null,
+      });
+      await syslog.info("twilio", `${stopClient.name} opted out of texts`,
+        `Carrier STOP from client ${stopClient.id}`, { clientId: stopClient.id });
+    }
+    return twiml();
+  }
 
   if (lower === "stop invites" || lower === "stop calendar invites" || lower === "no more invites") {
     const inviteClient = await getClient();
@@ -99,47 +113,41 @@ async function handleWebhook(request: NextRequest): Promise<Response> {
   }
 
   if (lower === "help" || lower === "info") {
-    return twiml(`M2 Performance & Therapy — session scheduling texts. Reply STOP to opt out. Contact: ${CONTACT_PHONE}`);
+    return twiml(helpReply(CONTACT_PHONE));
   }
 
-  // Confirmed opt-in. Numbers are collected verbally, which leaves no artifact
-  // a carrier reviewer can inspect — the A2P campaign was rejected partly on
-  // that (30896). We ask once; THIS reply is the record.
+  // Consent replies. The client is the only one who can opt in, and this is
+  // where it happens: a YES to our verification text, or START/YES sent
+  // unprompted by a client we already know. `recordReply` writes the event
+  // (with the Twilio MessageSid as evidence) before touching the status.
   //
-  // Placed ahead of the START handler below, which answers the same keywords
-  // but only talks — it records nothing, so a client could "opt in" forever
-  // without anything in the database changing.
+  // Placed ahead of the unknown-number handler below, which only talks.
   const consentClient = await getClient();
   if (consentClient) {
     const verdict = interpretConsentReply(body);
-    const now = new Date().toISOString();
-
-    // A decline is honoured whatever state we thought they were in. Twilio
-    // enforces STOP at the carrier level, so this may never arrive — but when
-    // it does, recording it is what stops us asking again next month.
-    if (verdict === "decline") {
-      await db.update(clients)
-        .set({ smsConsentStatus: "declined", smsConsentAt: now, smsConsentMethod: "sms_reply" })
-        .where(eq(clients.id, consentClient.id)).run();
-      await syslog.info("twilio", `${consentClient.name} opted out of texts`,
-        `Consent declined by reply from client ${consentClient.id}`, { clientId: consentClient.id });
-      return twiml(declinedReply());
+    if (verdict) {
+      const result = await recordReply({
+        phone: consentClient.phone ?? from, clientId: consentClient.id,
+        currentStatus: consentClient.smsConsentStatus as ConsentStatus,
+        verdict, body, messageSid: params.MessageSid ?? null,
+      });
+      if (result.outcome === "declined") {
+        await syslog.info("twilio", `${consentClient.name} opted out of texts`,
+          `Consent declined by reply from client ${consentClient.id}`, { clientId: consentClient.id });
+        return twiml(declinedReply());
+      }
+      if (result.outcome === "confirmed") {
+        await syslog.info("twilio", `${consentClient.name} confirmed texts`,
+          `Consent confirmed by ${result.method} from client ${consentClient.id}`, { clientId: consentClient.id });
+        return twiml(result.method === "sms_keyword" ? keywordConfirmedReply() : confirmedReply());
+      }
+      // "ignored": a bare "ok" from someone we never asked, or a repeat YES.
+      // Fall through — it may be a scheduling reply.
     }
-
-    // A confirmation only counts if we actually asked. Otherwise a stray "ok"
-    // in a scheduling conversation would silently manufacture consent.
-    if (verdict === "confirm" && consentClient.smsConsentStatus === "pending") {
-      await db.update(clients)
-        .set({ smsConsentStatus: "confirmed", smsConsentAt: now, smsConsentMethod: "sms_reply" })
-        .where(eq(clients.id, consentClient.id)).run();
-      await syslog.info("twilio", `${consentClient.name} confirmed texts`,
-        `Consent confirmed by reply from client ${consentClient.id}`, { clientId: consentClient.id });
-      return twiml(confirmedReply());
-    }
-  }
-
-  if (lower === "start" || lower === "subscribe" || (lower === "yes" && !await getClient())) {
-    return twiml("M2 Performance: You're signed up for session scheduling texts. For help, reply HELP. To opt out, reply STOP. Msg & data rates may apply.");
+  } else if (lower === "start" || lower === "subscribe" || lower === "yes" || lower === "unstop") {
+    // Unknown number opting in: point at the form, store nothing. We never
+    // create a client from an inbound text.
+    return twiml(unknownNumberReply());
   }
 
   const client = await getClient();
