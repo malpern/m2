@@ -263,3 +263,52 @@ describe("createClientFromSignup", () => {
     await expect(createClientFromSignup("+14085550199")).rejects.toThrow(/No unmatched signup/);
   });
 });
+
+describe("guardian numbers (minor signups)", () => {
+  const ATHLETE = "+14085550100", PARENT = "+14085550177";
+
+  it("records a second signed_up event for the parent, in the guardian role, with the athlete named", async () => {
+    await recordSignup({ phone: ATHLETE, name: "Jordan Lee", guardianName: "Dana Lee", guardianPhone: PARENT });
+    const a = (await events(ATHLETE))[0]; const g = (await events(PARENT))[0];
+    expect(a).toMatchObject({ role: "client", guardianName: "Dana Lee", guardianPhone: PARENT });
+    expect(g).toMatchObject({ role: "guardian", submittedName: "Dana Lee", clientId: null });
+    expect(g.evidence).toContain("parent/guardian of Jordan Lee");
+    // the parent's number is NOT a lead of its own
+    expect((await unmatchedSignups()).map((u) => u.phone)).toEqual([ATHLETE]);
+  });
+
+  it("words the parent's verification text differently and tracks the parent's own status", async () => {
+    await recordSignup({ phone: ATHLETE, name: "Jordan Lee", guardianName: "Dana Lee", guardianPhone: PARENT });
+    await sendVerification(ATHLETE);
+    await sendVerification(PARENT);
+    expect(mockSendSMS).toHaveBeenCalledTimes(2);
+    expect(mockSendSMS.mock.calls[0][1]).toContain("you signed up for session scheduling texts");
+    expect(mockSendSMS.mock.calls[1][1]).toContain("you signed Jordan up");
+    expect(mockSendSMS.mock.calls[1][1]).toContain("parent or guardian");
+    expect(await phoneStatus(PARENT)).toBe("pending");
+    // the parent replies from their own phone; the event carries the guardian role
+    const r = await recordReply({ phone: PARENT, clientId: null, currentStatus: "pending", verdict: "confirm", body: "YES", messageSid: "SMp" });
+    expect(r).toEqual({ outcome: "confirmed", method: "sms_reply" });
+    expect((await events(PARENT)).at(-1)).toMatchObject({ event: "confirmed", role: "guardian" });
+    expect(await phoneStatus(PARENT)).toBe("confirmed");
+    // and the athlete's status is untouched by the parent's YES
+    expect(await phoneStatus(ATHLETE)).toBe("pending");
+  });
+
+  it("creating the client from the athlete's signup claims the parent's events and stores the parent phone", async () => {
+    await recordSignup({ phone: ATHLETE, name: "Jordan Lee", guardianName: "Dana Lee", guardianPhone: PARENT });
+    await sendVerification(PARENT);
+    const { clientId } = await createClientFromSignup(ATHLETE);
+    const c = await db.select().from(clients).where(eq(clients.id, clientId)).get();
+    expect(c).toMatchObject({ parentGuardian: "Dana Lee", parentPhone: PARENT });
+    expect((await events(PARENT)).every((e) => e.clientId === clientId)).toBe(true);
+    expect((await consentHistory(clientId)).some((e) => e.role === "guardian")).toBe(true);
+  });
+
+  it("a parent's number that opted out is left alone by a new signup", async () => {
+    await recordReply({ phone: PARENT, clientId: null, currentStatus: "unknown", verdict: "decline", body: "STOP" });
+    await recordSignup({ phone: ATHLETE, name: "Jordan Lee", guardianName: "Dana Lee", guardianPhone: PARENT });
+    expect((await events(PARENT)).map((e) => e.event)).toEqual(["declined"]);
+    expect((await sendVerification(PARENT)).status).toBe("skipped");
+  });
+});

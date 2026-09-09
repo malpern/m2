@@ -37,22 +37,26 @@ export const CHIP_CLASSES: Record<ConsentChip["tone"], string> = {
 
 /** One line per event, in Matt's words rather than the enum's. */
 export function describeConsentEvent(e: ConsentEvent): string {
+  const who = e.role === "guardian" ? `Parent/guardian (${formatPhoneNumber(e.phone)}) ` : "";
   switch (e.event) {
     case "signed_up": {
-      const who = e.guardianName
+      if (e.role === "guardian") {
+        return `${who}gave their own number for texts${e.submittedName ? ` as ${e.submittedName}` : ""}`;
+      }
+      const signer = e.guardianName
         ? `${e.submittedName ?? "the athlete"}; parent/guardian ${e.guardianName} agreed`
         : (e.submittedName ?? "the client");
-      return `Signed up at m2scheduler.com/text-signup as ${who}${e.consentTextVersion ? ` · consent text ${e.consentTextVersion}` : ""}`;
+      return `Signed up at m2scheduler.com/text-signup as ${signer}${e.consentTextVersion ? ` · consent text ${e.consentTextVersion}` : ""}`;
     }
     case "request_sent":
-      return `Verification text sent${e.evidence ? ` · ${e.evidence}` : ""}`;
+      return `${who}${who ? "v" : "V"}erification text sent${e.evidence ? ` · ${e.evidence}` : ""}`;
     case "confirmed":
       return e.method === "sms_keyword"
-        ? `Texted an opt-in keyword unprompted${e.evidence ? ` · "${e.evidence}"` : ""}`
-        : `Replied YES${e.evidence ? ` · "${e.evidence}"` : ""}`;
+        ? `${who}${who ? "t" : "T"}exted an opt-in keyword unprompted${e.evidence ? ` · "${e.evidence}"` : ""}`
+        : `${who}${who ? "r" : "R"}eplied YES${e.evidence ? ` · "${e.evidence}"` : ""}`;
     case "declined":
       if (e.method === "manual") return `Matt marked them opted out${e.evidence ? ` · ${e.evidence}` : ""}`;
-      return `Opted out by text${e.evidence ? ` · "${e.evidence}"` : ""}`;
+      return `${who}${who ? "o" : "O"}pted out by text${e.evidence ? ` · "${e.evidence}"` : ""}`;
     case "reset":
       return `Consent reset: ${e.evidence ?? "phone number changed"}`;
     case "linked":

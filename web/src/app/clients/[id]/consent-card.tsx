@@ -9,6 +9,7 @@ import type { ConsentEvent } from "@/db/schema";
 import type { ConsentStatus } from "@/lib/sms-consent";
 import { CHIP_CLASSES, consentStatusLabel, describeConsentEvent } from "@/lib/consent-labels";
 import { CopySignupLink } from "../copy-signup-link";
+import { formatPhoneNumber } from "@/lib/utils";
 import { markClientOptedOut, resendVerification } from "../consent-actions";
 
 const TONE: Record<ConsentStatus, keyof typeof CHIP_CLASSES> = {
@@ -20,7 +21,7 @@ function when(iso: string): string {
 }
 
 export function ConsentCard({
-  clientId, status, since, hasPhone, history, signupLink,
+  clientId, status, since, hasPhone, history, signupLink, parent,
 }: {
   clientId: number;
   status: ConsentStatus;
@@ -28,6 +29,8 @@ export function ConsentCard({
   hasPhone: boolean;
   history: ConsentEvent[];
   signupLink: string;
+  /** The parent or guardian's own number and its consent, when a minor signed up. */
+  parent: { name: string | null; phone: string; status: ConsentStatus } | null;
 }) {
   const toast = useToast();
   const [isPending, startTransition] = useTransition();
@@ -47,6 +50,15 @@ export function ConsentCard({
           {since && <span className="text-xs text-muted-foreground">since {when(since)}</span>}
           {!hasPhone && <span className="text-xs text-muted-foreground">No phone on file.</span>}
         </div>
+
+        {parent && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Parent/guardian{parent.name ? ` ${parent.name}` : ""} · {formatPhoneNumber(parent.phone)}</span>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${CHIP_CLASSES[TONE[parent.status]]}`}>
+              {consentStatusLabel(parent.status)}
+            </span>
+          </div>
+        )}
 
         {status === "unknown" && hasPhone && (
           <p className="text-sm text-muted-foreground">

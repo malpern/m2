@@ -27,7 +27,7 @@ beforeEach(() => {
 describe("validateSignup", () => {
   it("accepts a complete adult signup and normalises the number", () => {
     const v = validateSignup(readSignupFields(form(GOOD)));
-    expect(v).toEqual({ ok: true, name: "Jordan Lee", e164: "+16505550142", guardianName: null });
+    expect(v).toEqual({ ok: true, name: "Jordan Lee", e164: "+16505550142", guardianName: null, guardianPhone: null });
   });
 
   it("refuses when the consent box is not ticked — the box is never assumed", () => {
@@ -40,15 +40,18 @@ describe("validateSignup", () => {
     expect(validateSignup(readSignupFields(form({ ...GOOD, phone: "+44 20 7946 0958" }))).ok).toBe(false);
   });
 
-  it("requires the guardian's name when the athlete is a minor, and records it", () => {
+  it("requires the guardian's name AND mobile when the athlete is a minor, and they must differ from the athlete's", () => {
     expect(validateSignup(readSignupFields(form({ ...GOOD, isMinor: "on" }))).ok).toBe(false);
-    const v = validateSignup(readSignupFields(form({ ...GOOD, isMinor: "on", guardianName: "Dana Lee" })));
-    expect(v).toMatchObject({ ok: true, guardianName: "Dana Lee" });
+    expect(validateSignup(readSignupFields(form({ ...GOOD, isMinor: "on", guardianName: "Dana Lee" }))).ok).toBe(false);
+    expect(validateSignup(readSignupFields(form({ ...GOOD, isMinor: "on", guardianName: "Dana Lee", guardianPhone: GOOD.phone }))))
+      .toMatchObject({ ok: false, error: expect.stringMatching(/different/) });
+    const v = validateSignup(readSignupFields(form({ ...GOOD, isMinor: "on", guardianName: "Dana Lee", guardianPhone: "650-555-0177" })));
+    expect(v).toMatchObject({ ok: true, guardianName: "Dana Lee", guardianPhone: "+16505550177" });
   });
 
-  it("ignores a guardian name typed by an adult", () => {
-    const v = validateSignup(readSignupFields(form({ ...GOOD, guardianName: "Someone" })));
-    expect(v).toMatchObject({ ok: true, guardianName: null });
+  it("ignores guardian fields typed by an adult", () => {
+    const v = validateSignup(readSignupFields(form({ ...GOOD, guardianName: "Someone", guardianPhone: "650-555-0177" })));
+    expect(v).toMatchObject({ ok: true, guardianName: null, guardianPhone: null });
   });
 });
 
@@ -72,6 +75,15 @@ describe("processSignup", () => {
       phone: "+16505550142", name: "Jordan Lee", guardianName: null, evidence: expect.stringContaining("web form"),
     }));
     expect(mockSendVerification).toHaveBeenCalledWith("+16505550142");
+  });
+
+  it("for a minor, records the guardian phone and sends a verification text to BOTH numbers", async () => {
+    const r = await processSignup({ form: form({ ...GOOD, isMinor: "on", guardianName: "Dana Lee", guardianPhone: "(650) 555-0177" }), ...ctx });
+    expect(r).toMatchObject({ ok: true, message: expect.stringContaining("(650) 555-0177") });
+    expect(mockRecordSignup).toHaveBeenCalledWith(expect.objectContaining({ guardianName: "Dana Lee", guardianPhone: "+16505550177" }));
+    expect(mockSendVerification).toHaveBeenCalledTimes(2);
+    expect(mockSendVerification).toHaveBeenCalledWith("+16505550142");
+    expect(mockSendVerification).toHaveBeenCalledWith("+16505550177");
   });
 
   it("returns the validation error to the visitor", async () => {

@@ -35,12 +35,12 @@ export function SignupForm() {
   return (
     <form action={action} className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="name">{isMinor ? "Athlete's name" : "Your name"}</Label>
+        <Label htmlFor="name">{isMinor ? "Athlete\u2019s name" : "Your name"}</Label>
         <Input id="name" name="name" required maxLength={80} autoComplete="name" />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phone">Mobile number</Label>
+        <Label htmlFor="phone">{isMinor ? "Athlete\u2019s mobile number" : "Mobile number"}</Label>
         <Input id="phone" name="phone" type="tel" required inputMode="tel" autoComplete="tel" placeholder="(650) 555-0142" />
       </div>
 
@@ -52,13 +52,23 @@ export function SignupForm() {
           onChange={(e) => setIsMinor(e.target.checked)}
           className="mt-0.5 h-4 w-4 rounded border-border"
         />
-        <span>I&rsquo;m under 18. This is my parent or guardian&rsquo;s number, and they&rsquo;re the one agreeing.</span>
+        <span>The athlete is under 18. A parent or guardian is signing up and agreeing on their behalf.</span>
       </label>
 
       {isMinor && (
-        <div className="space-y-2">
-          <Label htmlFor="guardianName">Parent or guardian&rsquo;s name</Label>
-          <Input id="guardianName" name="guardianName" required maxLength={80} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-lg border border-border/60 p-4">
+          <div className="space-y-2">
+            <Label htmlFor="guardianName">Parent or guardian&rsquo;s name</Label>
+            <Input id="guardianName" name="guardianName" required maxLength={80} autoComplete="off" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="guardianPhone">Parent or guardian&rsquo;s mobile</Label>
+            <Input id="guardianPhone" name="guardianPhone" type="tel" required inputMode="tel" autoComplete="off" placeholder="(650) 555-0100" />
+          </div>
+          <p className="sm:col-span-2 text-[13px] text-muted-foreground">
+            Matt texts the athlete about their sessions. The parent gets a copy of the confirmation and can be
+            reached at this number too. Both phones get a text asking to reply YES.
+          </p>
         </div>
       )}
 

@@ -3,8 +3,8 @@ import { consentChip, consentStatusLabel, describeConsentEvent } from "./consent
 import type { ConsentEvent } from "@/db/schema";
 
 function ev(o: Partial<ConsentEvent>): ConsentEvent {
-  return { id: 1, phone: "+14085550100", clientId: 1, event: "signed_up", method: "web_form", actor: "client",
-    consentTextVersion: null, submittedName: null, guardianName: null, evidence: null, createdAt: "2026-09-08T00:00:00Z", ...o };
+  return { id: 1, phone: "+14085550100", clientId: 1, event: "signed_up", method: "web_form", actor: "client", role: "client",
+    consentTextVersion: null, submittedName: null, guardianName: null, guardianPhone: null, evidence: null, createdAt: "2026-09-08T00:00:00Z", ...o };
 }
 
 describe("consentChip", () => {

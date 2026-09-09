@@ -54,6 +54,7 @@ export async function createClient(formData: FormData) {
     sessionRate: formData.get("sessionRate") ? Math.round(parseFloat(formData.get("sessionRate") as string) * 100) : null,
     sessionType: ((formData.get("sessionType") as string) || null) as "individual" | "dual" | "group" | null,
     parentGuardian: (formData.get("parentGuardian") as string) || null,
+    parentPhone: normalizePhone(formData.get("parentPhone") as string),
     email: (formData.get("email") as string) || null,
     calendarInviteOptIn: formData.get("calendarInviteOptIn") === "opted_in" ? true : formData.get("calendarInviteOptIn") === "opted_out" ? false : null,
     sessionReminders: formData.get("sessionReminders") === "on" ? true : false,
@@ -91,6 +92,7 @@ export async function updateClient(id: number, formData: FormData) {
       sessionRate: formData.get("sessionRate") ? Math.round(parseFloat(formData.get("sessionRate") as string) * 100) : null,
       sessionType: ((formData.get("sessionType") as string) || null) as "individual" | "dual" | "group" | null,
       parentGuardian: (formData.get("parentGuardian") as string) || null,
+      parentPhone: normalizePhone(formData.get("parentPhone") as string),
       email: (formData.get("email") as string) || null,
       calendarInviteOptIn: formData.get("calendarInviteOptIn") === "opted_in" ? true : formData.get("calendarInviteOptIn") === "opted_out" ? false : null,
       sessionReminders: formData.get("sessionReminders") === "on" ? true : false,
@@ -118,7 +120,7 @@ const ALLOWED_FIELDS = new Set([
   "name", "phone", "category", "gradeLevel", "collegeBound",
   "behaviorScore", "preferredDays", "preferredTime", "maxSessionsPerWeek",
   "standingSlot", "defaultDurationMinutes", "notes", "sessionRate", "sessionType", "parentGuardian", "email",
-  "calendarInviteOptIn", "sessionReminders",
+  "calendarInviteOptIn", "sessionReminders", "parentPhone",
 ]);
 
 export async function updateClientField(id: number, field: string, value: string | number | boolean) {
@@ -145,7 +147,7 @@ export async function updateClientField(id: number, field: string, value: string
     updates[field] = value as Category;
   } else if (field === "gradeLevel") {
     updates[field] = (value || null) as Grade;
-  } else if (field === "phone") {
+  } else if (field === "phone" || field === "parentPhone") {
     updates[field] = normalizePhone(value as string);
   } else {
     updates[field] = value;
