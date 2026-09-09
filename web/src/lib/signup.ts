@@ -9,7 +9,7 @@
  * an app that otherwise sits behind a password must not become a way to test
  * which numbers are clients.
  */
-import { createHash } from "crypto";
+import { createHmac } from "crypto";
 import { toE164 } from "./phone";
 import { isRateLimited } from "./rate-limit";
 import { recordSignup, sendVerification } from "./consent";
@@ -61,8 +61,11 @@ export function validateSignup(f: SignupFields): SignupValidation {
  * reviewer or an abuse investigation needs.
  */
 export function submissionEvidence(ip: string, userAgent: string): string {
-  const salt = process.env.APP_PASSWORD ?? "m2";
-  const h = createHash("sha256").update(`${salt}:${ip}`).digest("hex").slice(0, 16);
+  // Keyed so the hash cannot be reversed by hashing the IPv4 space. The key
+  // is its own setting, not the app password: this is a pseudonymiser, and a
+  // password must never be an input to anything but the login check.
+  const key = process.env.SIGNUP_EVIDENCE_KEY ?? "m2-signup-evidence";
+  const h = createHmac("sha256", key).update(ip).digest("hex").slice(0, 16);
   return `web form · ip:${h} · ua:${userAgent.slice(0, 120)}`;
 }
 
