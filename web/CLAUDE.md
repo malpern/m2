@@ -114,40 +114,47 @@ simultaneously opened SMS to every client.
 ## Confirmed opt-in — the second gate, after the allowlist
 
 `outreach-policy.ts` answers "may we contact this ADDRESS?". `sms-consent.ts`
-answers "has this PERSON agreed?". Both must pass.
+answers "has this PERSON agreed?". Both must pass. `consent.ts` is where the
+answer to the second question comes from.
 
-Matt collects numbers verbally at signup. That is lawful for transactional
-scheduling messages, but it produces no artifact — nothing a carrier reviewer,
-or we ourselves, can inspect to show a particular person agreed. The A2P 10DLC
-campaign was rejected partly on exactly that (error 30896, "rejected because of
-provided Opt-in information"), alongside 30927 (brand registered to Micah
-rather than to M2) and 30908 (privacy policy not verifiable).
+The A2P 10DLC campaign was rejected three times, twice on opt-in grounds
+(30896 "provided Opt-in information", then 30909 "message flow does not let a
+reviewer verify how end users consent"). The lesson: a reviewer can only
+approve what they can inspect, and "Matt asked them" cannot be inspected. So
+**nobody opts a client in on their behalf.** There are exactly two ways in:
 
-So a verbally-collected number now buys permission to send **one** question.
-The client's reply is the record:
+1. The client signs up on the public form at `/text-signup`, we send ONE
+   verification text, and they reply YES from their own phone.
+2. A client whose number we already have texts START or YES unprompted.
 
-- `unknown` → never asked. Blocks scheduling.
-- `pending` → asked, waiting. Blocks scheduling.
-- `confirmed` → replied YES. The only state that permits scheduling messages.
-- `declined` → replied STOP/NO. Blocks everything, permanently, including
-  being asked again.
+Status on `clients.sms_consent_status`:
 
-**The gate lives inside `sendSMS`, not at the call sites.** There are fourteen
-of them, and #227 is the standing lesson that a rule which has to be remembered
-at each is a rule that will be missed at one. `purpose` defaults to
-`scheduling`, the restricted kind, so a caller that says nothing gets the safe
-behaviour; `consent_request` and `operational` are the deliberate exemptions.
-When a caller does not supply the status, `sendSMS` looks it up by phone —
-"the caller forgot" must not mean "no check happened". A number matching no
-client reads as `unknown` and is refused.
+- `unknown` → never signed up. Blocks scheduling.
+- `pending` → verification text sent, waiting. Blocks scheduling.
+- `confirmed` → replied YES / texted START. The only state that permits scheduling.
+- `declined` → STOP/NO, or Matt marked them out. Blocks everything; only the
+  client can leave it, by texting START.
 
-Only a **bare** keyword counts as a consent reply. "no thanks, can we do
-Thursday?" is a scheduling message that happens to begin with "no", and reading
-it as an opt-out would silently cut a client off. See `interpretConsentReply`.
+**Every transition writes `consent_events` first**, then the status columns.
+The events table is append-only, keyed by phone (a signup can arrive before its
+client exists; consent belongs to the number and a number change resets it),
+and carries the evidence: the consent text version shown on the form, the
+client's reply verbatim with its Twilio `MessageSid`, Matt's note for a manual
+opt-out. Deleting a client does not cascade here — that history is the point.
 
-**The status only moves to `pending` when the request was actually sent.** A
-client marked pending who was never texted would sit un-contactable forever,
-waiting to answer a question they never received.
+**The gate lives inside `sendSMS`, not at the call sites.** `purpose` defaults
+to `scheduling`, the restricted kind; `consent_request` and `operational` are
+the deliberate exemptions. A number matching no client reads as `unknown` and
+is refused.
+
+Only a **bare** keyword counts as a consent reply ("no thanks, Thursday?" is
+scheduling), and a bare "ok" from someone we never asked is ignored rather than
+read as consent — only the opt-in keywords (`start`, `yes`, `subscribe`,
+`unstop`) confirm an unasked client. See `interpretConsentReply` and
+`isOptInKeyword`.
+
+**The status only moves to `pending` when the verification text was actually
+sent**, and it is sent at most once per number per 24 hours.
 
 ## Google Calendar — reads and writes target DIFFERENT calendars
 

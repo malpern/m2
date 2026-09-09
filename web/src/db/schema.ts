@@ -212,6 +212,51 @@ export const outreach = sqliteTable("outreach", {
   index("outreach_week_of_status_idx").on(t.weekOf, t.status),
 ]);
 
+/**
+ * The evidence behind `clients.sms_consent_*`.
+ *
+ * Append-only. Each row is one thing that happened to one phone number's
+ * consent: the client signed up on the public form, we sent the verification
+ * text, they replied YES, they texted STOP, Matt changed their number. The
+ * status columns on `clients` remain the fast answer the send gate reads; this
+ * table is what a carrier reviewer — or Matt, a year from now — reads to see
+ * WHY that answer is what it is.
+ *
+ * Keyed by phone rather than client because a signup can arrive before Matt
+ * has created the client, and consent belongs to the number in any case: a
+ * client whose number changes starts over. Rows are never updated or deleted,
+ * and deleting a client does not cascade here — "we did have consent when we
+ * texted them" is exactly the record you want after the fact.
+ */
+export const consentEvents = sqliteTable("consent_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  phone: text("phone").notNull(),
+  clientId: integer("client_id"),
+  event: text("event", {
+    enum: ["signed_up", "request_sent", "confirmed", "declined", "reset", "linked"],
+  }).notNull(),
+  method: text("method", {
+    enum: ["web_form", "sms_reply", "sms_keyword", "manual", "phone_changed"],
+  }).notNull(),
+  actor: text("actor", { enum: ["client", "matt", "system"] }).notNull(),
+  consentTextVersion: text("consent_text_version"),
+  submittedName: text("submitted_name"),
+  guardianName: text("guardian_name"),
+  // The inbound text verbatim plus its Twilio MessageSid; a hash of the
+  // submitting IP and user agent for form submissions; the note for manual
+  // events. Free text on purpose — evidence is whatever we had at the time.
+  evidence: text("evidence"),
+  // ISO-8601 with zone, written by the app. NOT CURRENT_TIMESTAMP: those are
+  // space-separated and zone-less and have already caused two bugs.
+  createdAt: text("created_at").notNull(),
+}, (t) => [
+  index("consent_events_phone_idx").on(t.phone),
+  index("consent_events_client_id_idx").on(t.clientId),
+]);
+
+export type ConsentEvent = typeof consentEvents.$inferSelect;
+export type NewConsentEvent = typeof consentEvents.$inferInsert;
+
 export const defaultAvailability = sqliteTable("default_availability", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   day: text("day", {

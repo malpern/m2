@@ -75,6 +75,11 @@ vi.mock("@/lib/sms-handlers", () => ({
   handleSingleSessionReply: vi.fn().mockResolvedValue(undefined),
 }));
 
+const mockRecordReply = vi.fn();
+vi.mock("@/lib/consent", () => ({
+  recordReply: (...a: unknown[]) => mockRecordReply(...a),
+}));
+
 vi.mock("@/lib/sms-handlers/shared", () => ({
   offerFreshAlternatives: vi.fn().mockResolvedValue(undefined),
   recordInboundReply: vi.fn().mockResolvedValue({ id: 99 }),
@@ -132,6 +137,7 @@ const TEST_CLIENT = {
   name: "Alex Lee",
   phone: "+15551234567",
   calendarInviteOptIn: true,
+  smsConsentStatus: "confirmed",
 };
 
 function makeRequest(body: Record<string, string>): NextRequest {
@@ -248,15 +254,30 @@ describe("POST /api/twilio", () => {
   /*  Carrier-level opt-out keywords                                   */
   /* ---------------------------------------------------------------- */
   describe("carrier opt-out keywords", () => {
-    for (const keyword of ["stop", "unsubscribe", "cancel", "quit"]) {
-      it(`returns empty TwiML for "${keyword}"`, async () => {
-        const response = await POST(makeRequest({ From: "+15551234567", Body: keyword }));
+    for (const keyword of ["stop", "unsubscribe", "cancel", "quit", "stopall"]) {
+      it(`records the decline and returns empty TwiML for "${keyword}" from a known client`, async () => {
+        mockFindClient.mockResolvedValue(TEST_CLIENT as Awaited<ReturnType<typeof findClient>>);
+        mockRecordReply.mockResolvedValue({ outcome: "declined" });
+
+        const response = await POST(makeRequest({ From: "+15551234567", Body: keyword, MessageSid: "SMstop" }));
 
         expect(response.status).toBe(200);
+        // Twilio sends the carrier opt-out reply itself; we must add nothing.
         expect(await getResponseText(response)).toBe("<Response/>");
-        expect(mockFindClient).not.toHaveBeenCalled();
+        expect(mockRecordReply).toHaveBeenCalledWith(expect.objectContaining({
+          clientId: 1, verdict: "decline", body: keyword, messageSid: "SMstop",
+        }));
       });
     }
+
+    it("returns empty TwiML and records nothing for an unknown number", async () => {
+      mockFindClient.mockResolvedValue(null);
+
+      const response = await POST(makeRequest({ From: "+15559999999", Body: "stop" }));
+
+      expect(await getResponseText(response)).toBe("<Response/>");
+      expect(mockRecordReply).not.toHaveBeenCalled();
+    });
   });
 
   /* ---------------------------------------------------------------- */
@@ -314,24 +335,60 @@ describe("POST /api/twilio", () => {
   /* ---------------------------------------------------------------- */
   /*  START / SUBSCRIBE keywords                                       */
   /* ---------------------------------------------------------------- */
-  describe("start/subscribe keywords", () => {
-    for (const keyword of ["start", "subscribe"]) {
-      it(`returns sign-up confirmation for "${keyword}"`, async () => {
-        const response = await POST(makeRequest({ From: "+15551234567", Body: keyword }));
+  describe("opt-in keywords", () => {
+    for (const keyword of ["start", "subscribe", "yes", "unstop"]) {
+      it(`points an unknown number at the signup form for "${keyword}" and stores nothing`, async () => {
+        mockFindClient.mockResolvedValue(null);
+
+        const response = await POST(makeRequest({ From: "+15559999999", Body: keyword }));
 
         expect(response.status).toBe(200);
         const text = await getResponseText(response);
-        expect(text).toContain("signed up for session scheduling");
+        expect(text).toContain("m2scheduler.com/text-signup");
+        expect(mockRecordReply).not.toHaveBeenCalled();
+        expect(mockDbInsert).not.toHaveBeenCalled();
       });
     }
 
-    it('returns sign-up for "yes" from unknown number', async () => {
-      mockFindClient.mockResolvedValue(null);
+    it("confirms a known client who texts START unprompted, with the keyword wording", async () => {
+      mockFindClient.mockResolvedValue({ ...TEST_CLIENT, smsConsentStatus: "unknown" } as Awaited<ReturnType<typeof findClient>>);
+      mockRecordReply.mockResolvedValue({ outcome: "confirmed", method: "sms_keyword" });
 
-      const response = await POST(makeRequest({ From: "+15559999999", Body: "yes" }));
+      const response = await POST(makeRequest({ From: "+15551234567", Body: "START", MessageSid: "SMkw" }));
 
       const text = await getResponseText(response);
-      expect(text).toContain("signed up for session scheduling");
+      expect(text).toContain("you're confirmed for session scheduling texts");
+      expect(mockRecordReply).toHaveBeenCalledWith(expect.objectContaining({
+        clientId: 1, currentStatus: "unknown", verdict: "confirm", messageSid: "SMkw",
+      }));
+    });
+
+    it("confirms a pending client who replies YES, with the thank-you wording", async () => {
+      mockFindClient.mockResolvedValue({ ...TEST_CLIENT, smsConsentStatus: "pending" } as Awaited<ReturnType<typeof findClient>>);
+      mockRecordReply.mockResolvedValue({ outcome: "confirmed", method: "sms_reply" });
+
+      const response = await POST(makeRequest({ From: "+15551234567", Body: "Yes" }));
+
+      expect(await getResponseText(response)).toContain("Thanks! You");
+    });
+
+    it("declines a pending client who replies NO", async () => {
+      mockFindClient.mockResolvedValue({ ...TEST_CLIENT, smsConsentStatus: "pending" } as Awaited<ReturnType<typeof findClient>>);
+      mockRecordReply.mockResolvedValue({ outcome: "declined" });
+
+      const response = await POST(makeRequest({ From: "+15551234567", Body: "no" }));
+
+      expect(await getResponseText(response)).toContain("won't get scheduling texts");
+    });
+
+    it("falls through to normal handling when the reply is ignored (e.g. a stray ok)", async () => {
+      mockFindClient.mockResolvedValue({ ...TEST_CLIENT, smsConsentStatus: "unknown" } as Awaited<ReturnType<typeof findClient>>);
+      mockRecordReply.mockResolvedValue({ outcome: "ignored", reason: "not asked" });
+
+      const response = await POST(makeRequest({ From: "+15551234567", Body: "ok" }));
+
+      expect(response.status).toBe(200);
+      expect(await getResponseText(response)).not.toContain("confirmed for session scheduling");
     });
   });
 

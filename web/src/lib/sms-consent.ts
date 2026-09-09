@@ -86,26 +86,75 @@ export function interpretConsentReply(body: string): "confirm" | "decline" | nul
 }
 
 /**
- * The confirmation request.
+ * The words the client agreed to on the signup form, versioned.
+ *
+ * Every `signed_up` event records which version was on the page, so the
+ * wording can change later without orphaning the records made under the old
+ * one. Bump the version whenever CONSENT_LABEL changes in substance.
+ */
+export const CONSENT_TEXT_VERSION = "v1";
+
+export const CONSENT_LABEL =
+  "I agree to receive text messages from M2 Performance and Therapy about scheduling my " +
+  "training sessions at the number above. Message frequency varies. Message and data rates " +
+  "may apply. Reply STOP at any time to opt out, or HELP for help. Texting is optional and " +
+  "not required to train with M2.";
+
+export const GUARDIAN_CONSENT_LABEL =
+  "I am the parent or guardian of the athlete named above and I agree to receive text " +
+  "messages from M2 Performance and Therapy about scheduling their training sessions at the " +
+  "number above. Message frequency varies. Message and data rates may apply. Reply STOP at " +
+  "any time to opt out, or HELP for help. Texting is optional and not required to train with M2.";
+
+const DEFAULT_PRIVACY = "m2scheduler.com/privacy";
+export const SIGNUP_PATH = "/text-signup";
+
+/**
+ * The verification text sent once after a form signup.
  *
  * Carries every element carriers require in an opt-in disclosure — business
- * name, message purpose, frequency, rates, STOP and HELP, and a link to the
- * privacy policy — because this message IS the disclosure. Matt's verbal ask
- * cannot be relied on to include them.
+ * name, purpose, frequency, rates, STOP and HELP, and the privacy link — so it
+ * stands alone as a record even if the form is ever redesigned.
  */
 export function confirmationMessage(opts?: { privacyUrl?: string }): string {
-  const privacy = opts?.privacyUrl ?? "m2scheduler.com/privacy";
+  const privacy = opts?.privacyUrl ?? DEFAULT_PRIVACY;
   return (
-    "M2 Performance and Therapy: you're set up for session scheduling texts. " +
-    "Reply YES to confirm. Msg frequency varies, msg & data rates may apply. " +
+    "M2 Performance and Therapy: you signed up for session scheduling texts at m2scheduler.com. " +
+    "Reply YES to confirm this is your number. Msg frequency varies, msg & data rates may apply. " +
     `Reply STOP to opt out, HELP for help. Privacy: ${privacy}`
   );
 }
 
 export function confirmedReply(): string {
-  return "Thanks! You're confirmed for session scheduling texts. Reply STOP any time to opt out.";
+  return "Thanks! You're confirmed for session scheduling texts from M2 Performance and Therapy. Reply STOP any time to opt out.";
 }
 
 export function declinedReply(): string {
-  return "No problem — you won't get scheduling texts. Matt will reach out another way.";
+  return "No problem — you won't get scheduling texts from M2. Matt will reach out another way.";
+}
+
+/** A known client texted START or YES on their own: confirmed on the spot. */
+export function keywordConfirmedReply(opts?: { privacyUrl?: string }): string {
+  const privacy = opts?.privacyUrl ?? DEFAULT_PRIVACY;
+  return (
+    "M2 Performance and Therapy: you're confirmed for session scheduling texts. " +
+    "Msg frequency varies, msg & data rates may apply. Reply STOP to opt out, HELP for help. " +
+    `Privacy: ${privacy}`
+  );
+}
+
+/** START from a number we do not have: point at the form, store nothing. */
+export function unknownNumberReply(): string {
+  return (
+    "This number is for M2 Performance and Therapy scheduling texts. " +
+    `To sign up, visit m2scheduler.com${SIGNUP_PATH}. Msg & data rates may apply. Reply STOP to opt out.`
+  );
+}
+
+export function helpReply(contactPhone: string, opts?: { privacyUrl?: string }): string {
+  const privacy = opts?.privacyUrl ?? DEFAULT_PRIVACY;
+  return (
+    "M2 Performance & Therapy — session scheduling texts. Reply STOP to opt out, START to opt in. " +
+    `Contact: ${contactPhone}. Privacy: ${privacy}`
+  );
 }
