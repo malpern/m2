@@ -24,6 +24,10 @@ import { needsRenewal } from "@/lib/package-renewal";
 import { analyseStandingSlotDrift, formatStandingSlot } from "@/lib/standing-slot-drift";
 import { ClientProfileCard } from "./client-profile-card";
 import { ClientPackageCard } from "./client-package-card";
+import { ConsentCard } from "./consent-card";
+import { consentHistory } from "@/lib/consent";
+import { signupLink } from "@/lib/consent-labels";
+import type { ConsentStatus } from "@/lib/sms-consent";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +65,7 @@ export default async function ClientDetailPage({
   if (!client) notFound();
 
   // These queries are all independent — run in parallel
-  const [clientPackages, clientMessages, allClientSessions, transactionHistory, sessionCounts] = await Promise.all([
+  const [clientPackages, clientMessages, allClientSessions, transactionHistory, sessionCounts, consentEvents] = await Promise.all([
     db.select().from(packages).where(eq(packages.clientId, clientId)).all(),
     db
       .select()
@@ -87,6 +91,7 @@ export default async function ClientDetailPage({
       .where(eq(sessions.clientId, clientId))
       .groupBy(sessions.status)
       .all(),
+    consentHistory(clientId),
   ]);
 
   // Use accurate SQL counts instead of filtering limited rows
@@ -244,6 +249,15 @@ export default async function ClientDetailPage({
               />
             ) : undefined
           }
+        />
+
+        <ConsentCard
+          clientId={clientId}
+          status={client.smsConsentStatus as ConsentStatus}
+          since={client.smsConsentAt}
+          hasPhone={!!client.phone}
+          history={consentEvents}
+          signupLink={signupLink()}
         />
 
         <SessionHistoryCard sessions={allClientSessions} />

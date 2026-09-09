@@ -6,6 +6,8 @@ import { sendSMS } from "@/lib/twilio";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { toE164 } from "@/lib/phone";
+import { resetForPhoneChange, linkSignupToClient, phoneStatus } from "@/lib/consent";
 
 export async function updateClientOrder(orderedIds: number[]) {
   for (let i = 0; i < orderedIds.length; i++) {
@@ -20,10 +22,23 @@ export async function updateClientOrder(orderedIds: number[]) {
 type Category = "active" | "inactive" | "in_season" | "on_break" | "vacation";
 type Grade = "freshman" | "sophomore" | "junior" | "senior" | "post_grad" | "adult" | null;
 
+/**
+ * Store E.164 when the number parses, so it matches the inbound lookup, the
+ * UNIQUE index, and the consent events keyed by phone. Anything else is kept
+ * as typed rather than rejected — the form has always accepted free text and
+ * a client with an odd number is better than a lost save.
+ */
+function normalizePhone(raw: string | null): string | null {
+  const t = (raw ?? "").trim();
+  if (!t) return null;
+  const p = toE164(t);
+  return p.ok ? p.e164 : t;
+}
+
 export async function createClient(formData: FormData) {
   const data: NewClient = {
     name: formData.get("name") as string,
-    phone: formData.get("phone") as string,
+    phone: normalizePhone(formData.get("phone") as string),
     category: ((formData.get("category") as string) || "active") as Category,
     gradeLevel: ((formData.get("gradeLevel") as string) || null) as Grade,
     collegeBound: formData.get("collegeBound") === "on",
@@ -44,16 +59,23 @@ export async function createClient(formData: FormData) {
     sessionReminders: formData.get("sessionReminders") === "on" ? true : false,
   };
 
-  await db.insert(clients).values(data).run();
+  const created = await db.insert(clients).values(data).returning({ id: clients.id }).get();
+  // If this number already signed up on the public form before Matt typed it
+  // in, the events are waiting: attach them so the status carries over.
+  if (data.phone && (await phoneStatus(data.phone)) !== "unknown") {
+    await linkSignupToClient(data.phone, created.id);
+  }
   revalidatePath("/clients");
   redirect("/clients");
 }
 
 export async function updateClient(id: number, formData: FormData) {
+  const before = await db.select({ phone: clients.phone }).from(clients).where(eq(clients.id, id)).get();
+  const newPhone = normalizePhone(formData.get("phone") as string);
   await db.update(clients)
     .set({
       name: formData.get("name") as string,
-      phone: formData.get("phone") as string,
+      phone: newPhone,
       category: ((formData.get("category") as string) || "active") as Category,
       gradeLevel: ((formData.get("gradeLevel") as string) || null) as Grade,
       collegeBound: formData.get("collegeBound") === "on",
@@ -75,6 +97,9 @@ export async function updateClient(id: number, formData: FormData) {
     })
     .where(eq(clients.id, id))
     .run();
+  // Consent belongs to the number. A different number starts from nothing
+  // (or inherits its own signup history, if it has one).
+  if (before && before.phone !== newPhone) await resetForPhoneChange(id, before.phone, newPhone);
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
   redirect(`/clients/${id}`);
@@ -120,10 +145,18 @@ export async function updateClientField(id: number, field: string, value: string
     updates[field] = value as Category;
   } else if (field === "gradeLevel") {
     updates[field] = (value || null) as Grade;
+  } else if (field === "phone") {
+    updates[field] = normalizePhone(value as string);
   } else {
     updates[field] = value;
   }
+  const before = field === "phone"
+    ? await db.select({ phone: clients.phone }).from(clients).where(eq(clients.id, id)).get()
+    : undefined;
   await db.update(clients).set(updates).where(eq(clients.id, id)).run();
+  if (field === "phone" && before && before.phone !== updates.phone) {
+    await resetForPhoneChange(id, before.phone, updates.phone as string | null);
+  }
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
 }

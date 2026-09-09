@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Client } from "@/db/schema";
+import { CopySignupLink } from "./copy-signup-link";
 
 const CATEGORIES = [
   { value: "active", label: "Active" },
@@ -36,10 +37,12 @@ export function ClientForm({
   client,
   action,
   submitLabel,
+  signupLink = "https://m2scheduler.com/text-signup",
 }: {
   client?: Client;
   action: (formData: FormData) => void;
   submitLabel: string;
+  signupLink?: string;
 }) {
   const preferredDays: string[] = client?.preferredDays
     ? JSON.parse(client.preferredDays)
@@ -56,6 +59,14 @@ export function ClientForm({
           <Label htmlFor="phone">Phone</Label>
           <Input id="phone" name="phone" defaultValue={client?.phone ?? ""} required />
         </div>
+      </div>
+
+      <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span>
+          Texting starts after this client signs up at <span className="font-mono text-foreground">m2scheduler.com/text-signup</span> and
+          replies YES. {client?.phone && client.phone !== undefined ? "Changing the number resets that." : "Only they can do that."}
+        </span>
+        <CopySignupLink link={signupLink} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

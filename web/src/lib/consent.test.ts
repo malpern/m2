@@ -15,7 +15,7 @@ vi.mock("@/lib/logger", () => ({ syslog: { info: vi.fn(), warn: vi.fn(), error: 
 const { db } = await import("@/db");
 const {
   recordSignup, sendVerification, recordReply, markOptedOut, resetForPhoneChange,
-  linkSignupToClient, phoneStatus, unmatchedSignups, consentHistory, isOptInKeyword,
+  linkSignupToClient, phoneStatus, unmatchedSignups, consentHistory, isOptInKeyword, createClientFromSignup,
 } = await import("./consent");
 
 const PHONE = "+14085550100";
@@ -245,5 +245,21 @@ describe("isOptInKeyword", () => {
     expect(isOptInKeyword(" yes. ")).toBe(true);
     expect(isOptInKeyword("ok")).toBe(false);
     expect(isOptInKeyword("yes tuesday works")).toBe(false);
+  });
+});
+
+describe("createClientFromSignup", () => {
+  it("creates the client from what was typed, links the events, and carries the status", async () => {
+    await recordSignup({ phone: PHONE, name: "Sam O", guardianName: "Pat O" });
+    await sendVerification(PHONE);
+    const { clientId, status } = await createClientFromSignup(PHONE);
+    expect(status).toBe("pending");
+    const c = await db.select().from(clients).where(eq(clients.id, clientId)).get();
+    expect(c).toMatchObject({ name: "Sam O", phone: PHONE, parentGuardian: "Pat O", smsConsentStatus: "pending" });
+    expect(await unmatchedSignups()).toHaveLength(0);
+  });
+
+  it("refuses when there is nothing to create from", async () => {
+    await expect(createClientFromSignup("+14085550199")).rejects.toThrow(/No unmatched signup/);
   });
 });

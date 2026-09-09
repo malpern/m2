@@ -33,6 +33,8 @@ import { updateClientOrder, clearAllSortOrders, updateClientField } from "./acti
 import { EmptyState } from "@/components/empty-state";
 import { SearchInput } from "@/components/search-input";
 import type { Client } from "@/db/schema";
+import { consentChip, CHIP_CLASSES } from "@/lib/consent-labels";
+import type { ConsentStatus } from "@/lib/sms-consent";
 import { GRADE_RANK } from "@/lib/constants";
 
 type ClientWithPackage = Client & { sessionsRemaining: number | null };
@@ -295,6 +297,25 @@ function SortableRow({
             <Link href={`/clients/${client.id}`} className="font-semibold hover:underline">
               {client.name}
             </Link>
+            {(() => {
+              // Who still needs the signup link. Confirmed clients get nothing;
+              // the list should read as a to-do, not a compliance dashboard.
+              const chip = consentChip(client.smsConsentStatus as ConsentStatus, !!client.phone);
+              return chip ? (
+                <span
+                  className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${CHIP_CLASSES[chip.tone]}`}
+                  title={
+                    chip.tone === "bad"
+                      ? "Opted out of texts. Only they can opt back in, by texting START."
+                      : chip.tone === "warn"
+                        ? "Verification text sent — waiting for them to reply YES."
+                        : "Has not signed up for texts yet. Send them the signup link."
+                  }
+                >
+                  {chip.label}
+                </span>
+              ) : null;
+            })()}
             {!client.phone && (
               // Since #221 a missing number is recorded as null rather than a
               // placeholder that looks dialable. Surfaced here because these are
@@ -503,8 +524,13 @@ export function ClientTable({
   const query = search.toLowerCase().trim();
   const isDragEnabled = sortKey === "rank" && sortDir === "asc" && !query;
 
+  // "needs signup" is a saved search: everyone with a number who cannot yet
+  // be texted, in one list Matt can work through.
+  const needsSignup = query === "needs signup" || query === "needs consent";
   const filterFn = (c: ClientWithPackage) =>
-    !query ||
+    needsSignup
+      ? !!c.phone && c.smsConsentStatus !== "confirmed"
+      : !query ||
     c.name.toLowerCase().includes(query) ||
     (c.gradeLevel ?? "").toLowerCase().includes(query) ||
     c.category.toLowerCase().includes(query) ||

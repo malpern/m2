@@ -4,6 +4,8 @@ import { eq, sql, desc, gte } from "drizzle-orm";
 import { ClientTable } from "./client-table";
 import { PackageAlerts } from "@/components/package-alerts";
 import { GRADE_RANK } from "@/lib/constants";
+import { SignupsQueue } from "./signups-queue";
+import { unmatchedSignups } from "@/lib/consent";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,7 @@ export default async function ClientsPage() {
   const cutoff = sixMonthsAgo();
 
   // All three queries are independent — run in parallel
-  const [allClients, recentSessions, lowPackagesRaw] = await Promise.all([
+  const [allClients, recentSessions, lowPackagesRaw, signups] = await Promise.all([
     db
       .select({
         id: clients.id,
@@ -79,6 +81,7 @@ export default async function ClientsPage() {
       .innerJoin(clients, eq(clients.id, packages.clientId))
       .where(eq(packages.status, "active"))
       .all(),
+    unmatchedSignups(),
   ]);
 
   const lowPackages = lowPackagesRaw.filter((p) => p.remaining <= 2);
@@ -113,6 +116,10 @@ export default async function ClientsPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-8">
+      <SignupsQueue
+        signups={signups}
+        clientOptions={allClients.map((c) => ({ id: c.id, name: c.name, phone: c.phone }))}
+      />
       <PackageAlerts items={lowPackages} />
       <ClientTable activeClients={active} inactiveClients={inactive} sessionsByClient={Object.fromEntries(sessionsByClient)} />
     </div>
