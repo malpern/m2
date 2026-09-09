@@ -24,6 +24,11 @@ const PUBLIC_EXACT = new Set([
   // load without a sign-in and to say what the app is for; "/" is the dashboard
   // and does neither, so unauthenticated visits to "/" are rewritten here.
   "/welcome",
+  // The public text-messaging opt-in form. The A2P 10DLC campaign registration
+  // points carrier reviewers at this URL, so it must load with no session.
+  // Its server action POSTs to the same path. Rate limited and uniform in its
+  // answers — see lib/signup.ts.
+  "/text-signup",
   // Google Search Console ownership proof for m2scheduler.com. Google fetches
   // this anonymously, so behind the gate it answers 307 to /login and
   // verification fails — which is exactly what happened on the first deploy.

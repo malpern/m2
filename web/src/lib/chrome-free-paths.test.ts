@@ -5,6 +5,7 @@ describe("isChromeFree", () => {
   it("hides the app chrome on the public legal pages", () => {
     expect(isChromeFree("/privacy")).toBe(true);
     expect(isChromeFree("/terms")).toBe(true);
+    expect(isChromeFree("/text-signup")).toBe(true);
   });
 
   it("hides it on /login too, so nothing prefetches gated routes while logged out", () => {
@@ -28,6 +29,6 @@ describe("isChromeFree", () => {
     // Both lists describe the same set of public pages. If one grows without
     // the other, either the page 302s to login or it renders with a nav full
     // of links the visitor cannot follow.
-    expect([...CHROME_FREE_PATHS].sort()).toEqual(["/login", "/privacy", "/terms"]);
+    expect([...CHROME_FREE_PATHS].sort()).toEqual(["/login", "/privacy", "/terms", "/text-signup"]);
   });
 });

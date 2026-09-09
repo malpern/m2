@@ -6,6 +6,8 @@ import { vi } from "vitest";
 describe("isPublicPath", () => {
   it("allows login, OAuth start/callback, login/logout, and Twilio webhook", () => {
     expect(isPublicPath("/login")).toBe(true);
+    // The A2P campaign registration points reviewers at the signup form.
+    expect(isPublicPath("/text-signup")).toBe(true);
     expect(isPublicPath("/api/auth")).toBe(true);
     expect(isPublicPath("/api/auth/callback")).toBe(true);
     expect(isPublicPath("/api/auth/login")).toBe(true);
