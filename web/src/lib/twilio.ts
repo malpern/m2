@@ -16,9 +16,6 @@ function getClient() {
   return _client;
 }
 
-const USE_WHATSAPP = process.env.TWILIO_USE_WHATSAPP === "true";
-const WHATSAPP_SANDBOX = "whatsapp:+14155238886";
-
 /**
  * Kept as the name every call site already uses, but the policy now lives in one
  * place shared with email and calendar invites (#242) rather than being an
@@ -114,13 +111,15 @@ export async function sendSMS(
     return { status: "skipped", reason: consentDecision.reason };
   }
 
-  const from = USE_WHATSAPP
-    ? WHATSAPP_SANDBOX
-    : process.env.TWILIO_PHONE_NUMBER;
-
+  // There used to be a TWILIO_USE_WHATSAPP switch here that routed every
+  // message through Twilio's WhatsApp sandbox. It was a May-2026 testing relic,
+  // and the first live verification text after the A2P campaign was approved
+  // went out through the sandbox and failed (63015) because the switch was
+  // still on in production. A sandbox toggle must not be able to hijack
+  // production sends, so the only path now is SMS from the registered number.
+  const from = process.env.TWILIO_PHONE_NUMBER;
   if (!from) throw new Error("TWILIO_PHONE_NUMBER must be set");
-
-  const toNumber = USE_WHATSAPP ? `whatsapp:${to}` : to;
+  const toNumber = to;
 
   const statusCallback = process.env.NEXT_PUBLIC_APP_URL
     ? `${process.env.NEXT_PUBLIC_APP_URL}/api/twilio`
