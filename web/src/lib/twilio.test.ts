@@ -65,7 +65,6 @@ describe("sendSMS", () => {
     vi.stubEnv("TWILIO_ACCOUNT_SID", "ACtest123");
     vi.stubEnv("TWILIO_AUTH_TOKEN", "authtoken123");
     vi.stubEnv("TWILIO_PHONE_NUMBER", "+12025551234");
-    vi.stubEnv("TWILIO_USE_WHATSAPP", "false");
 
     mockCreate.mockResolvedValue({ sid: "SM_test_sid_123" });
 
@@ -82,30 +81,10 @@ describe("sendSMS", () => {
     );
   });
 
-  it("applies WhatsApp prefix when TWILIO_USE_WHATSAPP is true", async () => {
-    vi.stubEnv("TWILIO_ACCOUNT_SID", "ACtest123");
-    vi.stubEnv("TWILIO_AUTH_TOKEN", "authtoken123");
-    vi.stubEnv("TWILIO_USE_WHATSAPP", "true");
-
-    mockCreate.mockResolvedValue({ sid: "SM_whatsapp_sid" });
-
-    const { sendSMS } = await import("./twilio");
-    const result = await sendSMS("+14082099509", "WhatsApp msg", { consent: "confirmed" });
-
-    expect(result).toEqual({ status: "sent", sid: "SM_whatsapp_sid" });
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        from: "whatsapp:+14155238886",
-        to: "whatsapp:+14082099509",
-      })
-    );
-  });
-
   it("includes statusCallback when NEXT_PUBLIC_APP_URL is set", async () => {
     vi.stubEnv("TWILIO_ACCOUNT_SID", "ACtest123");
     vi.stubEnv("TWILIO_AUTH_TOKEN", "authtoken123");
     vi.stubEnv("TWILIO_PHONE_NUMBER", "+12025551234");
-    vi.stubEnv("TWILIO_USE_WHATSAPP", "false");
     vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://example.com");
 
     mockCreate.mockResolvedValue({ sid: "SM_callback_sid" });
@@ -120,10 +99,9 @@ describe("sendSMS", () => {
     );
   });
 
-  it("throws when TWILIO_PHONE_NUMBER is missing (non-WhatsApp)", async () => {
+  it("throws when TWILIO_PHONE_NUMBER is missing ", async () => {
     vi.stubEnv("TWILIO_ACCOUNT_SID", "ACtest123");
     vi.stubEnv("TWILIO_AUTH_TOKEN", "authtoken123");
-    vi.stubEnv("TWILIO_USE_WHATSAPP", "false");
 
     const { sendSMS } = await import("./twilio");
     await expect(sendSMS("+14082099509", "No from", { consent: "confirmed" })).rejects.toThrow(
@@ -135,7 +113,6 @@ describe("sendSMS", () => {
     vi.stubEnv("TWILIO_ACCOUNT_SID", "ACtest123");
     vi.stubEnv("TWILIO_AUTH_TOKEN", "authtoken123");
     vi.stubEnv("TWILIO_PHONE_NUMBER", "+12025551234");
-    vi.stubEnv("TWILIO_USE_WHATSAPP", "false");
 
     mockCreate.mockRejectedValue(new Error("Twilio API error: 21211"));
 
